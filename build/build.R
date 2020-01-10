@@ -3,6 +3,8 @@ library(devtools)
 
 pkg=file.path("~/git", "CCL_authenticator")
 
+setwd(pkg)
+# create("CCLid")
 devtools::document(pkg)
 devtools::check(pkg)
 
