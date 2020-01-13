@@ -1,8 +1,10 @@
 library(ggplot2)
 library(scales)
+library(reshape2)
+
+library(CCLid)
 library(Biobase)
 library(taRifx)
-library(reshape2)
 
 l=1:5
 datasets <- c('GDSC', 'CCLE')

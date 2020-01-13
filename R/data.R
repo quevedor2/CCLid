@@ -1,7 +1,9 @@
 #' BED file of SNP6 Probeset IDs and genomic loci in hg19
+#' @docType data
 #'
-#' Data obtained from: 
-#'
+#' @usage data(snp6.dat)
+#' @keywords datasets
+#' 
 #' @format A list containing 3 elements, each containing 'ProbesetID, chrom, pos, strand'
 #' \describe{
 #'   \item{SNP}{SNP probeset data-frame containing 933422 rows x 4 cols}
