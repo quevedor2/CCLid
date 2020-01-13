@@ -20,6 +20,6 @@ devtools::build(pkg)
 #devtools::install_github("quevedor2/CCLid")
 devtools::install("~/git/CCL_authenticator")
 devtools::install("~/git/CCLid")
-#devtools::reload(inst('CCLid'))
+#devtools::reload(pkgload::inst('CCLid'))
 
 devtools::install_github("quevedor2/CCL_authenticator")
