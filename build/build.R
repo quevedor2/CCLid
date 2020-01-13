@@ -12,4 +12,6 @@ devtools::check(pkg)
 #devtools::build_vignettes(pkg)
 devtools::build(pkg)
 
-devtools::install_github("quevedor2/CCL_authenticator")
+#devtools::install_github("quevedor2/CCLid")
+devtools::install("~/git/CCL_authenticator")
+devtools::install("~/git/CCLid")

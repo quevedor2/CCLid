@@ -115,6 +115,7 @@ combineSamples <- function(data.type, sample.mat, prop){
 }
 
 .demo <- function(){
+  library(CCLid)
   data.type <- 'geno'
   data.type <- 'BAF'
   s.idx <- c(1,5)
@@ -133,7 +134,7 @@ combineSamples <- function(data.type, sample.mat, prop){
   }
   
   
-  d.mat <- similarityMatrix(demo$matrix, 'jaccard')
+  d.mat <- similarityMatrix(demo$matrix, 'euclidean')
   new.ids <- assignGrpIDs(d.mat, meta.df)
   colnames(d.mat) <- rownames(d.mat) <- as.character(new.ids)
   
@@ -154,7 +155,7 @@ combineSamples <- function(data.type, sample.mat, prop){
   
   ## Compare sampleX to ref data
   x.mat <- cbind(sample.x, demo$matrix)
-  x.dist <- similarityMatrix(x.mat, 'jaccard')[,1,drop=FALSE]
+  x.dist <- similarityMatrix(x.mat, 'euclidean')[,1,drop=FALSE]
   
   x.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=NULL)
   pred <- assemblePredDat(x.vals, known.class=FALSE)
