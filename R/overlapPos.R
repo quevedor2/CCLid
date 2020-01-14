@@ -1,3 +1,10 @@
+#' .overlapProbeset
+#' @description Overlaps probesets and orders based on chr position
+#' 
+#' @param ref.ids 
+#' @param comp.ids 
+#'
+#' @return
 .overlapProbeset <- function(ref.ids, comp.ids){
   probe.meta <- CCLid::snp6.dat$SNP$Probe_Set_ID
   
@@ -16,6 +23,16 @@
 
 
 
+#' overlapPos
+#' @description parent function that handles how overlaps are done between COMParing 
+#' group and REFerence datasets
+#' 
+#' @param comp 
+#' @param ref 
+#' @param mapping 
+#'
+#' @return
+#' @export
 overlapPos <- function(comp, ref, mapping='probeset'){
   switch(mapping,
          "probeset"=.overlapProbeset(ref.ids=rownames(ref), 

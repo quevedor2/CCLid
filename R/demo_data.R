@@ -191,6 +191,6 @@ combineSamples <- function(data.type, sample.mat, prop){
                        ref=dat.r2, mapping = 'probeset')
   x.mat <- cbind(vcf.map$BAF$BAF[ov.idx$comp], 
                  dat.r2[ov.idx$ref,])
-  x.dist <- similarityMatrix(x.mat, 'euclidean')[,1,drop=FALSE]
-  
+  x.dist <- similarityMatrix(x.mat, 'cor')[,1,drop=FALSE]
+  x.dist[order(x.dist, decreasing = TRUE),]
 }
