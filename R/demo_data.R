@@ -170,3 +170,27 @@ combineSamples <- function(data.type, sample.mat, prop){
   gplots::heatmap.2(sim, trace = 'none',  dendrogram = 'none', 
                     cexRow = 0.4, cexCol=0.4, key = FALSE)
 }
+
+.demoRna <- function(){
+  sampleVcf <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/denis_id/mutect_GDSC/EGAR00001252191_13305_1/EGAR00001252191_13305_1.vcf"
+  vcf.map <- mapVcf2Affy(sampleVcf)
+  analysis <- 'baf'
+  
+  pdir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/baf'
+  dat.r2 <- readRDS(file = file.path(pdir, paste0(analysis, 's-matrix.rds')))
+  rownames(dat.r2) <- dat.r2$ID
+  dat.r2 <- dat.r2[,-1]
+  keep.idx <- switch(analysis,
+                     lrr=grep("CN", gsub("_.*", "", rownames(dat.r2))),
+                     baf=grep("SNP", gsub("_.*", "", rownames(dat.r2))))
+  dat.r2 <- dat.r2[keep.idx,]
+  if(any(is.na(dat.r2))) dat.r2[is.na(dat.r2)] <- median(as.matrix(dat.r2), na.rm=T)
+  
+  
+  ov.idx <- overlapPos(comp = vcf.map$BAF,
+                       ref=dat.r2, mapping = 'probeset')
+  x.mat <- cbind(vcf.map$BAF$BAF[ov.idx$comp], 
+                 dat.r2[ov.idx$ref,])
+  x.dist <- similarityMatrix(x.mat, 'euclidean')[,1,drop=FALSE]
+  
+}

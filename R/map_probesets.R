@@ -119,3 +119,4 @@ mapVcf2Affy <- function(vcfFile){
               "GT"=vcf.gt.df))
 }
 
+
