@@ -3,6 +3,7 @@
 export(annoDemoMat)
 export(assemblePredDat)
 export(assignGrpIDs)
+export(bafDrift)
 export(balanceGrps)
 export(combineSamples)
 export(demoSample)

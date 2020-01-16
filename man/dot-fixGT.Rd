@@ -4,7 +4,7 @@
 \alias{.fixGT}
 \title{.fixGT}
 \usage{
-.fixGT(vcf.gt, affy.gt)
+.fixGT(vcf.gt, affy.gt, ret.idx = FALSE)
 }
 \arguments{
 \item{vcf.gt}{}

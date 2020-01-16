@@ -172,8 +172,14 @@ combineSamples <- function(data.type, sample.mat, prop){
 }
 
 .demoRna <- function(){
-  sampleVcf <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/denis_id/mutect_GDSC/EGAR00001252191_13305_1/EGAR00001252191_13305_1.vcf"
-  vcf.map <- mapVcf2Affy(sampleVcf)
+  library(VariantAnnotation)
+  library(CCLid)
+  
+  vcfFile <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/denis_id/mutect_GDSC/EGAR00001252191_13305_1/EGAR00001252191_13305_1.vcf" ## RNA
+  vcfFile='/mnt/work1/users/home2/quever/xfer/NGSST_04.mutect2.hg19.vcf' ## Mix
+  vcfFile='/mnt/work1/users/home2/quever/xfer/NGSST_05.mutect2.hg19.vcf' ## Mix
+  vcfFile <- '/mnt/work1/users/home2/quever/xfer/A549.sample_id.vcf' ## A549 WES
+  vcf.map <- mapVcf2Affy(vcfFile)
   analysis <- 'baf'
   
   pdir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/baf'
@@ -186,11 +192,31 @@ combineSamples <- function(data.type, sample.mat, prop){
   dat.r2 <- dat.r2[keep.idx,]
   if(any(is.na(dat.r2))) dat.r2[is.na(dat.r2)] <- median(as.matrix(dat.r2), na.rm=T)
   
-  
+  ## Find the overlap between the COMParator and the REFerence
   ov.idx <- overlapPos(comp = vcf.map$BAF,
                        ref=dat.r2, mapping = 'probeset')
+  
+  ## Scan for evidence of genetic drift
   x.mat <- cbind(vcf.map$BAF$BAF[ov.idx$comp], 
                  dat.r2[ov.idx$ref,])
+  
+  bafDrift(sample.mat=x.mat[,c(grep(ccle.id, colnames(x.mat)), 
+                               grep(gdsc.id, colnames(x.mat)), 
+                               1, 5)])
+  
+  ## Look for overall similarity
+
+  # x.mat[is.na(x.mat)] <- median(as.matrix(x.mat), na.rm=T)
   x.dist <- similarityMatrix(x.mat, 'cor')[,1,drop=FALSE]
-  x.dist[order(x.dist, decreasing = TRUE),]
+  as.matrix(c(head(x.dist[order(x.dist, decreasing = TRUE),], 10),
+              head(x.dist[order(x.dist, decreasing = FALSE),], 10)))
+  
+  ccle.id <- 'ARLES_p_NCLE_DNAAffy2_S_GenomeWideSNP_6_B06_256036'
+  gdsc.id <- '^A549$'
+  gdsc.id <- '^DU-145$'
+  gdsc.id <- '^HCC2998$'
+  
+  x.mat2 <- x.mat[,c(grep(ccle.id, colnames(x.mat)), grep(gdsc.id, colnames(x.mat)))]
+  x.mat2 <- x.mat[,c(1, grep(gdsc.id, colnames(x.mat)))]
+  plot(x.mat2, xlim=c(-0.5, 1.5), ylim=c(-0.5, 1.5))
 }

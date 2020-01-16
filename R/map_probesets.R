@@ -31,13 +31,17 @@
 #' @param vcf.gt VariantAnnotation ob ject
 #'
 #' @return
-.revComp <- function(vcf.gt){
+.revComp <- function(vcf.gt, ret.idx=FALSE){
   complementAllele <- c(A="T", T="A", C="G", G="C")
   neg.strand <- which(vcf.gt$Strand == '-')
   
-  vcf.gt[neg.strand,]$Allele_A <- complementAllele[vcf.gt[neg.strand,]$Allele_A]
-  vcf.gt[neg.strand,]$Allele_B <- complementAllele[vcf.gt[neg.strand,]$Allele_B]
-  vcf.gt
+  if(ret.idx){
+    neg.strand
+  } else {
+    vcf.gt[neg.strand,]$Allele_A <- complementAllele[vcf.gt[neg.strand,]$Allele_A]
+    vcf.gt[neg.strand,]$Allele_B <- complementAllele[vcf.gt[neg.strand,]$Allele_B]
+    vcf.gt
+  }
 }
 
 #' .fixGT
@@ -47,13 +51,17 @@
 #' @param affy.gt 
 #'
 #' @return
-.fixGT <- function(vcf.gt, affy.gt){
+.fixGT <- function(vcf.gt, affy.gt, ret.idx=FALSE){
   complementGenotype <- c('0'='2', 
                           '1'='1', 
                           '2'='0')
   rev.idx <- which(vcf.gt$Allele_A == alt(vcf.gt))
-  affy.gt[rev.idx] <- complementGenotype[as.character(affy.gt[rev.idx])]
-  as.integer(affy.gt)
+  if(ret.idx){
+    rev.idx
+  } else {
+    affy.gt[rev.idx] <- complementGenotype[as.character(affy.gt[rev.idx])]
+    as.integer(affy.gt)
+  }
 }
 
 #' .normBAF
@@ -91,6 +99,7 @@
 #' vcfFile <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/denis_id/mutect_GDSC/EGAR00001252191_13305_1/EGAR00001252191_13305_1.vcf"
 #' mapVcf2Affy(vcfFile)
 mapVcf2Affy <- function(vcfFile){
+  require(VariantAnnotation)
   message(paste0("Reading in VCF file (", basename(vcfFile), "..."))
   vcf.gr <- readVcfAsVRanges(vcfFile)
   seqlevelsStyle(vcf.gr) <- 'UCSC'
@@ -109,7 +118,10 @@ mapVcf2Affy <- function(vcfFile){
   if(any(vcf.affy.gr$affyGT == -1)) vcf.affy.gr <- vcf.affy.gr[which(vcf.affy.gr$affyGT != -1),]
   
   ## Calculate BAF
-  vcf.affy.gr$BAF <- round(altDepth(vcf.affy.gr) / totalDepth(vcf.affy.gr),2)
+  vcf.affy.gr$BAF <- round(altDepth(vcf.affy.gr) / (refDepth(vcf.affy.gr) + altDepth(vcf.affy.gr)),2)
+  flip.idx <- .fixGT(vcf.affy.gr, affy.genotype, ret.idx=T)
+  vcf.affy.gr[flip.idx,]$BAF <- (1-vcf.affy.gr[flip.idx,]$BAF)
+  #vcf.affy.gr$BAF <- round(altDepth(vcf.affy.gr) / totalDepth(vcf.affy.gr),2)
   vcf.affy.gr$nBAF <- .normBAF(vcf.affy.gr$BAF)
   
   vcf.baf.df <- mcols(vcf.affy.gr)[,c('Probe_Set_ID', 'BAF', 'nBAF')]

@@ -4,7 +4,7 @@
 \alias{.revComp}
 \title{.revComp}
 \usage{
-.revComp(vcf.gt)
+.revComp(vcf.gt, ret.idx = FALSE)
 }
 \arguments{
 \item{vcf.gt}{VariantAnnotation ob ject}
