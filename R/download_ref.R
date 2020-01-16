@@ -13,8 +13,8 @@
 #' downloadRefCCL(name="BAF")
 downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"), 
                             refFileName = NULL, verbose = TRUE) {
-  ccl.table <- availableRefCCL(saveDir = saveDir)
-  whichx <- match(name, pSetTable[, 1])
+  ccl.table <- CCLid::availableRefCCL(saveDir = saveDir)
+  whichx <- match(name, ccl.table[, 1])
   if (is.na(whichx)) {
     stop("Unknown Dataset. Please use the availableRefCCL() function for the table of available CCLid reference datasets.")
   }
@@ -22,7 +22,7 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
     dir.create(saveDir, recursive = TRUE)
   }
   if (is.null(refFileName)) {
-    refFileName <- paste0(ccl.table[whichx, "Datasets"], ".rds")
+    refFileName <- paste0(ccl.table[whichx, "Ref.type"], ".rds")
   }
   if (!file.exists(file.path(saveDir, refFileName))) {
     downloader::download(url = as.character(ccl.table[whichx, "URL"]), 

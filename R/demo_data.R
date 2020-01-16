@@ -175,6 +175,9 @@ combineSamples <- function(data.type, sample.mat, prop){
   library(VariantAnnotation)
   library(CCLid)
   
+  setwd("/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid")
+  ref.mat <- downloadRefCCL("BAF")
+  
   vcfFile='/mnt/work1/users/home2/quever/xfer/NGSST_04.mutect2.hg19.vcf' ## Mix
   vcfFile='/mnt/work1/users/home2/quever/xfer/NGSST_05.mutect2.hg19.vcf' ## Mix
   vcfFile <- '/mnt/work1/users/home2/quever/xfer/A549.sample_id.vcf' ## A549 WES
