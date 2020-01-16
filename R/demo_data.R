@@ -175,7 +175,6 @@ combineSamples <- function(data.type, sample.mat, prop){
   library(VariantAnnotation)
   library(CCLid)
   
-  vcfFile <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/denis_id/mutect_GDSC/EGAR00001252191_13305_1/EGAR00001252191_13305_1.vcf" ## RNA
   vcfFile='/mnt/work1/users/home2/quever/xfer/NGSST_04.mutect2.hg19.vcf' ## Mix
   vcfFile='/mnt/work1/users/home2/quever/xfer/NGSST_05.mutect2.hg19.vcf' ## Mix
   vcfFile <- '/mnt/work1/users/home2/quever/xfer/A549.sample_id.vcf' ## A549 WES
@@ -199,6 +198,8 @@ combineSamples <- function(data.type, sample.mat, prop){
   ## Scan for evidence of genetic drift
   x.mat <- cbind(vcf.map$BAF$BAF[ov.idx$comp], 
                  dat.r2[ov.idx$ref,])
+  
+  
   
   bafDrift(sample.mat=x.mat[,c(grep(ccle.id, colnames(x.mat)), 
                                grep(gdsc.id, colnames(x.mat)), 

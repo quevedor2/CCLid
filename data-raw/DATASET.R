@@ -1,4 +1,6 @@
+#### snp6.dat ####
 ## code to prepare `snp6.dat` dataset goes here
+## It's a list of Affymetrix SNP6 probeset, hg19 loci, rsIDs, and alleles
 setwd("~/git/CCL_authenticator/data-raw/")
 snp6.bed.raw <- read.table(unz("GenomeWideSNP_6.hg19.bed.zip", 
                                "GenomeWideSNP_6.hg19.bed"), skip = 1, 
@@ -31,3 +33,31 @@ gr.l <- as.list(split(affyAnno.gr, affyAnno.gr$Probe))
 snp6.dat <- GRangesList(append(gr.l, c("All"=affyAnno.gr)))
 
 usethis::use_data(snp6.dat, overwrite = T)
+
+#### meta.df ####
+## Cell line name by filename dataframe
+library(Biobase)
+
+datasets <- c('GDSC', 'CCLE')
+col.ids <- list('CCLE'=c('Cell line primary name', 'SNP arrays'),
+                'GDSC'=c('Sample Name', 'cel'))
+
+#pdir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/'
+#cn.dir <- file.path(pdir, 'rds')
+setwd("~/git/CCL_authenticator/data-raw/")
+cn.dat <- lapply(datasets, function(i){
+  readRDS(file.path('.', paste0(i, "_CN.gene.RDS")))
+})
+names(cn.dat) <- datasets
+
+## Form metadata
+meta <- lapply(datasets, function(i){
+  phenoData(cn.dat[[i]])@data[,col.ids[[i]]]
+})
+
+## Reduce to dataframe
+meta.df <- Reduce(function(x,y) merge(x,y, by.x='Sample Name', 
+                                      by.y='Cell line primary name', all=T), meta)
+meta.df <- taRifx::remove.factors(meta.df[-which(rowSums(is.na(meta.df)) == 3),])
+colnames(meta.df) <- c('ID', datasets)
+usethis::use_data(meta.df, overwrite = T)

@@ -13,3 +13,18 @@
 #' }
 #' @source \url{http://www.affymetrix.com/Auth/analysis/downloads/lf/genotyping/GenomeWideSNP_6/GenomeWideSNP_6.hg19.bed.zip}
 "snp6.dat"
+
+#' Mapping of cell IDs to filenames
+#' @docType data
+#'
+#' @usage data(meta.df)
+#' @keywords datasets
+#' 
+#' @format A data.frame structure
+#' \describe{
+#'   \item{ID}{Unique cell name}
+#'   \item{GDSC}{Filename ID for GDSC data}
+#'   \item{CCLE}{Filename ID for CCLE data}
+#'   ...
+#' }
+"meta.df"
