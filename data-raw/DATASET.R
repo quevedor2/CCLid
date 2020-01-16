@@ -1,3 +1,4 @@
+##################
 #### snp6.dat ####
 ## code to prepare `snp6.dat` dataset goes here
 ## It's a list of Affymetrix SNP6 probeset, hg19 loci, rsIDs, and alleles
@@ -34,6 +35,7 @@ snp6.dat <- GRangesList(append(gr.l, c("All"=affyAnno.gr)))
 
 usethis::use_data(snp6.dat, overwrite = T)
 
+#################
 #### meta.df ####
 ## Cell line name by filename dataframe
 library(Biobase)
@@ -60,4 +62,22 @@ meta.df <- Reduce(function(x,y) merge(x,y, by.x='Sample Name',
                                       by.y='Cell line primary name', all=T), meta)
 meta.df <- taRifx::remove.factors(meta.df[-which(rowSums(is.na(meta.df)) == 3),])
 colnames(meta.df) <- c('ID', datasets)
+for(d in datasets){
+  meta.df[,d] <- as.character(meta.df[,d])
+}
 usethis::use_data(meta.df, overwrite = T)
+
+#################
+#### ref.dat ####
+#pdir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/baf'
+pdir <- "~/git/CCL_authenticator/data-raw/"
+analysis  <- 'baf'
+dat.r <- readRDS(file = file.path(pdir, paste0(analysis, 's-matrix.rds')))
+rownames(dat.r) <- dat.r$ID
+dat.r <- dat.r[,-1]
+keep.idx <- switch(analysis,
+                   lrr=grep("CN", gsub("_.*", "", rownames(dat.r))),
+                   baf=grep("SNP", gsub("_.*", "", rownames(dat.r))))
+dat.r <- dat.r[keep.idx,]
+if(any(is.na(dat.r))) dat.r[is.na(dat.r)] <- median(as.matrix(dat.r), na.rm=T)
+

@@ -191,6 +191,7 @@ combineSamples <- function(data.type, sample.mat, prop){
   dat.r2 <- dat.r2[keep.idx,]
   if(any(is.na(dat.r2))) dat.r2[is.na(dat.r2)] <- median(as.matrix(dat.r2), na.rm=T)
   
+  
   ## Find the overlap between the COMParator and the REFerence
   ov.idx <- overlapPos(comp = vcf.map$BAF,
                        ref=dat.r2, mapping = 'probeset')
