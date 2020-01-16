@@ -191,6 +191,15 @@ combineSamples <- function(data.type, sample.mat, prop){
   dat.r2 <- dat.r2[keep.idx,]
   if(any(is.na(dat.r2))) dat.r2[is.na(dat.r2)] <- median(as.matrix(dat.r2), na.rm=T)
   
+  save(dat.r2, file="~/dat.rda")
+  dat.r <- as.matrix(dat.r2)
+  colnames(dat.r) <- rownames(dat.r) <- NULL
+  save(dat.r, file="~/dat.nameless.rda")
+  
+  
+  
+  big.r2 <- as.big.matrix(dat.r2, type='double')
+  write.big.matrix(big.r2, file.path("~", "bar.txt"))
   
   ## Find the overlap between the COMParator and the REFerence
   ov.idx <- overlapPos(comp = vcf.map$BAF,
