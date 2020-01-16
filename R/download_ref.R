@@ -48,6 +48,6 @@ availableRefCCL <- function (saveDir = file.path(".", "CCLid"),
     dir.create(saveDir, recursive = TRUE)
   }
   saveDir <- file.path("~", "git", "CCLid", "data-raw")
-  dl.table <- read.table(file.path(saveDir, myfn))
+  dl.table <- read.csv(file.path(saveDir, myfn), check.names = FALSE, stringsAsFactors = FALSE)
   return(dl.table)
 }
