@@ -51,3 +51,25 @@ availableRefCCL <- function (saveDir = file.path(".", "CCLid"),
   dl.table <- read.csv(file.path(saveDir, myfn), check.names = FALSE, stringsAsFactors = FALSE)
   return(dl.table)
 }
+
+#' Title
+#'
+#' @param ref.mat 
+#' @param analysis 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+formatRefMat <- function(ref.mat, analysis){
+  #pdir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/baf'
+  rownames(ref.mat) <- ref.mat$ID
+  ref.mat <- ref.mat[,-1]
+  keep.idx <- switch(analysis,
+                     lrr=grep("CN", gsub("_.*", "", rownames(ref.mat))),
+                     baf=grep("SNP", gsub("_.*", "", rownames(ref.mat))),
+                     stop("'analysis' parameter must be submitted: 'lrr, baf'"))
+  ref.mat <- ref.mat[keep.idx,]
+  ref.mat[is.na(ref.mat)] <- median(as.matrix(ref.mat), na.rm=T)
+  return(ref.mat)
+}

@@ -175,37 +175,34 @@ combineSamples <- function(data.type, sample.mat, prop){
   library(VariantAnnotation)
   library(CCLid)
   
-  setwd("/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid")
-  ref.mat <- downloadRefCCL("BAF")
+  PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid"
+  analysis <- 'baf'
+  ref.mat <- downloadRefCCL("BAF", saveDir = PDIR)
+  ref.mat <- formatRefMat(ref.mat, analysis='baf')
   
   vcfFile='/mnt/work1/users/home2/quever/xfer/NGSST_04.mutect2.hg19.vcf' ## Mix
   vcfFile='/mnt/work1/users/home2/quever/xfer/NGSST_05.mutect2.hg19.vcf' ## Mix
   vcfFile <- '/mnt/work1/users/home2/quever/xfer/A549.sample_id.vcf' ## A549 WES
   vcf.map <- mapVcf2Affy(vcfFile)
-  analysis <- 'baf'
-  
-  #pdir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/baf'
-  rownames(ref.mat) <- ref.mat$ID
-  ref.mat <- ref.mat[,-1]
-  keep.idx <- switch(analysis,
-                     lrr=grep("CN", gsub("_.*", "", rownames(ref.mat))),
-                     baf=grep("SNP", gsub("_.*", "", rownames(ref.mat))))
-  ref.mat <- ref.mat[keep.idx,]
-  if(any(is.na(ref.mat))) ref.mat[is.na(ref.mat)] <- median(as.matrix(ref.mat), na.rm=T)
   
   ## Find the overlap between the COMParator and the REFerence
   ov.idx <- overlapPos(comp = vcf.map$BAF,
                        ref=ref.mat, mapping = 'probeset')
   
-  ## Scan for evidence of genetic drift
+  ## Combine matrices and reduce features
   x.mat <- cbind(vcf.map$BAF$BAF[ov.idx$comp], 
                  ref.mat[ov.idx$ref,])
+  ref.vars <- apply(ref.mat, 1, var)
   
   
+  ## Calculate evidence of genetic drift between sample X and A549
+  ccle.id <- 'ARLES_p_NCLE_DNAAffy2_S_GenomeWideSNP_6_B06_256036'
+  gdsc.id <- '^A549$'
+  x.drift <- bafDrift(sample.mat=x.mat[,c(grep(ccle.id, colnames(x.mat)), 
+                                          grep(gdsc.id, colnames(x.mat)), 
+                                          1, 5)])
+  plot(x.drift$cna.obj[[ccle.id]])
   
-  bafDrift(sample.mat=x.mat[,c(grep(ccle.id, colnames(x.mat)), 
-                               grep(gdsc.id, colnames(x.mat)), 
-                               1, 5)])
   
   ## Look for overall similarity
 
