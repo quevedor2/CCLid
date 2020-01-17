@@ -184,33 +184,22 @@ combineSamples <- function(data.type, sample.mat, prop){
   vcf.map <- mapVcf2Affy(vcfFile)
   analysis <- 'baf'
   
-  pdir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/baf'
-  dat.r2 <- readRDS(file = file.path(pdir, paste0(analysis, 's-matrix.rds')))
-  rownames(dat.r2) <- dat.r2$ID
-  dat.r2 <- dat.r2[,-1]
+  #pdir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/baf'
+  rownames(ref.mat) <- ref.mat$ID
+  ref.mat <- ref.mat[,-1]
   keep.idx <- switch(analysis,
-                     lrr=grep("CN", gsub("_.*", "", rownames(dat.r2))),
-                     baf=grep("SNP", gsub("_.*", "", rownames(dat.r2))))
-  dat.r2 <- dat.r2[keep.idx,]
-  if(any(is.na(dat.r2))) dat.r2[is.na(dat.r2)] <- median(as.matrix(dat.r2), na.rm=T)
-  
-  save(dat.r2, file="~/dat.rda")
-  dat.r <- as.matrix(dat.r2)
-  colnames(dat.r) <- rownames(dat.r) <- NULL
-  save(dat.r, file="~/dat.nameless.rda")
-  
-  
-  
-  big.r2 <- as.big.matrix(dat.r2, type='double')
-  write.big.matrix(big.r2, file.path("~", "bar.txt"))
+                     lrr=grep("CN", gsub("_.*", "", rownames(ref.mat))),
+                     baf=grep("SNP", gsub("_.*", "", rownames(ref.mat))))
+  ref.mat <- ref.mat[keep.idx,]
+  if(any(is.na(ref.mat))) ref.mat[is.na(ref.mat)] <- median(as.matrix(ref.mat), na.rm=T)
   
   ## Find the overlap between the COMParator and the REFerence
   ov.idx <- overlapPos(comp = vcf.map$BAF,
-                       ref=dat.r2, mapping = 'probeset')
+                       ref=ref.mat, mapping = 'probeset')
   
   ## Scan for evidence of genetic drift
   x.mat <- cbind(vcf.map$BAF$BAF[ov.idx$comp], 
-                 dat.r2[ov.idx$ref,])
+                 ref.mat[ov.idx$ref,])
   
   
   

@@ -30,7 +30,7 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
                          quiet = !verbose)
   }
   ref.mat <- readRDS(file.path(saveDir, refFileName))
-  return(get(ref.mat))
+  return(ref.mat)
 }
 
 #' availableRefCCL
