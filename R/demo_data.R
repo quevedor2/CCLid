@@ -175,7 +175,7 @@ combineSamples <- function(data.type, sample.mat, prop){
   library(VariantAnnotation)
   library(CCLid)
   
-  PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid"
+  PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
   analysis <- 'baf'
   ref.mat <- downloadRefCCL("BAF", saveDir = PDIR)
   ref.mat <- formatRefMat(ref.mat, analysis='baf')
@@ -192,7 +192,13 @@ combineSamples <- function(data.type, sample.mat, prop){
   ## Combine matrices and reduce features
   x.mat <- cbind(vcf.map$BAF$BAF[ov.idx$comp], 
                  ref.mat[ov.idx$ref,])
-  ref.vars <- apply(ref.mat, 1, var)
+  var.features <- getVariantFeatures(x.mat, bin.size=5e5)
+  
+  
+  
+  
+  pb.var <- merge(var.df, pb.dat, by=Probe_Set_ID, all.x=TRUE)
+  
   
   
   ## Calculate evidence of genetic drift between sample X and A549

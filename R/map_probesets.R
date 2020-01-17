@@ -130,5 +130,3 @@ mapVcf2Affy <- function(vcfFile){
   return(list("BAF"=vcf.baf.df,
               "GT"=vcf.gt.df))
 }
-
-

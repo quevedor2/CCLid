@@ -61,15 +61,89 @@ availableRefCCL <- function (saveDir = file.path(".", "CCLid"),
 #' @export
 #'
 #' @examples
-formatRefMat <- function(ref.mat, analysis){
-  #pdir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/baf'
-  rownames(ref.mat) <- ref.mat$ID
-  ref.mat <- ref.mat[,-1]
-  keep.idx <- switch(analysis,
-                     lrr=grep("CN", gsub("_.*", "", rownames(ref.mat))),
-                     baf=grep("SNP", gsub("_.*", "", rownames(ref.mat))),
-                     stop("'analysis' parameter must be submitted: 'lrr, baf'"))
-  ref.mat <- ref.mat[keep.idx,]
-  ref.mat[is.na(ref.mat)] <- median(as.matrix(ref.mat), na.rm=T)
-  return(ref.mat)
+formatRefMat <- function(name, ref.mat, analysis, 
+                         varFileName=NULL, refFileName = NULL,
+                         saveDir = file.path(".", "CCLid"), bin.size=1e6){
+  ## Set filename and file path
+  ccl.table <- CCLid::availableRefCCL(saveDir = saveDir)
+  whichx <- match(name, ccl.table[, 1])
+  
+  if (is.null(varFileName)) {
+    varFileName <- paste0(as.integer(bin.size), ".", ccl.table[whichx, "Ref.type"], ".rds")
+  }
+  if (is.null(refFileName)) {
+    refFileName <- paste0("processed.", ccl.table[whichx, "Ref.type"], ".rds")
+  }
+  
+  
+  ## Process if existing RDS doesn't exist
+  if (!file.exists(file.path(saveDir, refFileName))) {
+    rownames(ref.mat) <- ref.mat$ID
+    ref.mat <- ref.mat[,-1]
+    keep.idx <- switch(analysis,
+                       lrr=grep("CN", gsub("_.*", "", rownames(ref.mat))),
+                       baf=grep("SNP", gsub("_.*", "", rownames(ref.mat))),
+                       stop("'analysis' parameter must be submitted: 'lrr, baf'"))
+    ref.mat <- ref.mat[keep.idx,]
+    ref.mat[is.na(ref.mat)] <- median(as.matrix(ref.mat), na.rm=T)
+    saveRDS(ref.mat, file.path(saveDir, refFileName))
+  } else {
+    ref.mat <- readRDS(file.path(saveDir, refFileName))
+  }
+  
+  ## Calculate variant features if file doesn't already exist
+  if (!file.exists(file.path(saveDir, varFileName))) {
+    var.feats <- .getVariantFeatures(ref.mat, bin.size)
+    saveRDS(var.feats, file.path(saveDir, varFileName))
+  } else {
+    var.feats <- readRDS(file.path(saveDir, varFileName))
+  }
+  
+  return(list("mat"=ref.mat,
+              "var"=var.feats))
+}
+
+#' .getVariantFeatures
+#' @description Calculates the features/probesets with the most variance from a 
+#' given matrix (rownames).  Returns equally spaced Variant Probesets
+#' 
+#' @param ref.mat 
+#' @param bin.size 
+#'
+#' @return
+.getVariantFeatures <- function(ref.mat, bin.size=1e6){
+  require(BSgenome.Hsapiens.UCSC.hg19)
+  
+  ## Gets variance of matrix
+  ref.vars <- apply(ref.mat, 1, var)
+  
+  ## Identifies genomic position of SNPs in ref.mat
+  all.pb <-  as.data.frame(CCLid::snp6.dat$All)[,c(1:3)] #Loads in probeset meta data
+  rownames(all.pb) <- CCLid::snp6.dat$All$Probe_Set_ID
+  var.pb <- all.pb[names(ref.vars),] # Selects rows based on probeset IDs
+  var.pb$var <- ref.vars  # Variance column
+  var.pb$Probe_Set_ID <- names(ref.vars)  # Probe_Set_ID column
+  na.idx <- which(is.na(var.pb$seqnames)) #Removes NA if any
+  if(length(na.idx) > 0) var.pb <- var.pb[-na.idx,]
+  var.gr <- sort(makeGRangesFromDataFrame(var.pb, keep.extra.columns = TRUE))
+  
+  ## Cuts the chromosomes into equal sized bins
+  chr.sizes <- seqlengths(Hsapiens)[paste0("chr", c(1:22, "X", "Y"))]
+  bins   <- tileGenome(chr.sizes, tilewidth=bin.size, cut.last.tile.in.chrom=T)
+  seqlevelsStyle(bins) <- seqlevelsStyle(var.gr) <- 'UCSC'
+  
+  ## Finds the overlap of SNP probesets with the genomic bins
+  ov.idx <- findOverlaps(bins, var.gr)
+  ov.split <- split(ov.idx, queryHits(ov.idx))
+  
+  ## For each bin, selects the Probeset with the max variance and returns that
+  var.l <- lapply(ov.split, function(i){
+    binned.var <- var.gr[subjectHits(i),]
+    n.var <- setNames(round(binned.var$var, 3), binned.var$Probe_Set_ID)
+    n.var
+    # max.idx <- which.max(search.space$var)
+    # search.space[max.idx,]
+  })
+  
+  return(var.l)
 }
