@@ -62,8 +62,8 @@ availableRefCCL <- function (saveDir = file.path(".", "CCLid"),
 #'
 #' @examples
 formatRefMat <- function(name, ref.mat, analysis, 
-                         varFileName=NULL, refFileName = NULL,
-                         saveDir = file.path(".", "CCLid"), bin.size=1e6){
+                         varFileName=NULL, saveDir = file.path(".", "CCLid"), 
+                         bin.size=1e6){
   ## Set filename and file path
   ccl.table <- CCLid::availableRefCCL(saveDir = saveDir)
   whichx <- match(name, ccl.table[, 1])
@@ -71,31 +71,24 @@ formatRefMat <- function(name, ref.mat, analysis,
   if (is.null(varFileName)) {
     varFileName <- paste0(as.integer(bin.size), ".", ccl.table[whichx, "Ref.type"], ".rds")
   }
-  if (is.null(refFileName)) {
-    refFileName <- paste0("processed.", ccl.table[whichx, "Ref.type"], ".rds")
-  }
-  
   
   ## Process if existing RDS doesn't exist
-  if (!file.exists(file.path(saveDir, refFileName))) {
-    rownames(ref.mat) <- ref.mat$ID
-    ref.mat <- ref.mat[,-1]
-    keep.idx <- switch(analysis,
-                       lrr=grep("CN", gsub("_.*", "", rownames(ref.mat))),
-                       baf=grep("SNP", gsub("_.*", "", rownames(ref.mat))),
-                       stop("'analysis' parameter must be submitted: 'lrr, baf'"))
-    ref.mat <- ref.mat[keep.idx,]
-    ref.mat[is.na(ref.mat)] <- median(as.matrix(ref.mat), na.rm=T)
-    saveRDS(ref.mat, file.path(saveDir, refFileName))
-  } else {
-    ref.mat <- readRDS(file.path(saveDir, refFileName))
-  }
+  rownames(ref.mat) <- ref.mat$ID
+  ref.mat <- ref.mat[,-1]
+  keep.idx <- switch(analysis,
+                     lrr=grep("CN", gsub("_.*", "", rownames(ref.mat))),
+                     baf=grep("SNP", gsub("_.*", "", rownames(ref.mat))),
+                     stop("'analysis' parameter must be submitted: 'lrr, baf'"))
+  ref.mat <- ref.mat[keep.idx,]
+  ref.mat[is.na(ref.mat)] <- median(as.matrix(ref.mat), na.rm=T)
   
   ## Calculate variant features if file doesn't already exist
   if (!file.exists(file.path(saveDir, varFileName))) {
+    print("Generate feature variance data")
     var.feats <- .getVariantFeatures(ref.mat, bin.size)
     saveRDS(var.feats, file.path(saveDir, varFileName))
   } else {
+    print("Reading existing variance data")
     var.feats <- readRDS(file.path(saveDir, varFileName))
   }
   

@@ -59,6 +59,7 @@ demoSample <- function(data.type, sample.ord, demo.dat){
 #' @return
 #' @export
 annoDemoMat <- function(sample.ord, demo.mat){
+  require(reshape2)
   s <- rep(1, length(sample.ord))
   while(any(duplicated(paste0(sample.ord, s)))){
     s <- s + duplicated(paste0(sample.ord, s))
@@ -70,7 +71,7 @@ annoDemoMat <- function(sample.ord, demo.mat){
   m.ids <- data.frame("ID"=gsub("[A-Z]$", "", colnames(demo.mat)),
                       "uniq"=gsub("^S[0-9]*", "", colnames(demo.mat)),
                       "IDs"=colnames(demo.mat))
-  meta.df <- dcast(m.ids, ID ~ uniq)
+  meta.df <- reshape2::dcast(m.ids, ID ~ uniq)
   
   
   list("mat"=demo.mat, "meta"=meta.df)
@@ -119,7 +120,7 @@ combineSamples <- function(data.type, sample.mat, prop){
   data.type <- 'geno'
   data.type <- 'BAF'
   s.idx <- c(1,5)
-  prop <- c(0.5, 0.5)
+  prop <- c(0.1, 0.9)
   
   demo <- genDemoData(data.type=data.type, n.sim=20, 
                       n.pop=40, n.loci=1000, seed=1234, sd=0.1)
@@ -132,8 +133,6 @@ combineSamples <- function(data.type, sample.mat, prop){
   } else {
     sample.x <- test.sample
   }
-  
-  
 
   d.mat <- similarityMatrix(demo$matrix, 'euclidean')
   new.ids <- assignGrpIDs(d.mat, meta.df)
@@ -171,6 +170,46 @@ combineSamples <- function(data.type, sample.mat, prop){
                     cexRow = 0.4, cexCol=0.4, key = FALSE)
 }
 
+.demoDeconvolution <- function(){
+  
+  
+  ## Test decomposition via NMF
+  s.idx.nmf <- c(1,2,3)
+  M <- demoSample(data.type, s.idx.nmf, demo$prob)
+  M <- annoDemoMat(s.idx.nmf, M)$mat
+  
+  prop.nmf <- c(0.9, 0.09, 0.01)
+  A <- as.matrix(combineSamples('BAF', M, prop=c(0.9, 0.09, 0.01)))
+  
+  # Decomposition with complete data
+  M1.mse <- .checkMse(A, M)
+  M1 <-nnmf(A, k = 1, check.k = FALSE, init=list(W0 = M));
+  as.matrix(M1$H[,1] / colSums(M1$H)) # [0.9, 0.09, 0.01]
+  
+  # Decomposition with complete data and a rank
+  M1 <-nnmf(A, k = 1, check.k = FALSE, init=list(W0 = M));
+  as.matrix(M1$H[,1] / colSums(M1$H)) # [0.003, 0.975, 0.021, 0]
+  
+  # Decomposition with incomplete data
+  M2.mse <- .checkMse(A, M[,1:2])
+  M2 <-nnmf(A, k = 0, check.k = FALSE, init=list(W0 = M[,1:2]));
+  as.matrix(M2$H[,1] / colSums(M2$H)) # [0.905, 0.094]
+  
+  # Decomposition with incomplete data and rank
+  M2 <-nnmf(A, k = 1, check.k = FALSE, init=list(W0 = M[,1:2]));
+  as.matrix(M2$H[,1] / colSums(M2$H)) # [0.0001, 0.947, 0.05]
+  
+  # Decomposition with incomplete data
+  M3.mse <- .checkMse(A, M[,2:3])
+  M3 <-nnmf(A, k = 0, check.k = FALSE, init=list(W0 = M[,2:3]));
+  as.matrix(M3$H[,1] / colSums(M3$H)) # [0.581, 0.418]
+  
+  # Decomposition with incomplete data and a rank
+  M3 <-nnmf(A, k = 1, check.k = FALSE, init=list(W0 = M[,2:3]));
+  as.matrix(M3$H[,1] / colSums(M3$H)) # [1, 0, 0]
+  
+}
+
 .demoRna <- function(){
   library(VariantAnnotation)
   library(CCLid)
@@ -178,7 +217,10 @@ combineSamples <- function(data.type, sample.mat, prop){
   PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
   analysis <- 'baf'
   ref.mat <- downloadRefCCL("BAF", saveDir = PDIR)
-  ref.mat <- formatRefMat(ref.mat, analysis='baf')
+  format.dat <- formatRefMat(name="BAF", ref.mat=ref.mat, 
+                             analysis='baf', bin.size=5e5)
+  ref.mat <- format.dat$mat
+  var.dat <- format.dat$var
   
   vcfFile='/mnt/work1/users/home2/quever/xfer/NGSST_04.mutect2.hg19.vcf' ## Mix
   vcfFile='/mnt/work1/users/home2/quever/xfer/NGSST_05.mutect2.hg19.vcf' ## Mix

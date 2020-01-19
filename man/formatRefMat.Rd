@@ -9,7 +9,6 @@ formatRefMat(
   ref.mat,
   analysis,
   varFileName = NULL,
-  refFileName = NULL,
   saveDir = file.path(".", "CCLid"),
   bin.size = 1e+06
 )
