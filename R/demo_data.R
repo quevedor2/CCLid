@@ -208,6 +208,12 @@ combineSamples <- function(data.type, sample.mat, prop){
   M3 <-nnmf(A, k = 1, check.k = FALSE, init=list(W0 = M[,2:3]));
   as.matrix(M3$H[,1] / colSums(M3$H)) # [1, 0, 0]
   
+  # Decomposition with incomplete data and noise 
+  A2 <- A + runif(n=nrow(A), min = -0.01, max = 0.01)
+  M4.mse <- .checkMse(A2, M)
+  M4 <-nnmf(A2, k = 0, check.k = FALSE, init=list(W0 = M));
+  as.matrix(M4$H[,1] / colSums(M4$H)) # [0.581, 0.418]
+  
 }
 
 .demoRna <- function(){
