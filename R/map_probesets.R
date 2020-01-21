@@ -130,3 +130,40 @@ mapVcf2Affy <- function(vcfFile){
   return(list("BAF"=vcf.baf.df,
               "GT"=vcf.gt.df))
 }
+
+#' mapVariantFeat
+#' @description Selects only the features with the highest variance
+#' per bin
+#' 
+#' @param vcf.map An object returned by mapVcf2Aff()
+#' @param var.dat A list returned by formatRefMat()$var
+#'
+#' @return
+#' @export
+mapVariantFeat <- function(vcf.map, var.dat){
+  if(class(vcf.map) == 'list'){
+    baf <- vcf.map$BAF
+    geno <- vcf.map$GT
+    rownames(geno) <- rownames(baf) <- baf$Probe_Set_ID
+  } else if(is.data.frame(vcf.map) | is.matrix(vcf.map)){
+    baf <- vcf.map
+    baf$Probe_Set_ID <- rownames(vcf.map)
+  }
+  
+  
+  max.var <- lapply(var.dat, function(v){
+    max.var <- head(sort(v[names(v) %in% baf$Probe_Set_ID]),1)
+    return(baf[names(max.var),])
+  })
+  
+  baf.var <- do.call(rbind, max.var)
+  if(class(vcf.map)=='list'){
+    geno.var <- geno[baf.var$Probe_Set_ID,]
+    return(list("BAF"=baf.var,
+                "GT"=geno.var,
+                "Var"=NULL)) #fill in with index of variance data
+  } else if(is.data.frame(vcf.map) | is.matrix(vcf.map)){
+    return(baf.var)
+  }
+ 
+}
