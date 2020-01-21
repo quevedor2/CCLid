@@ -110,10 +110,12 @@ balanceGrps <- function(D.vals){
 #' @return
 #' @export
 similarityMatrix <- function(mat, method){
+  require(Rfast)
+  require(philentropy)
   D <- switch(method,
               "cor"=cor(mat),
               "jaccard"=philentropy::distance(t(mat), method='jaccard'),
-              "euclidean"=philentropy::distance(t(mat), method='euclidean'))
+              "euclidean"=Rfast::Dist(t(mat), method='euclidean'))
   colnames(D) <- rownames(D) <- colnames(mat)
   return(D)
 }
