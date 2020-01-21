@@ -255,12 +255,13 @@ combineSamples <- function(data.type, sample.mat, prop){
   
   
   ## Look for overall similarity
-  x.dist <- similarityMatrix(x.mat, 'cor')[,1,drop=FALSE]
+  x.dist <- similarityMatrix(x.mat, 'euclidean')[,1,drop=FALSE]
   as.matrix(c(head(x.dist[order(x.dist, decreasing = TRUE),], 10),
               head(x.dist[order(x.dist, decreasing = FALSE),], 10)))
   
   ccle.id <- 'ARLES_p_NCLE_DNAAffy2_S_GenomeWideSNP_6_B06_256036'
   gdsc.id <- '^A549$'
+  gdsc.id <- 'ACN'
   
   x.mat2 <- x.mat[,c(grep(ccle.id, colnames(x.mat)), grep(gdsc.id, colnames(x.mat)))]
   x.mat2 <- x.mat[,c(1, grep(gdsc.id, colnames(x.mat)))]

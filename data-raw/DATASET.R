@@ -65,6 +65,8 @@ colnames(meta.df) <- c('ID', datasets)
 for(d in datasets){
   meta.df[,d] <- as.character(meta.df[,d])
 }
+meta.df[250,]$CCLE <- meta.df[249,]$CCLE ## Fixes DU-145
+meta.df[-c(249),]
 usethis::use_data(meta.df, overwrite = T)
 
 #################

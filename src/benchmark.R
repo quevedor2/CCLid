@@ -17,13 +17,13 @@ bencharkCCLid <- function(bench){
 }
   
 combinedCellLine <- function(){
-  new.ids <- assignGrpIDs(ref.mat, meta.df)
-  colnames(ref.mat) <- new.ids
   ref.mat.bkup <- ref.mat
+  new.ids <- assignGrpIDs(ref.mat.bkup, meta.df)
+  colnames(ref.mat) <- new.ids
   
   a <- 'A549'; b <- 'DU-145'
   cl.A <- grep(paste0("CCLE_", a), colnames(ref.mat))
-  cl.B <- grep(paste0("GDSC_", DU-145), colnames(ref.mat))
+  cl.B <- grep(paste0("GDSC_", b), colnames(ref.mat))
   sample.mat <- ref.mat[,c(cl.A, cl.B)]
   
   vcf.map.var <- mapVariantFeat(sample.mat, var.dat)
@@ -35,22 +35,8 @@ combinedCellLine <- function(){
     prop <- c(p, 1-p)
     sample.x <- as.matrix(combineSamples('BAF', vcf.to.use, prop))
     colnames(sample.x) <- "X"
-
-    A <- sample.x[ov.idx$comp,,drop=FALSE]
-    A2 <- A + runif(n=nrow(A), min = -0.2, max = 0.2)
-    a.idx <- grep(a, colnames(ref.mat))[1]
-    b.idx <- grep(b, colnames(ref.mat))[1]
-    M <- ref.mat[ov.idx$ref, c(a.idx, b.idx), drop=FALSE]
     
-    # Decomposition with complete data
-    #M1.mse <- .checkMse(A, M)
-    M1 <- NNLM::nnmf(A2, k = 0, check.k = FALSE, init=list(W0 = M));
-    M1.deconv <- as.matrix(M1$H[,1] / colSums(M1$H)) # [0.9, 0.09, 0.01]
-    return(M1.deconv)
-  })
-  all.deconv <- as.data.frame(t(do.call(cbind, all.deconv)))
-  all.deconv$prop <- q
-    
+    ## Calculate samples with highest probability
     ov.idx <- overlapPos(comp = sample.x, ref=ref.mat, 
                          mapping = 'probeset')
     x.mat <- cbind(sample.x[ov.idx$comp], 
@@ -58,8 +44,8 @@ combinedCellLine <- function(){
     
     
     x.dist <- similarityMatrix(x.mat, 'euclidean')
-    as.matrix(c(head(x.dist[order(x.dist[,1,drop=FALSE], decreasing = TRUE),], 10),
-                head(x.dist[order(x.dist[,1,drop=FALSE], decreasing = FALSE),], 10)))
+    # as.matrix(c(head(x.dist[order(x.dist[,1,drop=FALSE], decreasing = TRUE), 1], 10),
+    #             head(x.dist[order(x.dist[,1,drop=FALSE], decreasing = FALSE), 1], 10)))
     
     
     D.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=meta.df)
@@ -72,11 +58,39 @@ combinedCellLine <- function(){
     pred <- assemblePredDat(x.vals, known.class=FALSE)
     pred <- mkPredictions(pred, models)
     
+    p.cols <- c('baf.fit', 'z', 'q')
     x.pred <- split(pred, pred$Var2)[[1]]
-    a.prob <- (1 - x.pred[grep(a, x.pred$Var1),]$baf.fit)
-    b.prob <- (1- x.pred[grep(gsub("-", ".", b), x.pred$Var1),]$baf.fit)
-    names(a.prob) <- paste0(a, "_", c(1:2))
-    names(b.prob) <- paste0(b, "_", c(1:2))
+    x.pred$CL <- gsub("^.*?_", "", x.pred$Var1)
+    
+    ## ground-truth
+    a.idx <- grep(a, x.pred$Var1)
+    b.idx <- grep(b, x.pred$Var1)
+    a.prob <- x.pred[a.idx, p.cols]
+    rownames(a.prob) <- x.pred[a.idx,]$Var1
+    b.prob <- x.pred[b.idx, p.cols]
+    rownames(b.prob) <- x.pred[b.idx,]$Var1
+    
+    ## predicted-matches
+    sig.idx <- which(x.pred$z < -3)
+    pred.prob <- x.pred[sig.idx, p.cols]
+
+    ## Deconvolute the samples using highest probability samples:
+    A <- sample.x[ov.idx$comp,,drop=FALSE]
+    A2 <- A + runif(n=nrow(A), min = -0.2, max = 0.2)
+    a.idx <- grep(a, colnames(ref.mat))[1]
+    b.idx <- grep(b, colnames(ref.mat))[1]
+    M <- ref.mat[ov.idx$ref, c(a.idx, b.idx), drop=FALSE]
+    
+    # Decomposition with complete data
+    #M1.mse <- .checkMse(A, M)
+    M1 <- NNLM::nnmf(A2, k = 0, check.k = FALSE, init=list(W0 = M));
+    M1.deconv <- as.matrix(M1$H[,1] / colSums(M1$H)) # [0.9, 0.09, 0.01]
+    return(M1.deconv)
+  # })
+  all.deconv <- as.data.frame(t(do.call(cbind, all.deconv)))
+  all.deconv$prop <- q
+    
+    
     
     c(a.prob, b.prob)
   })

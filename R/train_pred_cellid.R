@@ -1,3 +1,14 @@
+#' z-statistic
+#'
+#' @param dat 
+#'
+#' @return
+.zval <- function(dat, p=FALSE){
+  z <- (dat - mean(dat)) / sd(dat)
+  if(p) z <- 2*pnorm(-abs(z))
+  return(z)
+}
+
 #' assignGrpIDs
 #' @description Creates a standardized set of group names for 
 #' samples using a reference
@@ -193,6 +204,11 @@ mkPredictions <- function(pred, models){
   colnames(p.fits) <- paste0(colnames(p.fits), ".p.fit")
   
   pred <- do.call(cbind, list(pred, fits, p.fits))
+  
+  pred$z <- .zval(pred$baf)
+  pred$p <- .zval(pred$baf, p=TRUE)
+  pred$q <- p.adjust(pred$p, method='fdr')
+  
   return(pred)
 }
 
