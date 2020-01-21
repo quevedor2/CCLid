@@ -196,6 +196,7 @@ mkPredictions <- function(pred, models){
 
 #### Private Functions ####
 .meltDf <- function(m){
+  require(reshape2)
   diag(m) <- m[upper.tri(m)] <- NA
   melt.m <- melt(m)
   melt.m[-which(is.na(melt.m$value)),]

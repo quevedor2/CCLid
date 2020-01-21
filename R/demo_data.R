@@ -177,13 +177,15 @@ combineSamples <- function(data.type, sample.mat, prop){
   s.idx.nmf <- c(1,2,3)
   M <- demoSample(data.type, s.idx.nmf, demo$prob)
   M <- annoDemoMat(s.idx.nmf, M)$mat
+  #M <- M[1:50,]
   
   prop.nmf <- c(0.9, 0.09, 0.01)
-  A <- as.matrix(combineSamples('BAF', M, prop=c(0.9, 0.09, 0.01)))
+  prop.nmf <- c(0.60, 0.30, 0.10)
+  A <- as.matrix(combineSamples('BAF', M, prop=prop.nmf))
   
   # Decomposition with complete data
   M1.mse <- .checkMse(A, M)
-  M1 <-nnmf(A, k = 1, check.k = FALSE, init=list(W0 = M));
+  M1 <-nnmf(A, k = 0, check.k = FALSE, init=list(W0 = M));
   as.matrix(M1$H[,1] / colSums(M1$H)) # [0.9, 0.09, 0.01]
   
   # Decomposition with complete data and a rank
@@ -209,10 +211,10 @@ combineSamples <- function(data.type, sample.mat, prop){
   as.matrix(M3$H[,1] / colSums(M3$H)) # [1, 0, 0]
   
   # Decomposition with incomplete data and noise 
-  A2 <- A + runif(n=nrow(A), min = -0.01, max = 0.01)
+  A2 <- A + runif(n=nrow(A), min = -0.2, max = 0.2)
   M4.mse <- .checkMse(A2, M)
   M4 <-nnmf(A2, k = 0, check.k = FALSE, init=list(W0 = M));
-  as.matrix(M4$H[,1] / colSums(M4$H)) # [0.581, 0.418]
+  as.matrix(M4$H[,1] / colSums(M4$H)) # []
   
 }
 
@@ -233,21 +235,14 @@ combineSamples <- function(data.type, sample.mat, prop){
   vcfFile <- '/mnt/work1/users/home2/quever/xfer/A549.sample_id.vcf' ## A549 WES
   vcf.map <- mapVcf2Affy(vcfFile)
   
-  ## Find the overlap between the COMParator and the REFerence
-  ov.idx <- overlapPos(comp = vcf.map$BAF,
-                       ref=ref.mat, mapping = 'probeset')
-  
   ## Combine matrices and reduce features
-  x.mat <- cbind(vcf.map$BAF$BAF[ov.idx$comp], 
+  ## Find the overlap between the COMParator and the REFerence
+  vcf.map.var <- mapVariantFeat(vcf.map, var.dat)
+  vcf.to.use <- vcf.map.var
+  ov.idx <- overlapPos(comp = vcf.to.use$BAF,
+                       ref=ref.mat, mapping = 'probeset')
+  x.mat <- cbind(vcf.to.use$BAF$BAF[ov.idx$comp], 
                  ref.mat[ov.idx$ref,])
-  var.features <- getVariantFeatures(x.mat, bin.size=5e5)
-  
-  
-  
-  
-  pb.var <- merge(var.df, pb.dat, by=Probe_Set_ID, all.x=TRUE)
-  
-  
   
   ## Calculate evidence of genetic drift between sample X and A549
   ccle.id <- 'ARLES_p_NCLE_DNAAffy2_S_GenomeWideSNP_6_B06_256036'
@@ -256,21 +251,19 @@ combineSamples <- function(data.type, sample.mat, prop){
                                           grep(gdsc.id, colnames(x.mat)), 
                                           1, 5)])
   plot(x.drift$cna.obj[[ccle.id]])
+  x.drift$frac
   
   
   ## Look for overall similarity
-
-  # x.mat[is.na(x.mat)] <- median(as.matrix(x.mat), na.rm=T)
   x.dist <- similarityMatrix(x.mat, 'cor')[,1,drop=FALSE]
   as.matrix(c(head(x.dist[order(x.dist, decreasing = TRUE),], 10),
               head(x.dist[order(x.dist, decreasing = FALSE),], 10)))
   
   ccle.id <- 'ARLES_p_NCLE_DNAAffy2_S_GenomeWideSNP_6_B06_256036'
   gdsc.id <- '^A549$'
-  gdsc.id <- '^DU-145$'
-  gdsc.id <- '^HCC2998$'
   
   x.mat2 <- x.mat[,c(grep(ccle.id, colnames(x.mat)), grep(gdsc.id, colnames(x.mat)))]
   x.mat2 <- x.mat[,c(1, grep(gdsc.id, colnames(x.mat)))]
   plot(x.mat2, xlim=c(-0.5, 1.5), ylim=c(-0.5, 1.5))
 }
+

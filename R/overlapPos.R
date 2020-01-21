@@ -35,6 +35,13 @@
 #' @export
 overlapPos <- function(comp, ref, mapping='probeset'){
   switch(mapping,
-         "probeset"=.overlapProbeset(ref.ids=rownames(ref), 
-                                     comp.ids=comp$Probe_Set_ID))
+         "probeset"={
+           if(grepl("Probe_Set_ID", colnames(comp))){
+             .overlapProbeset(ref.ids=rownames(ref), 
+                                     comp.ids=comp$Probe_Set_ID)
+           } else {
+             .overlapProbeset(ref.ids=rownames(ref), 
+                              comp.ids=rownames(comp))
+           }
+           })
 }
