@@ -65,8 +65,33 @@ colnames(meta.df) <- c('ID', datasets)
 for(d in datasets){
   meta.df[,d] <- as.character(meta.df[,d])
 }
-meta.df[250,]$CCLE <- meta.df[249,]$CCLE ## Fixes DU-145
-meta.df[-c(249),]
+
+
+meta.df$tmp <- tolower(gsub("[ -/]", "", meta.df$ID))
+## Fix TT, T-T cell lines
+tt.idx <- grep("^tt$", meta.df$tmp)
+meta.df[grep("^T[-._]T$", meta.df$ID),]$tmp <- 't.t'
+
+dup.ids <- which(table(meta.df$tmp) > 1)
+for(each.dup in names(dup.ids)){
+  datasets <- c('GDSC', 'CCLE')
+  
+  idc <- grep(paste0("^", each.dup, "$"), meta.df$tmp)
+  ds.ids <- apply(meta.df[idc, datasets], 2, na.omit)
+  for(each.ds in names(ds.ids)){
+    meta.df[idc,each.ds] <- ds.ids[each.ds]
+  }
+}
+meta.df <- meta.df[-which(duplicated(meta.df$tmp)),]
+
+meta.df[16,]$CCLE <- meta.df[17,]$CCLE ## Fixes 786-0
+meta.df[309,]$CCLE <- meta.df[310,]$CCLE ## Fixes G-292_Clone_A141B1
+meta.df[529,]$CCLE <- meta.df[528,]$CCLE ## Fixes Ishikawa_Heraklio_02ER
+meta.df[1005,]$CCLE <- meta.df[953,]$CCLE ## Fixes NIH:OVCAR-3
+meta.df[1049,]$CCLE <- meta.df[1050,]$CCLE ## Fixes NIH:OVCAR-3
+meta.df <- meta.df[-c(17, 309, 528, 953, 1050),]
+meta.df <- meta.df[, -grep("^tmp$", colnames(meta.df))]
+
 usethis::use_data(meta.df, overwrite = T)
 
 #################

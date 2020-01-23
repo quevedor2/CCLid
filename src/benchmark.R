@@ -2,6 +2,10 @@ bencharkCCLid <- function(bench){
   library(VariantAnnotation)
   library(CCLid)
   
+  ## Set dataset colors
+  dataset.cols <- setNames(RColorBrewer::brewer.pal(6, "Dark2"),
+                           c("GDSC", "CCLE", "gCSI", "CGP", "Pfizer"))
+  
   ## Load in Ref mat file
   PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
   analysis <- 'baf'
@@ -16,16 +20,33 @@ bencharkCCLid <- function(bench){
   ref.mat <- format.dat$mat
   var.dat <- format.dat$var
 }
-  
+
+
+#################################
+#### Cell Line Decomposition ####
+#################################
+## Measures the detection of cell line decomposition
 combinedCellLine <- function(){
   ref.mat.bkup <- ref.mat
   new.ids <- assignGrpIDs(ref.mat.bkup, meta.df)
   colnames(ref.mat) <- new.ids
   
-  a <- 'A549'; b <- 'DU-145'
-  cl.A <- grep(paste0("CCLE_", a), colnames(ref.mat))
-  cl.B <- grep(paste0("GDSC_", b), colnames(ref.mat))
-  sample.mat <- ref.mat[,c(cl.A, cl.B)]
+  vcf.dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs/GDSC'
+  data.type <- 'rna'
+  
+  vcf.files <- switch(data.type,
+                     "wes"=setNames(c('DU-145.sample_id.vcf'), c("DU-145")), #A549.sample_id.vcf [not A549]
+                     "rna"=setNames(c('EGAF00000661931.snpOut.vcf.gz', 'EGAF00000660849.snpOut.vcf.gz'), 
+                                    c("EM-2", "COLO-205"))) #EM-2 CaR-1
+  
+  ## Load in two VCFs (EM-2 and CaR-1) from a given technology
+  vcf.maps <- lapply(vcf.files, function(f) {
+    mapVcf2Affy(file.path(vcf.dir, f))$BAF[,c('Probe_Set_ID', 'BAF'), drop=FALSE]
+  })
+  sample.mat <- as.data.frame(Reduce(function(x,y) merge(x,y, by='Probe_Set_ID'), vcf.maps))
+  rownames(sample.mat) <- sample.mat$Probe_Set_ID
+  sample.mat <- sample.mat[,-1,drop=FALSE]
+  colnames(sample.mat) <- names(vcf.files)
   
   vcf.map.var <- mapVariantFeat(sample.mat, var.dat)
   vcf.to.use <- vcf.map.var[,c(1,2)]
@@ -43,31 +64,10 @@ combinedCellLine <- function(){
     x.mat <- cbind(sample.x[ov.idx$comp], 
                    ref.mat[ov.idx$ref,])
     
-    ## Logit model based on euclidean distance between probesets
-    analyze.probesets=FALSE
-    if(analyze.probesets){
-      snpD.vals <- lapply(list("baf"=x.mat), splitSnpDist, meta.df=meta.df)
-      balanced <- snpD.vals$baf
-      balanced$id <- factor(balanced$id)
-      probeset.model <- trainLogit(balanced, predictors=c('.'))
-      
-      pred.snp <- t(sapply(c(1:ncol(x.mat)), function(c.idx){
-        abs(rowDiffs(as.matrix(x.mat[,c(1,c.idx)])))
-      }))
-      colnames(pred.snp) <- rownames(x.mat)
-      rownames(pred.snp) <- colnames(x.mat)
-      x.pred.snp <- predict(probeset.model[[1]], newdata = as.data.frame(pred.snp), type = "response")
-      
-      head(as.matrix(sort(x.pred.snp)), 30)
-      as.matrix(sort(x.pred.snp[c('CCLE_DU-145', 'GDSC_DU-145',
-                                  'CCLE_A549', 'GDSC_A549')]))
-      head(as.matrix(sort(rowSums(pred.snp))), 10)
-      lapply(split(rowSums(snpD.vals$baf[,-ncol(snpD.vals$baf)]), snpD.vals$baf$id), summary)
-      
-      pred <- mkPredictions(pred.snp, probeset.model)
-    }
     ## Logit model based on euclidean distance between samples
     x.dist <- similarityMatrix(x.mat, 'euclidean')
+    x <- x.dist[,1]
+    head(sort(x))
     D.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=meta.df)
     balanced <- balanceGrps(D.vals)
     D.model <- trainLogit(balanced, predictors=c('baf'))
@@ -81,8 +81,8 @@ combinedCellLine <- function(){
     x.pred$CL <- gsub("^.*?_", "", x.pred$Var1)
     
     ## ground-truth
-    truth.cl <- lapply(setNames(c(a,b), c(a,b)), function(i){
-      i.idx <- grep(i, x.pred$Var1)
+    truth.cl <- lapply(setNames(names(vcf.files), names(vcf.files)), function(i){
+      i.idx <- grep(paste0("_", i, "$"), x.pred$Var1)
       i.prob <- x.pred[i.idx, p.cols]
       rownames(i.prob) <- x.pred[i.idx,]$Var1
       return(i.prob)
@@ -96,29 +96,36 @@ combinedCellLine <- function(){
     pred.cl <- split(pred.prob, pred.prob$CL)
 
     ## Deconvolute the samples using highest probability samples:
-    # pred.cl[['OVSAHO']] <- x[3,,drop=FALSE]
-    # rownames(pred.cl[['OVSAHO']]) <- "CCLE_OVSAHO"
     A <- sample.x[ov.idx$comp,,drop=FALSE]
-    A2 <- A + runif(n=nrow(A), min = -0.2, max = 0.2)
-    M <- sapply(pred.cl, function(p.cl){
+    M.t <- sapply(truth.cl, function(p.cl){
         combineSamples("BAF", ref.mat[ov.idx$ref, rownames(p.cl), drop=FALSE], 
                      rep(1/nrow(p.cl), nrow(p.cl)))
     })
-    M.mse <- checkMse(A2, M)
+    M.p <- sapply(pred.cl, function(p.cl){
+      combineSamples("BAF", ref.mat[ov.idx$ref, rownames(p.cl), drop=FALSE], 
+                     rep(1/nrow(p.cl), nrow(p.cl)))
+    })
     
     # Decomposition with complete data
     #M1.mse <- .checkMse(A, M)
-    M0 <- NNLM::nnmf(A2, k = 0, check.k = FALSE, init=list(W0 = M));
-    M1 <- NNLM::nnmf(A2, k = 1, check.k = FALSE, init=list(W0 = M));
-    M1.deconv <- as.matrix(M1$H[,1] / colSums(M1$H)) # [0.9, 0.09, 0.01]
+    M0 <- NNLM::nnmf(A, k = 0, check.k = FALSE, init=list(W0 = M.t));
     M0.deconv <- as.matrix(M0$H[,1] / colSums(M0$H)) # [0.9, 0.09, 0.01]
+    rownames(M0.deconv) <- colnames(M.t)
+    
+    M1 <- NNLM::nnmf(A, k = 0, check.k = FALSE, init=list(W0 = M.p));
+    M1.deconv <- as.matrix(M1$H[,1] / colSums(M1$H)) # [0.9, 0.09, 0.01]
+    rownames(M1.deconv) <- colnames(M.p)
     
     return(list("truth"=truth.cl,
                 "pred"=pred.cl,
-                "nmf"=M0.deconv))
+                "nmf.truth"=M0.deconv,
+                "nmf.pred"=M1.deconv))
   })
+  names(all.deconv) <- as.character(q)
+  
   lapply(all.deconv, function(i) i$pred)
-  lapply(all.deconv, function(i) i$nmf)
+  lapply(all.deconv, function(i) i$nmf.pred)
+  lapply(all.deconv, function(i) i$nmf.truth)
   
   all.deconv <- as.data.frame(t(do.call(cbind, all.deconv)))
   all.deconv$prop <- q
@@ -149,63 +156,6 @@ combinedCellLine <- function(){
   dev.off()
 }
 
-combinedCellLine <- function(){
-  ref.mat.bkup <- ref.mat
-  new.ids <- assignGrpIDs(ref.mat, meta.df)
-  colnames(ref.mat) <- new.ids
-  
-  
-  vcf.dir <- '/mnt/work1/users/home2/quever/xfer/kelsie'
-  data.type <- 'wes'
-  
-  vcf.files <- switch(data.type,
-                      "wes"=c('DU-145.sample_id.vcf', 'DU-R600.vcf'), #A549.sample_id.vcf [not A549]
-                      "rna"=c('PAR_ATTACTCG.vcf', 'R400_AGCGATAG.vcf'))
-   
-  ## Load in two VCFs (A549 and DU-145) from a given technology
-  vcfs <- lapply(vcf.files, function(v){
-    vcf.map <- mapVcf2Affy(file.path(vcf.dir, data.type, v))
-    vcf.map.var <- mapVariantFeat(vcf.map, var.dat)
-    vcf.map.var
-  })
-  
-  ## Overlap the two VCFs to form a single matrix to combine
-  ov.idx <- overlapPos(comp = vcfs[[1]]$BAF,
-                       ref=vcfs[[1]]$BAF, mapping = 'probeset')
-  vcfs.c <- cbind(vcfs[[1]]$BAF$BAF[ov.idx$comp], 
-                  vcfs[[2]]$BAF$BAF[ov.idx$ref])
-  colnames(vcfs.c) <- gsub(".vcf", "", vcf.files)
-  rownames(vcfs.c) <- vcfs[[1]]$BAF$Probe_Set_ID[ov.idx$comp]
-  
-  
-  
-  ## Purpose: Combine the two samples at different proportions
-  ## See whether we can detect the two samples and deconvolute them
-  lapply(seq(0, 1, by=0.05), function(p){
-    prop <- c(p, 1-p)
-    sample.x <- as.matrix(combineSamples('BAF', vcfs.c, prop))
-    colnames(sample.x) <- "X"
-    
-    ov.idx <- overlapPos(comp = sample.x, ref=ref.mat, 
-                         mapping = 'probeset')
-    x.mat <- cbind(sample.x[ov.idx$comp], 
-                   ref.mat[ov.idx$ref,])
-    
-    
-    x.dist <- similarityMatrix(x.mat, 'cor')[,1,drop=FALSE]
-    as.matrix(c(head(x.dist[order(x.dist, decreasing = TRUE),], 10),
-                head(x.dist[order(x.dist, decreasing = FALSE),], 10)))
-    
-    
-    # x.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=NULL)
-    # pred <- assemblePredDat(x.vals, known.class=FALSE)
-    # pred <- mkPredictions(pred, models)
-    # head(pred[order(pred$baf.fit),], n=15)
-    # ggplot(pred,aes(x=baf,y=baf.fit)) + stat_binhex()
-  })
-  
-}
-
 ##########################
 #### snpsCellIdentity ####
 ##########################
@@ -226,6 +176,10 @@ snpsCellIdentity <- function(){
   vcf.map <- mapVcf2Affy(file.path(vcf.dir, vcf.file))
   
   r <- c(seq(1, 0.1, by=-0.1), seq(0.1, 0.01, by=-0.01), seq(0.01, 0.001, by=-0.001))
+  if(any(duplicated(as.character(r)))) r <- r[-which(duplicated(as.character(r)))]
+  num.snps <- setNames(floor(length(var.dat) * r), r)
+  
+  
   frac.score <- lapply(r, function(frac){
     idx <- sort(sample(1:length(var.dat), size=frac * length(var.dat), replace = FALSE))
     vcf.map.var <- mapVariantFeat(vcf.map, var.dat[idx])
@@ -255,102 +209,44 @@ snpsCellIdentity <- function(){
     
     return(x.pred[,p.cols])
   })
-  frac.p <- as.data.frame(do.call(rbind, frac.score))
-  frac.p$frac.snps <- r
-  frac.p$numb.of.snps <- r * length(var.dat)
+  names(frac.score) <- r
   
-  if(!exists("frac.l")) frac.l <- list()
-  frac.l[[data.type]] <- frac.p
-  
-  pdf("~/minSnps.pdf")
-  lapply(names(frac.l), function(data.type){
-    plot(0, type="n", xlim=c(min(r), max(r)), ylim=c(0,1), xaxt='n', xlab="Frac. of SNPs", 
-         ylab="P", las=1, main=paste0(data.type, ": classify cell identity"))
+  fits <- lapply(setNames(c('baf.fit', 'z'), c('baf', 'z')), function(f){
+    fit <- Reduce(function(x,y) merge(x,y,by="Var1"), lapply(frac.score, function(i) i[,c('Var1', f)]))
+    colnames(fit) <- c('ID', r)
     
-    cols <- setNames(c("#91bfdb", "#4575b4"),
-                     colnames(frac.l[[data.type]])[1:2])
-    axis(side = 1, at=frac.l[[data.type]]$frac.snps, 
-         labels=frac.l[[data.type]]$frac.snps,line=0, tick = TRUE)
-    axis(side = 1, at=frac.l[[data.type]]$frac.snps, 
-         labels=floor(frac.l[[data.type]]$numb.of.snps), line=1, tick = FALSE)
-    for(i in colnames(frac.l[[data.type]])[1:2]){
-      points(x = frac.l[[data.type]]$frac.snps, y=frac.l[[data.type]][,i], pch=16, col=cols[i])
-      lines(x = frac.l[[data.type]]$frac.snps, y=frac.l[[data.type]][,i], col=cols[i])
-    }
+    m.df <- melt(fit)
+    m.df$variable <- num.snps[as.character(m.df$variable)]
     
-    legend(x=0.001, y=0.9, fill=cols, legend=names(cols), box.lwd = 0)
+    coi <- rep(scales::alpha("black", 0.5), nrow(m.df))
+    coi[grep(paste0("CCLE_", names(vcf.file), "$"), m.df$ID)] <- scales::alpha(dataset.cols['CCLE'], 0.5)
+    coi[grep(paste0("GDSC_", names(vcf.file), "$"), m.df$ID)] <- scales::alpha(dataset.cols['GDSC'], 0.5)
+    m.df$clid <- coi
+    return(m.df)
   })
-  dev.off()
-}
-
-snpsCellIdentity <- function(){
-  ref.mat.bkup <- ref.mat
-  new.ids <- assignGrpIDs(ref.mat, meta.df)
-  colnames(ref.mat) <- new.ids
+  fit.style <- 'baf'
+  m.df <- fits[[fit.style]]
+  if(fit.style == 'baf') m.df$value <- 1-m.df$value
   
-  vcf.dir <- '/mnt/work1/users/home2/quever/xfer/kelsie'
-  data.type <- 'rna'
   
-  vcf.file <- switch(data.type,
-                      "wes"=setNames(c('DU-145.sample_id.vcf'), c("DU-145")), #A549.sample_id.vcf [not A549]
-                      "rna"=setNames(c('PAR_ATTACTCG.vcf'), c("A549"))) #A549
+  pdf(file.path(vcf.dir, paste0(fit.style, "_", names(vcf.file), ".pdf")), height = 4, width=6)
+  boxplot(value ~ variable, data = m.df, col="#0000ff22", las=1, cex.axis=0.8,
+          xlab="Number of SNPs", main=paste0(toupper(data.type), ": ", names(vcf.file)),
+          ylab=switch(fit.style, "baf"="Probability", "z"="Z-statistic"),
+          ylim=switch(fit.style, "baf"=c(0,1), "z"=c(-10, 5)),
+          outline=FALSE, border=FALSE, xaxt='n')
+  axis(side=1, at=c(1:length(num.snps)), labels=rep('', length(num.snps)), lwd.ticks = 0.5)
+  axis(side = 1, at=seq(1, length(num.snps), by=2), labels = rev(num.snps[c(FALSE,TRUE)]), tick = TRUE, line=0, cex.axis=0.5)
+  axis(side = 1, at=seq(2, length(num.snps), by=2), labels = rev(num.snps[c(TRUE,FALSE)]), tick = FALSE, line=1, cex.axis=0.5)
+  if(fit.style=='z') abline(h = -3, lty=2)
   
-  ## Load in two VCFs (A549 and DU-145) from a given technology
-  vcf.map <- mapVcf2Affy(file.path(vcf.dir, data.type, vcf.file))
-  
-  r <- seq(0.05, 0.001, by=-0.001)
-  frac.score <- lapply(r, function(frac){
-    idx <- sort(sample(1:length(var.dat), size=frac * length(var.dat), replace = FALSE))
-    vcf.map.var <- mapVariantFeat(vcf.map, var.dat[idx])
-    vaf.to.map <- vcf.map.var
-    
-    ## Overlap the two VCFs to form a single matrix to combine
-    ov.idx <- overlapPos(comp = vaf.to.map$BAF,
-                         ref=ref.mat, mapping = 'probeset')
-    x.mat <- cbind(vaf.to.map$BAF$BAF[ov.idx$comp], 
-                   ref.mat[ov.idx$ref,])
-    
-    x.dist <- similarityMatrix(x.mat, 'euclidean')
-    D.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=meta.df)
-    balanced <- balanceGrps(D.vals)
-    
-    models <- trainLogit(balanced, predictors=c('baf'))
-    x.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=NULL)
-    pred <- assemblePredDat(x.vals, known.class=FALSE)
-    pred <- mkPredictions(pred, models)
-    
-    x.pred <- split(pred, pred$Var2)[[1]]
-    #tail(x.pred[order(x.pred$baf, decreasing = TRUE),])
-    cl.id <- names(vcf.file)
-    cl.prob <- (1- x.pred[grep(gsub("-", ".", cl.id), x.pred$Var1),]$baf.fit)
-    cl.prob <- setNames(cl.prob, as.character(x.pred[grep(gsub("-", ".", cl.id), x.pred$Var1),]$Var1))
-    
-    cl.prob
-  })
-  frac.p <- as.data.frame(do.call(rbind, frac.score))
-  frac.p$frac.snps <- r
-  frac.p$numb.of.snps <- r * length(var.dat)
-  
-  if(!exists("frac.l")) frac.l <- list()
-  frac.l[[data.type]] <- frac.p
-  
-  pdf("~/minSnps.pdf")
-  lapply(names(frac.l), function(data.type){
-    plot(0, type="n", xlim=c(min(r), max(r)), ylim=c(0,1), xaxt='n', xlab="Frac. of SNPs", 
-         ylab="P", las=1, main=paste0(data.type, ": classify cell identity"))
-    
-    cols <- setNames(c("#91bfdb", "#4575b4"),
-                     colnames(frac.l[[data.type]])[1:2])
-    axis(side = 1, at=frac.l[[data.type]]$frac.snps, 
-         labels=frac.l[[data.type]]$frac.snps,line=0, tick = TRUE)
-    axis(side = 1, at=frac.l[[data.type]]$frac.snps, 
-         labels=floor(frac.l[[data.type]]$numb.of.snps), line=1, tick = FALSE)
-    for(i in colnames(frac.l[[data.type]])[1:2]){
-      points(x = frac.l[[data.type]]$frac.snps, y=frac.l[[data.type]][,i], pch=16, col=cols[i])
-      lines(x = frac.l[[data.type]]$frac.snps, y=frac.l[[data.type]][,i], col=cols[i])
-    }
-    
-    legend(x=0.001, y=0.9, fill=cols, legend=names(cols), box.lwd = 0)
-  })
+  spl <- split(m.df, m.df$variable)
+  ext.m.df <- do.call(rbind, lapply(spl, function(i){
+    switch(fit.style,
+           "baf"=i[i$value > quantile(i$value, 0.95),],
+           "z"=i[i$value < quantile(i$value, 0.05),])
+  }))
+  beeswarm(value ~ variable, data = ext.m.df, method = 'swarm', corral = 'gutter',
+           cex=0.8, pch = 16, pwcol=clid, add=TRUE)
   dev.off()
 }
