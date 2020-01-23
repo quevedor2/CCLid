@@ -1,3 +1,7 @@
+###########################
+#### Preliminary steps ####
+###########################
+## Run before executing any of the following 3 analyses
 bencharkCCLid <- function(bench){
   library(VariantAnnotation)
   library(CCLid)
@@ -19,18 +23,59 @@ bencharkCCLid <- function(bench){
   # var.dat <- var.dat2
   ref.mat <- format.dat$mat
   var.dat <- format.dat$var
+  
+  ref.mat.bkup <- ref.mat
+  new.ids <- assignGrpIDs(ref.mat.bkup, meta.df)
+  colnames(ref.mat) <- new.ids
 }
 
+
+#######################
+#### Genetic Drift ####
+#######################
+## Measures the amount of genetic drift between cell lines using BAF
+geneticDrift <- function(){
+  vcf.dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs/GDSC'
+  data.type <- 'rna'
+  
+  vcf.file <- switch(data.type,
+                      "rna"=setNames(c('EGAF00000660866.snpOut.vcf.gz'), 
+                                     c("HT-29"))) #HT-29
+
+  ## Load in the VCF of HT-29
+  sample.mat <- mapVcf2Affy(file.path(vcf.dir, vcf.file))$BAF[,c('Probe_Set_ID', 'BAF'), drop=FALSE]
+  rownames(sample.mat) <- sample.mat$Probe_Set_ID
+  sample.mat <- as.data.frame(sample.mat[,-1,drop=FALSE])
+
+  vcf.map.var <- mapVariantFeat(sample.mat, var.dat)
+  vcf.to.use <- as.matrix(vcf.map.var[,1, drop=FALSE])
+  rownames(vcf.to.use) <- vcf.map.var$Probe_Set_ID
+  
+  ## Append sample to matrix
+  ov.idx <- overlapPos(comp = vcf.to.use, ref=ref.mat, 
+                       mapping = 'probeset')
+  x.mat <- cbind(vcf.to.use[ov.idx$comp], 
+                 ref.mat[ov.idx$ref,])
+  
+  ## Calculate drift of Cell line with RNAseq with external control
+  cl.idx <- grep(names(vcf.file), colnames(x.mat))
+  em2.idx <- grep('_EM-2$', colnames(x.mat))
+  x.drift <- bafDrift(sample.mat=x.mat[,c(cl.idx, 1, em2.idx)])
+  
+  pdf(file.path(vcf.dir, paste0("drift_", names(vcf.file), ".pdf")), height = 4, width=5)
+  plot(x.drift$cna.obj[[1]], low.sig.alpha=0, sample.size=70)
+  dev.off()
+  print(file.path(vcf.dir, paste0("drift_", names(vcf.file), ".pdf")))
+
+  
+  
+}
 
 #################################
 #### Cell Line Decomposition ####
 #################################
 ## Measures the detection of cell line decomposition
 combinedCellLine <- function(){
-  ref.mat.bkup <- ref.mat
-  new.ids <- assignGrpIDs(ref.mat.bkup, meta.df)
-  colnames(ref.mat) <- new.ids
-  
   vcf.dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs/GDSC'
   data.type <- 'rna'
   
@@ -194,10 +239,6 @@ combinedCellLine <- function(){
 ##########################
 ## Measures the number of SNPs needed to call cellular identity
 snpsCellIdentity <- function(){
-  ref.mat.bkup <- ref.mat
-  new.ids <- assignGrpIDs(ref.mat.bkup, meta.df)
-  colnames(ref.mat) <- new.ids
-  
   vcf.dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs/GDSC'
   data.type <- 'rna'
   
