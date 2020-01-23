@@ -10,7 +10,8 @@ formatRefMat(
   analysis,
   varFileName = NULL,
   saveDir = file.path(".", "CCLid"),
-  bin.size = 1e+06
+  bin.size = 1e+06,
+  just.var = FALSE
 )
 }
 \arguments{

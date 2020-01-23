@@ -246,13 +246,14 @@ snpsCellIdentity <- function(){
     pred <- assemblePredDat(x.vals, known.class=FALSE)
     pred <- mkPredictions(pred, models)
     
+    p.cols <- c("Var1", "baf.fit", "z", "q")
     x.pred <- split(pred, pred$Var2)[[1]]
-    #tail(x.pred[order(x.pred$baf, decreasing = TRUE),])
-    cl.id <- names(vcf.file)
-    cl.prob <- (1- x.pred[grep(gsub("-", ".", cl.id), x.pred$Var1),]$baf.fit)
-    cl.prob <- setNames(cl.prob, as.character(x.pred[grep(gsub("-", ".", cl.id), x.pred$Var1),]$Var1))
+    # x.pred[order(x.pred$z),]
+    # #tail(x.pred[order(x.pred$baf, decreasing = TRUE),])
+    # cl.idx <- grep(paste0("_", names(vcf.file), "$"), x.pred$Var1)
+    # cl.prob <- setNames(1-x.pred[cl.idx,]$baf.fit, x.pred[cl.idx,]$Var1)
     
-    cl.prob
+    return(x.pred[,p.cols])
   })
   frac.p <- as.data.frame(do.call(rbind, frac.score))
   frac.p$frac.snps <- r
