@@ -8,12 +8,13 @@ bencharkCCLid <- function(bench){
   ref.mat <- downloadRefCCL("BAF", saveDir = PDIR)
   format.dat <- formatRefMat(name="BAF", ref.mat=ref.mat, 
                              analysis='baf', bin.size=5e5)
+  # var.dat10mb <- var.dat2
+  # var.dat5mb <- var.dat2
+  # var.dat500k <- var.dat
+  # var.dat1mb <- var.dat2
+  # var.dat <- var.dat2
   ref.mat <- format.dat$mat
   var.dat <- format.dat$var
-  
-  ## Load in VCF file
-  vcfFile <- '/mnt/work1/users/home2/quever/xfer/A549.sample_id.vcf' ## A549 WES
-  vcf.map <- mapVcf2Affy(vcfFile)
 }
   
 combinedCellLine <- function(){
@@ -42,58 +43,87 @@ combinedCellLine <- function(){
     x.mat <- cbind(sample.x[ov.idx$comp], 
                    ref.mat[ov.idx$ref,])
     
-    
+    ## Logit model based on euclidean distance between probesets
+    analyze.probesets=FALSE
+    if(analyze.probesets){
+      snpD.vals <- lapply(list("baf"=x.mat), splitSnpDist, meta.df=meta.df)
+      balanced <- snpD.vals$baf
+      balanced$id <- factor(balanced$id)
+      probeset.model <- trainLogit(balanced, predictors=c('.'))
+      
+      pred.snp <- t(sapply(c(1:ncol(x.mat)), function(c.idx){
+        abs(rowDiffs(as.matrix(x.mat[,c(1,c.idx)])))
+      }))
+      colnames(pred.snp) <- rownames(x.mat)
+      rownames(pred.snp) <- colnames(x.mat)
+      x.pred.snp <- predict(probeset.model[[1]], newdata = as.data.frame(pred.snp), type = "response")
+      
+      head(as.matrix(sort(x.pred.snp)), 30)
+      as.matrix(sort(x.pred.snp[c('CCLE_DU-145', 'GDSC_DU-145',
+                                  'CCLE_A549', 'GDSC_A549')]))
+      head(as.matrix(sort(rowSums(pred.snp))), 10)
+      lapply(split(rowSums(snpD.vals$baf[,-ncol(snpD.vals$baf)]), snpD.vals$baf$id), summary)
+      
+      pred <- mkPredictions(pred.snp, probeset.model)
+    }
+    ## Logit model based on euclidean distance between samples
     x.dist <- similarityMatrix(x.mat, 'euclidean')
-    # as.matrix(c(head(x.dist[order(x.dist[,1,drop=FALSE], decreasing = TRUE), 1], 10),
-    #             head(x.dist[order(x.dist[,1,drop=FALSE], decreasing = FALSE), 1], 10)))
-    
-    
     D.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=meta.df)
     balanced <- balanceGrps(D.vals)
-    # plotHist(D.vals$baf)
-    
-    models <- trainLogit(balanced, predictors=c('baf'))
+    D.model <- trainLogit(balanced, predictors=c('baf'))
     
     x.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=NULL)
     pred <- assemblePredDat(x.vals, known.class=FALSE)
-    pred <- mkPredictions(pred, models)
+    pred <- mkPredictions(pred, D.model)
     
     p.cols <- c('baf.fit', 'z', 'q')
     x.pred <- split(pred, pred$Var2)[[1]]
     x.pred$CL <- gsub("^.*?_", "", x.pred$Var1)
     
     ## ground-truth
-    a.idx <- grep(a, x.pred$Var1)
-    b.idx <- grep(b, x.pred$Var1)
-    a.prob <- x.pred[a.idx, p.cols]
-    rownames(a.prob) <- x.pred[a.idx,]$Var1
-    b.prob <- x.pred[b.idx, p.cols]
-    rownames(b.prob) <- x.pred[b.idx,]$Var1
+    truth.cl <- lapply(setNames(c(a,b), c(a,b)), function(i){
+      i.idx <- grep(i, x.pred$Var1)
+      i.prob <- x.pred[i.idx, p.cols]
+      rownames(i.prob) <- x.pred[i.idx,]$Var1
+      return(i.prob)
+    })
     
     ## predicted-matches
     sig.idx <- which(x.pred$z < -3)
-    pred.prob <- x.pred[sig.idx, p.cols]
+    x <- x.pred[order(x.pred$z),]
+    pred.prob <- x.pred[sig.idx, c(p.cols, "CL")]
+    rownames(pred.prob) <- x.pred[sig.idx,]$Var1
+    pred.cl <- split(pred.prob, pred.prob$CL)
 
     ## Deconvolute the samples using highest probability samples:
+    # pred.cl[['OVSAHO']] <- x[3,,drop=FALSE]
+    # rownames(pred.cl[['OVSAHO']]) <- "CCLE_OVSAHO"
     A <- sample.x[ov.idx$comp,,drop=FALSE]
     A2 <- A + runif(n=nrow(A), min = -0.2, max = 0.2)
-    a.idx <- grep(a, colnames(ref.mat))[1]
-    b.idx <- grep(b, colnames(ref.mat))[1]
-    M <- ref.mat[ov.idx$ref, c(a.idx, b.idx), drop=FALSE]
+    M <- sapply(pred.cl, function(p.cl){
+        combineSamples("BAF", ref.mat[ov.idx$ref, rownames(p.cl), drop=FALSE], 
+                     rep(1/nrow(p.cl), nrow(p.cl)))
+    })
+    M.mse <- checkMse(A2, M)
     
     # Decomposition with complete data
     #M1.mse <- .checkMse(A, M)
-    M1 <- NNLM::nnmf(A2, k = 0, check.k = FALSE, init=list(W0 = M));
+    M0 <- NNLM::nnmf(A2, k = 0, check.k = FALSE, init=list(W0 = M));
+    M1 <- NNLM::nnmf(A2, k = 1, check.k = FALSE, init=list(W0 = M));
     M1.deconv <- as.matrix(M1$H[,1] / colSums(M1$H)) # [0.9, 0.09, 0.01]
-    return(M1.deconv)
-  # })
+    M0.deconv <- as.matrix(M0$H[,1] / colSums(M0$H)) # [0.9, 0.09, 0.01]
+    
+    return(list("truth"=truth.cl,
+                "pred"=pred.cl,
+                "nmf"=M0.deconv))
+  })
+  lapply(all.deconv, function(i) i$pred)
+  lapply(all.deconv, function(i) i$nmf)
+  
   all.deconv <- as.data.frame(t(do.call(cbind, all.deconv)))
   all.deconv$prop <- q
     
-    
-    
-    c(a.prob, b.prob)
-  })
+
   prob.mat <- as.data.frame(do.call(rbind, all.probs))
   prob.mat$prop_A <- q
   prob.mat$prop_B <- 1-q
@@ -180,6 +210,78 @@ combinedCellLine <- function(){
 #### snpsCellIdentity ####
 ##########################
 ## Measures the number of SNPs needed to call cellular identity
+snpsCellIdentity <- function(){
+  ref.mat.bkup <- ref.mat
+  new.ids <- assignGrpIDs(ref.mat.bkup, meta.df)
+  colnames(ref.mat) <- new.ids
+  
+  vcf.dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs/GDSC'
+  data.type <- 'rna'
+  
+  vcf.file <- switch(data.type,
+                     "wes"=setNames(c('DU-145.sample_id.vcf'), c("DU-145")), #A549.sample_id.vcf [not A549]
+                     "rna"=setNames(c('EGAF00000661931.snpOut.vcf.gz'), c("EM-2"))) #EM-2
+  
+  ## Load in two VCFs (A549 and DU-145) from a given technology
+  vcf.map <- mapVcf2Affy(file.path(vcf.dir, vcf.file))
+  
+  r <- c(seq(1, 0.1, by=-0.1), seq(0.1, 0.01, by=-0.01), seq(0.01, 0.001, by=-0.001))
+  frac.score <- lapply(r, function(frac){
+    idx <- sort(sample(1:length(var.dat), size=frac * length(var.dat), replace = FALSE))
+    vcf.map.var <- mapVariantFeat(vcf.map, var.dat[idx])
+    vaf.to.map <- vcf.map.var
+    
+    ## Overlap the two VCFs to form a single matrix to combine
+    ov.idx <- overlapPos(comp = vaf.to.map$BAF,
+                         ref=ref.mat, mapping = 'probeset')
+    x.mat <- cbind(vaf.to.map$BAF$BAF[ov.idx$comp], 
+                   ref.mat[ov.idx$ref,])
+    
+    x.dist <- similarityMatrix(x.mat, 'euclidean')
+    D.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=meta.df)
+    balanced <- balanceGrps(D.vals)
+    
+    models <- trainLogit(balanced, predictors=c('baf'))
+    x.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=NULL)
+    pred <- assemblePredDat(x.vals, known.class=FALSE)
+    pred <- mkPredictions(pred, models)
+    
+    x.pred <- split(pred, pred$Var2)[[1]]
+    #tail(x.pred[order(x.pred$baf, decreasing = TRUE),])
+    cl.id <- names(vcf.file)
+    cl.prob <- (1- x.pred[grep(gsub("-", ".", cl.id), x.pred$Var1),]$baf.fit)
+    cl.prob <- setNames(cl.prob, as.character(x.pred[grep(gsub("-", ".", cl.id), x.pred$Var1),]$Var1))
+    
+    cl.prob
+  })
+  frac.p <- as.data.frame(do.call(rbind, frac.score))
+  frac.p$frac.snps <- r
+  frac.p$numb.of.snps <- r * length(var.dat)
+  
+  if(!exists("frac.l")) frac.l <- list()
+  frac.l[[data.type]] <- frac.p
+  
+  pdf("~/minSnps.pdf")
+  lapply(names(frac.l), function(data.type){
+    plot(0, type="n", xlim=c(min(r), max(r)), ylim=c(0,1), xaxt='n', xlab="Frac. of SNPs", 
+         ylab="P", las=1, main=paste0(data.type, ": classify cell identity"))
+    
+    cols <- setNames(c("#91bfdb", "#4575b4"),
+                     colnames(frac.l[[data.type]])[1:2])
+    axis(side = 1, at=frac.l[[data.type]]$frac.snps, 
+         labels=frac.l[[data.type]]$frac.snps,line=0, tick = TRUE)
+    axis(side = 1, at=frac.l[[data.type]]$frac.snps, 
+         labels=floor(frac.l[[data.type]]$numb.of.snps), line=1, tick = FALSE)
+    for(i in colnames(frac.l[[data.type]])[1:2]){
+      points(x = frac.l[[data.type]]$frac.snps, y=frac.l[[data.type]][,i], pch=16, col=cols[i])
+      lines(x = frac.l[[data.type]]$frac.snps, y=frac.l[[data.type]][,i], col=cols[i])
+    }
+    
+    legend(x=0.001, y=0.9, fill=cols, legend=names(cols), box.lwd = 0)
+  })
+  dev.off()
+}
+
 snpsCellIdentity <- function(){
   ref.mat.bkup <- ref.mat
   new.ids <- assignGrpIDs(ref.mat, meta.df)

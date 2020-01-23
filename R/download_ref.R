@@ -63,7 +63,7 @@ availableRefCCL <- function (saveDir = file.path(".", "CCLid"),
 #' @examples
 formatRefMat <- function(name, ref.mat, analysis, 
                          varFileName=NULL, saveDir = file.path(".", "CCLid"), 
-                         bin.size=1e6){
+                         bin.size=1e6, just.var=FALSE){
   ## Set filename and file path
   ccl.table <- CCLid::availableRefCCL(saveDir = saveDir)
   whichx <- match(name, ccl.table[, 1])
@@ -73,14 +73,16 @@ formatRefMat <- function(name, ref.mat, analysis,
   }
   
   ## Process if existing RDS doesn't exist
-  rownames(ref.mat) <- ref.mat$ID
-  ref.mat <- ref.mat[,-1]
-  keep.idx <- switch(analysis,
-                     lrr=grep("CN", gsub("_.*", "", rownames(ref.mat))),
-                     baf=grep("SNP", gsub("_.*", "", rownames(ref.mat))),
-                     stop("'analysis' parameter must be submitted: 'lrr, baf'"))
-  ref.mat <- ref.mat[keep.idx,]
-  ref.mat[is.na(ref.mat)] <- median(as.matrix(ref.mat), na.rm=T)
+  if(!just.var){
+    rownames(ref.mat) <- ref.mat$ID
+    ref.mat <- ref.mat[,-1]
+    keep.idx <- switch(analysis,
+                       lrr=grep("CN", gsub("_.*", "", rownames(ref.mat))),
+                       baf=grep("SNP", gsub("_.*", "", rownames(ref.mat))),
+                       stop("'analysis' parameter must be submitted: 'lrr, baf'"))
+    ref.mat <- ref.mat[keep.idx,]
+    ref.mat[is.na(ref.mat)] <- median(as.matrix(ref.mat), na.rm=T)
+  }
   
   ## Calculate variant features if file doesn't already exist
   if (!file.exists(file.path(saveDir, varFileName))) {

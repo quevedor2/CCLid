@@ -167,7 +167,6 @@ trainLogit <- function(balanced, ...){
   models <- lapply(fs, function(f){
     glm(f, family=binomial(link='logit'),data=balanced)
   })
-  
   return(models)
 }
 
@@ -224,4 +223,81 @@ mkPredictions <- function(pred, models){
   lapply(predictors, function(p){
     as.formula(paste0("id ~ ", paste(p, collapse="+")))
   })
+}
+
+#' .genNonmatchSnpDiff
+#' @description generates a matrix of euclidean distance between probesets of 
+#' sample pairs if the sample id's dont' match (NON-MATCH)
+#' @param col.len 
+#' @param dr.nm 
+#'
+#' @return
+.genNonmatchSnpDiff <- function(col.len, dr.nm){
+  ## Initialize a matrix of random pairs
+  r.idx <- matrix(sample(1:ncol(dr.nm), col.len*2, replace=TRUE), nrow=2)
+  ids.match <- TRUE
+  while(ids.match){
+    ## Initialize a matrix of random pairs
+    id.mat <- matrix(colnames(dr.nm)[r.idx], nrow=2)
+    id.mat <- gsub("^.*?_", "", id.mat)
+    
+    m.idx <- apply(id.mat, 2, function(i) {i[1] == i[2]})
+    ids.match <- any(m.idx) # check for matching pairs
+    
+    ## update matching pairs to new indices
+    if(ids.match){
+      r.idx[,which(m.idx)] <- sample(1:ncol(dr.nm), sum(m.idx)*2, replace=TRUE)
+    }
+  }
+  
+  d <- as.data.frame(apply(r.idx, 2, function(com){
+    rowDiffs(as.matrix(dr.nm[,com]))
+  }))
+  rownames(d) <- rownames(dr.nm)
+  colnames(d) <- apply(r.idx,2, function(j) paste(colnames(dr.nm)[j],collapse=':'))
+  return(d)
+}
+
+#' .genMatchSnpDiff
+#' @description generates a matrix of euclidean distance between probesets of 
+#' sample pairs if the sample id's MATCH
+#' @param dr.nm 
+#'
+#' @return
+.genMatchSnpDiff <- function(dr.nm){
+  m.d <- sapply(meta.df$ID, function(i){
+    idx <- grep(paste0("_", i, "$"), colnames(dr.nm))
+    if(length(idx) > 1){
+      d <- as.data.frame(apply(combn(idx,2), 2, function(com){
+        rowDiffs(as.matrix(dr.nm[,com]))
+      }))
+      rownames(d) <- rownames(dr.nm)
+      colnames(d) <- apply(combn(idx,2),2, function(j) paste(colnames(dr.nm)[j],collapse=':'))
+      return(d)
+    }
+  })
+  null.idx <- sapply(m.d, is.null)
+  if(any(null.idx)){
+    m.d <- do.call(cbind, m.d[-which(null.idx)])
+  } 
+  
+  return(m.d)
+}
+
+#' splitSnpDist
+#'
+#' @param dm 
+#' @param meta.df 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+splitSnpDist <- function(dm, meta.df){
+  dr.nm <- dm
+  m.d <- abs(.genMatchSnpDiff(dr.nm))
+  nm.d <- abs(.genNonmatchSnpDiff(col.len=ncol(m.d), dr.nm))
+  pred.mat <- as.data.frame(t(cbind(m.d, nm.d)))
+  pred.mat$id <- c(rep("M", ncol(m.d)), rep("NM", ncol(nm.d)))
+  return(pred.mat)
 }
