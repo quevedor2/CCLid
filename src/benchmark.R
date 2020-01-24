@@ -2,7 +2,7 @@
 #### Preliminary steps ####
 ###########################
 ## Run before executing any of the following 3 analyses
-bencharkCCLid <- function(bench){
+benchmarkCCLid <- function(bench){
   library(VariantAnnotation)
   library(CCLid)
   

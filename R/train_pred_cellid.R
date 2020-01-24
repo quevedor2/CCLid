@@ -20,6 +20,7 @@
 #' @export
 assignGrpIDs <- function(mat, meta.df){
   new.ids <- sapply(colnames(mat), function(i){
+    i <- gsub(".[xy]$", "", i)
     cidx <- grep(i, meta.df, ignore.case = T)
     cidx <- cidx[length(cidx)]
     ridx <- grep(paste0("^", i, "(.cel)?$"), meta.df[,cidx], ignore.case = T)
@@ -44,7 +45,22 @@ assignGrpIDs <- function(mat, meta.df){
 #' @export
 splitConcordanceVals <- function(dm, meta.df){
   dr.nm <- dm
-  
+  # 
+  # all.idx <- sapply(meta.df$ID, function(i) grep(paste0("_", i, "$"), x=colnames(dr.nm)))
+  # mat.idx <- c(x, x + nrow(mat))
+  # 
+  # m.vals <- lapply(all.idx, function(idx){
+  #   m.val <- .meltDf(dr.nm[idx,idx,drop=FALSE])
+  #   m.val
+  # })
+  # 
+  # m.vals <- list()
+  # for(idx in all.idx){
+  #   print(idx)
+  #   m.vals[[idx]] <- .meltDf(dr.nm[idx,idx,drop=FALSE])
+  #   #dr.nm[idx,idx] <- NA
+  # }
+  # 
   m.vals <- list()
   for(i in meta.df$ID){
     idx <- grep(paste0("_", i, "$"), colnames(dr.nm))

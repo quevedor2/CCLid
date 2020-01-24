@@ -83,13 +83,14 @@ for(each.dup in names(dup.ids)){
   }
 }
 meta.df <- meta.df[-which(duplicated(meta.df$tmp)),]
+rownames(meta.df) <- 1:nrow(meta.df)
 
-meta.df[16,]$CCLE <- meta.df[17,]$CCLE ## Fixes 786-0
-meta.df[309,]$CCLE <- meta.df[310,]$CCLE ## Fixes G-292_Clone_A141B1
-meta.df[529,]$CCLE <- meta.df[528,]$CCLE ## Fixes Ishikawa_Heraklio_02ER
-meta.df[1005,]$CCLE <- meta.df[953,]$CCLE ## Fixes NIH:OVCAR-3
-meta.df[1049,]$CCLE <- meta.df[1050,]$CCLE ## Fixes NIH:OVCAR-3
-meta.df <- meta.df[-c(17, 309, 528, 953, 1050),]
+meta.df[14,]$CCLE <- meta.df[15,]$CCLE ## Fixes 786-0
+meta.df[278,]$CCLE <- meta.df[279,]$CCLE ## Fixes G-292_Clone_A141B1
+meta.df[486,]$CCLE <- meta.df[485,]$CCLE ## Fixes Ishikawa_Heraklio_02ER
+meta.df[941,]$CCLE <- meta.df[893,]$CCLE ## Fixes NIH:OVCAR-3
+meta.df[978,]$CCLE <- meta.df[979,]$CCLE ## Fixes PE/CA-PJ15
+meta.df <- meta.df[-c(15, 279, 485, 893, 979),]
 meta.df <- meta.df[, -grep("^tmp$", colnames(meta.df))]
 
 usethis::use_data(meta.df, overwrite = T)
