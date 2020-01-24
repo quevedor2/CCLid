@@ -45,29 +45,29 @@ assignGrpIDs <- function(mat, meta.df){
 #' @export
 splitConcordanceVals <- function(dm, meta.df){
   dr.nm <- dm
-  # 
-  # all.idx <- sapply(meta.df$ID, function(i) grep(paste0("_", i, "$"), x=colnames(dr.nm)))
-  # mat.idx <- c(x, x + nrow(mat))
-  # 
-  # m.vals <- lapply(all.idx, function(idx){
-  #   m.val <- .meltDf(dr.nm[idx,idx,drop=FALSE])
-  #   m.val
-  # })
-  # 
-  # m.vals <- list()
-  # for(idx in all.idx){
-  #   print(idx)
-  #   m.vals[[idx]] <- .meltDf(dr.nm[idx,idx,drop=FALSE])
-  #   #dr.nm[idx,idx] <- NA
-  # }
-  # 
-  m.vals <- list()
-  for(i in meta.df$ID){
-    idx <- grep(paste0("_", i, "$"), colnames(dr.nm))
-    m.val <- .meltDf(dr.nm[idx,idx,drop=FALSE])
-    dr.nm[idx,idx] <- NA
-    m.vals[[i]] <- m.val
+  
+  .mPosToVec <- function(x, nrw){
+    as.integer(sapply(nrw * (x-1), function(i) i+x))
   }
+  
+  n.rows <- nrow(dm)
+  
+  all.idx <- sapply(meta.df$ID, function(i) grep(paste0("_", i, "$"), x=colnames(dr.nm)))
+  all.idx.v <- unlist(sapply(all.idx, .mPosToVec, nrw=n.rows))
+  
+  m.vals <- lapply(all.idx, function(idx){
+    .meltDf(dr.nm[idx,idx,drop=FALSE])
+  })
+  dr.nm[all.idx.v] <- NA
+  
+  ## Old, slightly slower method:
+  # m.vals <- list()
+  # for(i in meta.df$ID){
+  #   idx <- grep(paste0("_", i, "$"), colnames(dr.nm))
+  #   m.val <- .meltDf(dr.nm[idx,idx,drop=FALSE])
+  #   dr.nm[idx,idx] <- NA
+  #   m.vals[[i]] <- m.val
+  # }
   m.vals <- do.call(rbind, m.vals)
   nm.vals <- .meltDf(dr.nm)
   
