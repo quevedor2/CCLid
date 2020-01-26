@@ -45,3 +45,17 @@ overlapPos <- function(comp, ref, mapping='probeset'){
            }
            })
 }
+
+#' findCclPairs
+#' @description Finds indices for cell lines that are found
+#' in multiple datasets
+#' 
+#' @param meta.df 
+#' @param dr.nm  matrix where column names are cell lines/datasets
+#'
+#' @return
+#' @export
+findCclPairs <- function(meta.df, dr.nm){
+  all.idx <- sapply(meta.df$ID, function(i) grep(paste0("_", i, "$"), x=colnames(dr.nm)))
+  return(all.idx)
+}

@@ -159,14 +159,14 @@ mapVariantFeat <- function(vcf.map, var.dat, slow.method=FALSE){
     var.dat.m$init <- var.dat.m$variable %in% baf$Probe_Set_ID
     var.dat.m <- var.dat.m[which(var.dat.m$init),]
     max.var.ids <- sapply(split(var.dat.m, var.dat.m$L1), function(i) {
-      i[which.max(i$value),]$variable
+      i[which.min(i$value),]$variable
     })
     baf.var <- baf[as.character(max.var.ids),,drop=FALSE]
   } else {
     # Old slow method
     max.var <- lapply(var.dat, function(v){
-      max.var <- head(sort(v[names(v) %in% baf$Probe_Set_ID], decreasing = TRUE),1)
-      #max.var <- head(sort(v[names(v) %in% baf$Probe_Set_ID]),1)
+      #max.var <- head(sort(v[names(v) %in% baf$Probe_Set_ID], decreasing = TRUE),1)
+      max.var <- head(sort(v[names(v) %in% baf$Probe_Set_ID]),1)
       return(baf[names(max.var),])
     }) 
     baf.var <- do.call(rbind, max.var)

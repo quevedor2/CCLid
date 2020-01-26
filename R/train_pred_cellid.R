@@ -21,13 +21,13 @@
 splitConcordanceVals <- function(dm, meta.df){
   dr.nm <- dm
   
+  ## Changes matrix position [2,1] to a vector [2]
   .mPosToVec <- function(x, nrw){
     as.integer(sapply(nrw * (x-1), function(i) i+x))
   }
   
   n.rows <- nrow(dm)
-  
-  all.idx <- sapply(meta.df$ID, function(i) grep(paste0("_", i, "$"), x=colnames(dr.nm)))
+  all.idx <- findCclPairs(meta.df, dr.nm)
   all.idx.v <- unlist(sapply(all.idx, .mPosToVec, nrw=n.rows))
   
   m.vals <- lapply(all.idx, function(idx){

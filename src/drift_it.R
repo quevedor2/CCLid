@@ -53,7 +53,82 @@ benchmarkCCLid <- function(bench){
 driftConcordance <- function(){
   dataset <- 'GDSC'
   alt.ds <- 'CCLE'
-  vcf.map.var <- mapVariantFeat(ref.mat, var.dat)
+  
+  ## Find variant features and isolate for cell lines shared in datasets
+  ref.mat.var <- mapVariantFeat(ref.mat, var.dat)
+  cl.idx <- findCclPairs(meta.df, ref.mat.var)
+  m.cls.idx <- cl.idx[sapply(cl.idx, function(i) length(i) >= 2)]
+  
+  ## Get drift distance between CL pairs
+  baf.drifts <- lapply(m.cls.idx, function(cl.pairs){
+    ref.idx <- grep(paste0(dataset, "_"), colnames(ref.mat.var)[cl.pairs])
+    alt.idx <- grep(paste0(alt.ds, "_"), colnames(ref.mat.var)[cl.pairs])
+    all.idx <- c(ref.idx, alt.idx)
+    
+    if(length(all.idx) == 2){
+      bdf <- bafDrift(ref.mat.var[,cl.pairs[all.idx]])
+      #CCLid:::plot.CCLid(bdf$cna.obj[[1]])
+      drift.score <- list("sig.gr"=sigDiffBaf(bdf$cna.obj[[1]]),
+                          "frac"=bdf$frac[[1]][3,])
+    } else {
+      drift.score <- list("sig.gr"=NULL, "frac"=NULL)
+    }
+
+    return(drift.score)
+  })
+  save(baf.drifts, "~/baf_drift.rda")
+  # cl.pairs <- m.cls.idx[[1]]
+  
+  ## Load in CN bins
+  cn.dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/cnv_predictions/input/cn'
+  bins.file <- list.files(cn.dir, pattern="bins")
+  bins <- lapply(bins.file, function(b) readRDS(file.path(cn.dir, b)))
+  names(bins) <- gsub("_.*", "",  bins.file)
+  
+  alt.bin.ids <- assignGrpIDs(assayData(bins[[alt.ds]])$nAraw, meta.df)
+  ref.bin.ids <- assignGrpIDs(assayData(bins[[dataset]])$nAraw, meta.df)
+  alt.ref.idx <- data.frame("id"=as.character(names(baf.drifts)),
+                            "ref"=as.integer(sapply(paste0("_", names(baf.drifts), "$"), grep, x=ref.bin.ids)),
+                            "alt"=as.integer(sapply(paste0("_", names(baf.drifts), "$"), grep, x=alt.bin.ids)))
+  
+  apply(alt.ref.idx, 1, function(ar.i){
+    ra.i <- cbind(assayData(bins[[dataset]])$exprs[,ar.i['ref'] ,drop=FALSE],
+                  assayData(bins[[alt.ds]])$exprs[,ar.i['alt'] ,drop=FALSE])
+    ra.i <- preprocessCore::normalize.quantiles(data.matrix(ra.i))
+    D = scale((ra.i[,1] - ra.i[,2]), center = FALSE)
+    smo <- 5
+    if (smo%%2 == 0) smo <- smo + 1
+    run.dat <- as.numeric(D[,1])
+    l2r.rm <- stats::runmed(na.omit(run.dat), 201)
+    plot(l2r.rm, type='l')
+    plot(as.numeric(D[,1]), type='l')
+    
+
+    
+    CNAo <- with(featureData(bins[[alt.ds]])@data,
+                 CNA(genomdat=D, 
+                     chrom=as.factor(seg.seqnames),
+                     maploc=seg.start, 
+                     data.type="logratio",
+                     sampleid=alt.bin.ids[ar.i['alt']]))
+    smoothed.CNAo <- smooth.CNA(CNAo)
+    seg.CNAo <- segment(smoothed.CNAo, verbose=1, alpha=0.001, eta=0.05, min.width=5)
+    #seg.CNAo$output$seg.sd <- sd(D,na.rm=TRUE)
+    seg.CNAo$output <- CCLid:::.addSegSd(seg.CNAo)
+    
+    seg.drift <- .estimateDrift(seg.CNAo, z.cutoff=1:3)
+    seg.CNAo$output <- seg.drift$seg
+    class(seg.CNAo) <- 'CCLid'
+    CCLid:::plot.CCLid(seg.CNAo)
+    return(list("frac"=seg.drift$frac,
+                "cna.obj"=seg.CNAo))
+    
+    
+    par(mfrow=c(2,1))
+    CCLid:::plot.CCLid(bdf$cna.obj[[1]])
+    plot(a.i-r.i, pch=16, col=scales::alpha("black", 0.5), ylim=c(-5,5))
+    abline(h = 0, col="grey", lwd=2)
+  })
   
 }
 
@@ -98,15 +173,7 @@ driftTech <- function(){
       x.drift <- bafDrift(sample.mat=x.mat[,c(1, match.idx)])
 
       ## Isolate siginificant different regions
-      sig.diff.gr <- lapply(x.drift$cna.obj, function(each.sample, sig.es=NULL){
-        es <- each.sample$output
-        sig.idx <- which(es$t >= 3)
-        if(length(sig.idx) > 0){
-          es <- es[sig.idx,] 
-          sig.es <- lapply(split(es, es$ID), makeGRangesFromDataFrame, keep.extra.columns=TRUE)
-        }
-        return(sig.es)
-      })
+      sig.diff.gr <- lapply(x.drift$cna.obj, sigDiffBaf)
       frac.cnt <- x.drift$frac
       
       summ <- list("frac"=frac.cnt,

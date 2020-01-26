@@ -94,7 +94,8 @@ bafDrift <- function(sample.mat){
   drift.dat <- lapply(split(seg.gr, seg.gr$ID), function(seg, z.cutoff=c(1:4)){
     ##Calculate Z-score of each seg.mean
     seg.sd <- mean(rep(seg$seg.sd, (width(seg) / 1000000)))
-    seg.z <- round((seg$seg.mean) / (seg.sd / sqrt(seg$num.mark)), 3)
+    #seg.z <- round((seg$seg.mean) / (seg.sd / sqrt(seg$num.mark)), 3) ## t
+    seg.z <- round((seg$seg.mean / seg.sd), 3) ## z
     seg$seg.z <- seg.z 
     
     frac.cnv <- round(width(seg) / sum(width(seg)),3)
@@ -108,10 +109,30 @@ bafDrift <- function(sample.mat){
 
   ## Reform the DNAcopy segment object into original populated data structure
   seg.out <- unlist(as(sapply(drift.dat, function(i) i$seg), "GRangesList"))
+  names(seg.out) <- NULL
   seg.out <- as.data.frame(seg.out)[,-c(4,5)]
   colnames(seg.out)[c(1:3)] <- c("chrom", "loc.start", "loc.end")
   seg.out <- seg.out[,c(colnames(seg.obj$output), "seg.z", "t")]
   
   return(list("frac"=sapply(drift.dat, function(i){ i$sum }),
               "seg"=seg.out))
+}
+
+#' sigDiffBaf
+#' @returns GRanges object of significant BAF drift (z > 3)
+#' for a cna.obj returned by bafDrift$cna.obj
+#' 
+#' @param each.sample 
+#' @param sig.es 
+#'
+#' @return
+#' @export
+sigDiffBaf <- function(each.sample, sig.es=NULL){
+  es <- each.sample$output
+  sig.idx <- which(es$t >= 3)
+  if(length(sig.idx) > 0){
+    es <- es[sig.idx,] 
+    sig.es <- lapply(split(es, es$ID), makeGRangesFromDataFrame, keep.extra.columns=TRUE)
+  }
+  return(sig.es)
 }
