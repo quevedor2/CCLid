@@ -137,10 +137,11 @@ mapVcf2Affy <- function(vcfFile){
 #' 
 #' @param vcf.map An object returned by mapVcf2Aff()
 #' @param var.dat A list returned by formatRefMat()$var
+#' @param slow.method 
 #'
 #' @return
 #' @export
-mapVariantFeat <- function(vcf.map, var.dat){
+mapVariantFeat <- function(vcf.map, var.dat, slow.method=FALSE){
   if(class(vcf.map) == 'list'){
     baf <- vcf.map$BAF
     geno <- vcf.map$GT
@@ -151,12 +152,26 @@ mapVariantFeat <- function(vcf.map, var.dat){
   }
   
   
-  max.var <- lapply(var.dat, function(v){
-    max.var <- head(sort(v[names(v) %in% baf$Probe_Set_ID]),1)
-    return(baf[names(max.var),])
-  })
-  
-  baf.var <- do.call(rbind, max.var)
+  if(!slow.method){
+    # New fast method
+    var.dat.m <- reshape::melt(var.dat)
+    var.dat.m$variable <- gsub("^[0-9]*\\.", "", names(unlist(var.dat)))
+    var.dat.m$init <- var.dat.m$variable %in% baf$Probe_Set_ID
+    var.dat.m <- var.dat.m[which(var.dat.m$init),]
+    max.var.ids <- sapply(split(var.dat.m, var.dat.m$L1), function(i) {
+      i[which.max(i$value),]$variable
+    })
+    baf.var <- baf[as.character(max.var.ids),,drop=FALSE]
+  } else {
+    # Old slow method
+    max.var <- lapply(var.dat, function(v){
+      max.var <- head(sort(v[names(v) %in% baf$Probe_Set_ID], decreasing = TRUE),1)
+      #max.var <- head(sort(v[names(v) %in% baf$Probe_Set_ID]),1)
+      return(baf[names(max.var),])
+    }) 
+    baf.var <- do.call(rbind, max.var)
+  }
+
   if(class(vcf.map)=='list'){
     geno.var <- geno[baf.var$Probe_Set_ID,]
     return(list("BAF"=baf.var,

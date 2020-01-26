@@ -4,12 +4,14 @@
 \alias{mapVariantFeat}
 \title{mapVariantFeat}
 \usage{
-mapVariantFeat(vcf.map, var.dat)
+mapVariantFeat(vcf.map, var.dat, slow.method = FALSE)
 }
 \arguments{
 \item{vcf.map}{An object returned by mapVcf2Aff()}
 
 \item{var.dat}{A list returned by formatRefMat()$var}
+
+\item{slow.method}{}
 }
 \value{
 

@@ -1,12 +1,27 @@
+#### Private Functions ####
+###########################
+#' .blankGr
+#'
+#' @return
 .blankGr <- function(){
+  require(GenomicRanges)
   makeGRangesFromDataFrame(data.frame("chr"='chrZ', "start"=1,  "end"=1))
 }
 
+#' .grepNA
+#'
+#' @param pattern 
+#' @param x 
+#'
+#' @return
 .grepNA <- function(pattern, x){
   idx <- grep(pattern, x)
   if(length(idx) > 0) idx else NA
 }
 
+#' .getChrLength
+#'
+#' @return
 .getChrLength <- function(){
   require(BSgenome.Hsapiens.UCSC.hg19)
   chr.lengths = seqlengths(Hsapiens)[1:24]
@@ -19,6 +34,8 @@
   return(chr.len.gr)
 }
 
+#### Main Functions ####
+########################
 #' multiDriftPlot
 #'
 #' @param seg 
@@ -84,6 +101,7 @@ multiDriftPlot <- function(seg, chr.size.gr=NULL,
 #' @return
 #' @export
 driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
+  require(GenomicRanges)
   if(is.null(ref.ds)) stop("Requires input of ref.ds (GDSC or CCLE)")
   if(is.null(alt.ds)) stop("Requires input of alt.ds (GDSC or CCLE)")
   

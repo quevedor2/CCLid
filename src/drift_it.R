@@ -1,3 +1,19 @@
+readinRnaFileMapping <- function(){
+  meta <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs/fileList1357.txt'
+  meta2 <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs/E-MTAB-3983.sdrf.txt'
+  
+  meta <- read.table(meta, sep="\t", header=F, fill=TRUE)
+  meta2 <- read.table(meta2, sep="\t", header=T, fill=TRUE)
+  all.meta <- merge(meta, meta2, by.x='V2', by.y='Comment.EGA_SAMPLE.', all=TRUE)
+  all.meta <- all.meta[,c('V1','Source.Name', 'V4', 'Comment.EGA_RUN.')]
+  
+  all.meta$tmp <- gsub("[ -/]", "", all.meta$'Source.Name')
+  meta.df$tmp <- gsub("[ -/]", "", meta.df$ID)
+  all.meta.df <- merge(all.meta, meta.df, by="tmp", all.x=TRUE)
+  colnames(all.meta.df)[1:6] <- c("tmp", "V1", "ID2", "EGAF", "EGAR", "ID")
+  return(all.meta.df)
+}
+
 ###########################
 #### Preliminary steps ####
 ###########################
@@ -16,11 +32,6 @@ benchmarkCCLid <- function(bench){
   ref.mat <- downloadRefCCL("BAF", saveDir = PDIR)
   format.dat <- formatRefMat(name="BAF", ref.mat=ref.mat, 
                              analysis='baf', bin.size=5e5)
-  # var.dat10mb <- var.dat2
-  # var.dat5mb <- var.dat2
-  # var.dat500k <- var.dat
-  # var.dat1mb <- var.dat2
-  # var.dat <- var.dat2
   ref.mat <- format.dat$mat
   var.dat <- format.dat$var
   
@@ -31,20 +42,19 @@ benchmarkCCLid <- function(bench){
   
 }
 
-readinRnaFileMapping <- function(){
-  meta <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs/fileList1357.txt'
-  meta2 <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs/E-MTAB-3983.sdrf.txt'
+
+####################################################
+#### Concordance between BAF-drift and CN-drift ####
+####################################################
+## This process is meant to compare the drift called between
+## any two matching cell line IDs using both BAF-drift
+## from the CCLid package, and the difference
+## in ASCAT ASCN data.
+driftConcordance <- function(){
+  dataset <- 'GDSC'
+  alt.ds <- 'CCLE'
+  vcf.map.var <- mapVariantFeat(ref.mat, var.dat)
   
-  meta <- read.table(meta, sep="\t", header=F, fill=TRUE)
-  meta2 <- read.table(meta2, sep="\t", header=T, fill=TRUE)
-  all.meta <- merge(meta, meta2, by.x='V2', by.y='Comment.EGA_SAMPLE.', all=TRUE)
-  all.meta <- all.meta[,c('V1','Source.Name', 'V4', 'Comment.EGA_RUN.')]
-  
-  all.meta$tmp <- gsub("[ -/]", "", all.meta$'Source.Name')
-  meta.df$tmp <- gsub("[ -/]", "", meta.df$ID)
-  all.meta.df <- merge(all.meta, meta.df, by="tmp", all.x=TRUE)
-  colnames(all.meta.df)[1:6] <- c("tmp", "V1", "ID2", "EGAF", "EGAR", "ID")
-  return(all.meta.df)
 }
 
 ###################################
@@ -64,6 +74,7 @@ driftTech <- function(){
   rna.meta.df <- readinRnaFileMapping()
   names(all.vcfs) <- gsub(".snpOut.*", "", all.vcfs)
   
+  ## Compare every VCF to the entire ref matrix to calculate BAF drift
   vcf.drift <- mclapply(all.vcfs, function(vcf){
     cat(paste0(vcf, "(", match(vcf, all.vcfs), "/", length(all.vcfs), "): "))
     vcf.map <- mapVcf2Affy(file.path(vcf.dir, vcf))
@@ -85,8 +96,7 @@ driftTech <- function(){
     print(match.idx)
     if(length(match.idx) > 0){
       x.drift <- bafDrift(sample.mat=x.mat[,c(1, match.idx)])
-      
-      
+
       ## Isolate siginificant different regions
       sig.diff.gr <- lapply(x.drift$cna.obj, function(each.sample, sig.es=NULL){
         es <- each.sample$output
@@ -110,34 +120,28 @@ driftTech <- function(){
   }, mc.cores = 8)
   save(vcf.drift, file="~/vcf_drift.rda")
 
+  ## Private Function
   .getDrift <- function(i, idx=1){
     if(length(i$frac) >= idx){
+      ## Select the "z > 3" row from all baf-drift estimates
+      ## idx = 1: Should be VCF compare to all matching cell lines
+      ## idx = 2: Should be SNP cell line compared to all other matching SNP cell line
       delta <- i$frac[[idx]][3,,drop=FALSE]
       rownames(delta) <- gsub("RNA_", "", names(i$frac)[1])
     } else {
       delta <- NULL
     }
-
     if(!is.null(delta)) colnames(delta) <- gsub("_.*", "", colnames(delta))
     return(as.data.frame(delta))
   }
 
-  ## Aggregate drift matrix
-  rna.drift <- do.call(gtools::smartbind, lapply(vcf.drift, .getDrift, idx=1)) #RNA - GDSC/CCLE
-  cl.drift <- do.call(gtools::smartbind, lapply(vcf.drift, .getDrift, idx=2)) # GDSC - CCLE
-  colnames(rna.drift) <- paste0("RNA_", colnames(rna.drift))
-  colnames(cl.drift) <- paste0("SNP_", colnames(cl.drift))
-  rna.drift$ID <- rownames(rna.drift)
-  cl.drift$ID <- rownames(cl.drift)
-  rna.cl.drift <- merge(rna.drift, cl.drift, by="ID", all.y=TRUE)
-
-  ## Measure overlap between RNA and cell lines
+  ## Identify drift pairs that are NULL and remove from future analysis
   seg.sig <- lapply(vcf.drift, function(i) if(length(i$sig) == 2) i$sig else NULL)
   null.idx <- which(sapply(seg.sig, is.null))
 
-  # Interesct and fractionate
+  ## Intersect significant (z > 3) drifted regions and calculate estimates
+  ## of how much intersect there is between SNP and RNA data
   all.drift.ovs <- lapply(seg.sig[-null.idx], function(seg){
-    #seg <- seg.sig[-null.idx][[max.intersect]]
     drift.ovs <- driftOverlap(seg, ref.ds=dataset, alt.ds=alt.ds)
   })
   null.idx2 <- sapply(all.drift.ovs, is.null)
@@ -151,53 +155,78 @@ driftTech <- function(){
   })
   tmp.m <- idx.drift[[1]]
   ord <- order(tmp.m[3,], tmp.m[1,], tmp.m[2,])
-
-  # Assign the colours
+  
+  ## Aggregate the "z > 3" drift "fraction of the genome" data into a singular matrix
+  rna.drift <- do.call(gtools::smartbind, lapply(vcf.drift, .getDrift, idx=1)) #RNA - GDSC/CCLE
+  cl.drift <- do.call(gtools::smartbind, lapply(vcf.drift, .getDrift, idx=2)) # GDSC - CCLE
+  colnames(rna.drift) <- paste0("RNA_", colnames(rna.drift))
+  colnames(cl.drift) <- paste0(dataset, "_", colnames(cl.drift))
+  rna.drift$ID <- rownames(rna.drift)
+  cl.drift$ID <- rownames(cl.drift)
+  rna.cl.drift <- merge(rna.drift, cl.drift, by="ID", all.y=TRUE)
+  rcl.sub.drift <- rna.cl.drift[match(names(all.drift.ovs), rna.cl.drift$ID),]
+  
+  ## Assign the colours and labels
   all.row.ids <- unique(as.character(sapply(idx.drift, rownames)))
   cols <- setNames(RColorBrewer::brewer.pal(length(all.row.ids), "Set2"),
                    all.row.ids)
   cols['intersect'] <- '#ffffcc'
   cols['no_drift'] <- 'grey'
 
+  #### Visualization ####
   ## Plot amount of intra- and inter-institutional drift
-  pdf("~/drift_datasets.pdf")
-  rcl.sub.drift <- rna.cl.drift[match(names(all.drift.ovs), rna.cl.drift$ID),]
+  pdf(file.path(vcf.dir, paste0("drift_", dataset, "-", alt.ds, ".pdf")), 
+      height = 3, width=5)
   par(mfrow=c(3,1), mar=c(0.5, 4.1, 0.5, 2.1))
-  with(rcl.sub.drift[ord,], barplot(RNA_GDSC, ylab="RNA/GDSC", las=1, ylim=c(0,1), col=cols['RNA/GDSC'], xaxt='n', xlab=''))
-  with(rcl.sub.drift[ord,], barplot(RNA_GDSC, ylab="GDSC/CCLE", las=1, ylim=c(0,1), col=cols['GDSC/CCLE'], xaxt='n', xlab=''))
-  with(rcl.sub.drift[ord,], barplot(RNA_GDSC, ylab="RNA/CCLE", las=1, ylim=c(0,1), col=cols['RNA/CCLE'], xaxt='n', xlab=''))
-  
-  ## Plot concordance in drift estimates
-  col.idx <- grep(paste0(alt.ds, "$"), colnames(rna.cl.drift))
-  comp.drift <- rna.cl.drift[,col.idx,drop=FALSE]
-  par(mfrow=c(3,1), mar=c(2, 4.1, 2, 2.1))
-  plot(comp.drift, pch=16, col='black', xlim=c(0,1), ylim=c(0,1),
-       xlab=paste0(dataset, " (", gsub("_.*", "", colnames(comp.drift)[1]), ") - ", alt.ds, " (SNP)"),
-       ylab=paste0(dataset, " (", gsub("_.*", "", colnames(comp.drift)[2]), ") - ", alt.ds, " (SNP)"),
-       main='Genetic drift between cell lines (Fraction of genome)')
-  r <- round(cor(comp.drift, use="pairwise", method="pearson")[1,2], 2)
-  text(c(1,1), labels = paste0("r = ", r, " (pearson)"), adj=1)
-  abline(coef = c(0,1), col="grey", lty=2)
-
-  ## Plot the drift overlap matrix
-  par(mfrow=c(3,1), mar=c(2, 4.1, 2, 2.1))
-  lapply(idx.drift, function(m){
-    barplot(as.matrix(m[,ord]), xaxt='n', col=cols[rownames(m)])
-    par(xpd=TRUE)
-    legend(x = 1, y = 0, fill=cols[rownames(m)], 
-           legend=rownames(m), horiz=TRUE, box.lwd = 0)
-    par(xpd=FALSE)
+  ids <- combn(c("RNA", dataset, alt.ds), 2)
+  apply(ids, 2, function(id){
+    barplot(rcl.sub.drift[ord, paste(id, collapse="_")], ylab=paste(id, collapse="/"),
+            las=1, ylim=c(0,1), col=cols[paste(id, collapse="/")], xaxt='n', xlab='')
   })
   
   ## Plot individual cell lines
-  max.intersect <- names(which.max(idx.drift[[1]]['intersect',]))
-  max.intersect2 <- colnames(idx.drift[[1]][,ord])[41]
-  max.rnaRef <- rcl.sub.drift[which.max(rcl.sub.drift$RNA_GDSC),]$ID
+  cl.idx <- c(which.max(idx.drift[[1]][ord,]['intersect',]), 
+              41, which.max(rcl.sub.drift[ord,]$RNA_GDSC))
   par(mfrow=c(3,1), mar=c(0.5, 4.1, 0.5, 2.1))
-  multiDriftPlot(seg.sig[-null.idx][[max.intersect]], ref.ds=dataset, alt.ds=alt.ds)
-  multiDriftPlot(seg.sig[-null.idx][[max.intersect2]], ref.ds=dataset, alt.ds=alt.ds)
-  multiDriftPlot(seg.sig[-null.idx][[max.rnaRef]], ref.ds=dataset, alt.ds=alt.ds)
+  sapply(colnames(idx.drift[[1]][,ord])[cl.idx], function(cl.ids){
+    #rna.meta.df[sapply(colnames(idx.drift[[1]][,ord])[cl.idx], grep, rna.meta.df$EGAF),]$ID
+    multiDriftPlot(seg.sig[-null.idx][[cl.ids]], ref.ds=dataset, alt.ds=alt.ds)
+  })
+  
+  ## Plot the drift overlap matrix
+  par(mfrow=c(3,1), mar=c(2, 4.1, 2, 2.1))
+  lapply(idx.drift, function(m){
+    bp <- barplot(as.matrix(m[,ord]), xaxt='n', col=cols[rownames(m)], las=1)
+    
+    par(xpd=TRUE)
+    if(all(rownames(m) == rownames(idx.drift[[1]]))){
+      idx <- match(colnames(m[,ord]), rna.meta.df$EGAF)
+      lbl <- rep(NA, ncol(m))
+      lbl[cl.idx] <- rna.meta.df[idx, ][cl.idx,]$ID
+      axis(side = 1, at=bp, labels=lbl, las=2, cex.axis=0.8)
+    } else {
+      legend(x = 1, y = 0, fill=cols[rownames(m)], 
+             legend=rownames(m), horiz=TRUE, box.lwd = 0)
+    }
+    par(xpd=FALSE)
+  })
+
+  ## Plot concordance in drift estimates
+  col.idx <- grep(paste0(alt.ds, "$"), colnames(rna.cl.drift))
+  comp.drift <- rna.cl.drift[,col.idx,drop=FALSE]
+  par(mfrow=c(2,1), mar=c(2, 4.1, 2, 2.1))
+  plot(comp.drift, pch=16, col=scales::alpha('black', 0.7), 
+       xlim=c(0,1), ylim=c(0,1),
+       xlab=paste0(dataset, " (", gsub("_.*", "", colnames(comp.drift)[1]), ") - ", alt.ds, " (SNP)"),
+       ylab=paste0(dataset, " (", gsub("_.*", "", colnames(comp.drift)[2]), ") - ", alt.ds, " (SNP)"),
+       main='Genetic drift between cell lines (Fraction of genome)',
+       cex=0.6, las=1)
+  r <- round(cor(comp.drift, use="pairwise", method="pearson")[1,2], 2)
+  text(c(1,0.9), labels = paste0("r = ", r, " (pearson)"), adj=1, cex=0.6)
+  abline(coef = c(0,1), col="grey", lty=2)
+
   dev.off()
+  print(file.path(vcf.dir, paste0("drift_", dataset, "-", alt.ds, ".pdf")))
 
 }
   
