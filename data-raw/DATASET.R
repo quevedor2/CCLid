@@ -92,6 +92,7 @@ meta.df[941,]$CCLE <- meta.df[893,]$CCLE ## Fixes NIH:OVCAR-3
 meta.df[978,]$CCLE <- meta.df[979,]$CCLE ## Fixes PE/CA-PJ15
 meta.df <- meta.df[-c(15, 279, 485, 893, 979),]
 meta.df <- meta.df[, -grep("^tmp$", colnames(meta.df))]
+meta.df$ID <- gsub(" ", "-", meta.df$ID)
 
 usethis::use_data(meta.df, overwrite = T)
 

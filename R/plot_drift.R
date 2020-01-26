@@ -1,3 +1,7 @@
+.blankGr <- function(){
+  makeGRangesFromDataFrame(data.frame("chr"='chrZ', "start"=1,  "end"=1))
+}
+
 .grepNA <- function(pattern, x){
   idx <- grep(pattern, x)
   if(length(idx) > 0) idx else NA
@@ -15,7 +19,7 @@
   return(chr.len.gr)
 }
 
-#' plot.CCLidDRIFTMulti
+#' multiDriftPlot
 #'
 #' @param seg 
 #' @param chr.size.gr 
@@ -24,8 +28,8 @@
 #'
 #' @return
 #' @export
-plot.CCLidDRIFTMulti <- function(seg, chr.size.gr=NULL, 
-                            ref.ds=NULL, alt.ds=NULL){
+multiDriftPlot <- function(seg, chr.size.gr=NULL, 
+                           ref.ds=NULL, alt.ds=NULL){
   if(is.null(ref.ds)) stop("Requires input of ref.ds (GDSC or CCLE)")
   if(is.null(alt.ds)) stop("Requires input of alt.ds (GDSC or CCLE)")
   
@@ -59,7 +63,7 @@ plot.CCLidDRIFTMulti <- function(seg, chr.size.gr=NULL,
     
     ## populate with sig.diff regions
     if(!is.na(grl.idx[i])){
-      gr0 <- grl[[i]]
+      gr0 <- grl[[grl.idx[i]]]
       ov <- findOverlaps(gr0, chr.size.gr)
       gr0$cum.start <- start(gr0[queryHits(ov)]) + chr.size.gr[subjectHits(ov)]$cum.start
       gr0$cum.end <- end(gr0[queryHits(ov)]) + chr.size.gr[subjectHits(ov)]$cum.start
@@ -71,7 +75,51 @@ plot.CCLidDRIFTMulti <- function(seg, chr.size.gr=NULL,
   })
 }
 
-#' plot.CCLidDRIFT
+driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
+  if(is.null(ref.ds)) stop("Requires input of ref.ds (GDSC or CCLE)")
+  if(is.null(alt.ds)) stop("Requires input of alt.ds (GDSC or CCLE)")
+  
+  # seg <- seg.sig[-null.idx][[1]]
+  if(is.null(unlist(seg))) {
+    na.mat <- matrix(rep(NA, 3), ncol=1)
+    return(list(na.mat, na.mat, na.mat))
+  }
+  grl <- as(unlist(seg), "GRangesList")
+  grl.idx <- setNames(c(.grepNA(paste0(ref.ds, "_.*", alt.ds), names(grl)),
+                        .grepNA(paste0("RNA_.*", alt.ds), names(grl)),
+                        .grepNA(paste0("RNA_.*", ref.ds), names(grl))),
+                      c(paste0(ref.ds, "/", alt.ds),
+                        paste0("RNA/", alt.ds),
+                        paste0("RNA/", ref.ds)))
+  
+  cs <- combn(x=1:3, m=2)
+  drift.ov <- apply(cs, 2, function(i){
+    # i <- unlist(cs[,2])
+    gr1 <- if(is.na(grl.idx[i[1]]))  .blankGr() else grl[[grl.idx[i[1]]]]
+    gr2 <- if(is.na(grl.idx[i[2]]))  .blankGr() else grl[[grl.idx[i[2]]]]
+    grI <- intersect(gr1, gr2)
+    
+    wI <- sum(width(grI))
+    wG1 <- sum(width(setdiff(gr1, grI)))
+    wG2 <- sum(width(setdiff(gr2, grI)))
+    wEmpty <- 0
+    
+    gr1.chr <- as.character(seqnames(gr1))
+    gr2.chr <- as.character(seqnames(gr2))
+    if(any(gr1.chr == 'chrZ') & any(gr2.chr == 'chrZ')){
+      wEmpty <- 1
+      wI <- 0
+    }
+    
+    w.frac <- as.matrix(round(c(wG1, wI, wG2, wEmpty) / sum(c(wG1, wI, wG2, wEmpty)),2))
+    rownames(w.frac) <- c(names(grl.idx)[i[1]], 'intersect', names(grl.idx)[i[2]], 'no_drift')
+    return(as.data.frame(w.frac))
+  })
+  return(drift.ov)
+}
+
+
+#' plot.CCLid
 #' plot() function for CCLid adjusted DNAcopy segment objects
 #' 
 #' @param obj 
@@ -79,7 +127,7 @@ plot.CCLidDRIFTMulti <- function(seg, chr.size.gr=NULL,
 #' @return
 #'
 #' @examples
-plot.CCLidDRIFT <- function (obj, sample.size=50, low.sig.alpha=0.01, hi.sig.alpha=0.2) {
+plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01, hi.sig.alpha=0.2) {
   require(scales)
   chroms <- paste0("chr", c(1:22, "X", "Y"))
   chr.data <- split(obj$data, obj$data$chrom)

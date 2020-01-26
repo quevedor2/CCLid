@@ -9,31 +9,6 @@
   return(z)
 }
 
-#' assignGrpIDs
-#' @description Creates a standardized set of group names for 
-#' samples using a reference
-#' 
-#' @param mat 
-#' @param meta.df 
-#'
-#' @return
-#' @export
-assignGrpIDs <- function(mat, meta.df){
-  new.ids <- sapply(colnames(mat), function(i){
-    i <- gsub(".[xy]$", "", i)
-    cidx <- grep(i, meta.df, ignore.case = T)
-    cidx <- cidx[length(cidx)]
-    ridx <- grep(paste0("^", i, "(.cel)?$"), meta.df[,cidx], ignore.case = T)
-    
-    if(length(ridx) > 0){
-      paste0(colnames(meta.df)[cidx], "_", meta.df[ridx,]$ID)
-    } else {
-      i
-    }
-  })
-  return(new.ids)
-}
-
 #' splitConcordanceVals
 #' @description Melts the data structure into Sample 1, Sample 2, concordance
 #' and separates into Match/nonmatch if a reference metadata is given
