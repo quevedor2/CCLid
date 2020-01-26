@@ -38,9 +38,9 @@ multiDriftPlot <- function(seg, chr.size.gr=NULL,
   
   # seg <- seg.sig[-null.idx][[2]]
   grl <- as(unlist(seg), "GRangesList")
-  grl.idx <- setNames(c(.grepNA(paste0(ref.ds, ".*", alt.ds), names(grl)),
-                        .grepNA(paste0("RNA.*", alt.ds), names(grl)),
-                        .grepNA(paste0("RNA.*", ref.ds), names(grl))),
+  grl.idx <- setNames(c(.grepNA(paste0(ref.ds, "_.*", alt.ds, "_"), names(grl)),
+                        .grepNA(paste0("RNA_.*", alt.ds, "_"), names(grl)),
+                        .grepNA(paste0("RNA_.*", ref.ds, "_"), names(grl))),
                       c(paste0(ref.ds, "/", alt.ds),
                         paste0("RNA/", alt.ds),
                         paste0("RNA/", ref.ds)))
@@ -75,13 +75,21 @@ multiDriftPlot <- function(seg, chr.size.gr=NULL,
   })
 }
 
+#' driftOverlap
+#'
+#' @param seg 
+#' @param ref.ds 
+#' @param alt.ds 
+#'
+#' @return
+#' @export
 driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
   if(is.null(ref.ds)) stop("Requires input of ref.ds (GDSC or CCLE)")
   if(is.null(alt.ds)) stop("Requires input of alt.ds (GDSC or CCLE)")
   
   # seg <- seg.sig[-null.idx][[1]]
   if(is.null(unlist(seg))) {
-    na.mat <- matrix(rep(NA, 3), ncol=1)
+    na.mat <- matrix(rep(NA, 4), ncol=1)
     return(list(na.mat, na.mat, na.mat))
   }
   grl <- as(unlist(seg), "GRangesList")

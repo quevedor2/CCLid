@@ -109,7 +109,7 @@ driftTech <- function(){
     return(summ)
   }, mc.cores = 8)
   save(vcf.drift, file="~/vcf_drift.rda")
-  
+
   .getDrift <- function(i, idx=1){
     if(length(i$frac) >= idx){
       delta <- i$frac[[idx]][3,,drop=FALSE]
@@ -117,11 +117,11 @@ driftTech <- function(){
     } else {
       delta <- NULL
     }
-    
+
     if(!is.null(delta)) colnames(delta) <- gsub("_.*", "", colnames(delta))
     return(as.data.frame(delta))
   }
-  
+
   ## Aggregate drift matrix
   rna.drift <- do.call(gtools::smartbind, lapply(vcf.drift, .getDrift, idx=1)) #RNA - GDSC/CCLE
   cl.drift <- do.call(gtools::smartbind, lapply(vcf.drift, .getDrift, idx=2)) # GDSC - CCLE
@@ -130,11 +130,11 @@ driftTech <- function(){
   rna.drift$ID <- rownames(rna.drift)
   cl.drift$ID <- rownames(cl.drift)
   rna.cl.drift <- merge(rna.drift, cl.drift, by="ID", all.y=TRUE)
-  
+
   ## Measure overlap between RNA and cell lines
   seg.sig <- lapply(vcf.drift, function(i) if(length(i$sig) == 2) i$sig else NULL)
   null.idx <- which(sapply(seg.sig, is.null))
-  
+
   # Interesct and fractionate
   all.drift.ovs <- lapply(seg.sig[-null.idx], function(seg){
     #seg <- seg.sig[-null.idx][[max.intersect]]
@@ -142,7 +142,7 @@ driftTech <- function(){
   })
   null.idx2 <- sapply(all.drift.ovs, is.null)
   if(any(null.idx2)) all.drift.ovs <- all.drift.ovs[-which(null.idx2)]
-  
+
   # Reduce drift fraction data to a matrix and order
   idx.drift <- lapply(seq_along(all.drift.ovs[[1]]), function(idx){
     drift.mat <- do.call(cbind, lapply(all.drift.ovs, function(i) i[[idx]]))
@@ -151,14 +151,14 @@ driftTech <- function(){
   })
   tmp.m <- idx.drift[[1]]
   ord <- order(tmp.m[3,], tmp.m[1,], tmp.m[2,])
-  
+
   # Assign the colours
   all.row.ids <- unique(as.character(sapply(idx.drift, rownames)))
   cols <- setNames(RColorBrewer::brewer.pal(length(all.row.ids), "Set2"),
                    all.row.ids)
   cols['intersect'] <- '#ffffcc'
   cols['no_drift'] <- 'grey'
-  
+
   ## Plot amount of intra- and inter-institutional drift
   pdf("~/drift_datasets.pdf")
   rcl.sub.drift <- rna.cl.drift[match(names(all.drift.ovs), rna.cl.drift$ID),]
@@ -172,8 +172,8 @@ driftTech <- function(){
   comp.drift <- rna.cl.drift[,col.idx,drop=FALSE]
   par(mfrow=c(3,1), mar=c(2, 4.1, 2, 2.1))
   plot(comp.drift, pch=16, col='black', xlim=c(0,1), ylim=c(0,1),
-       xlab=paste0(dataset, " (", gsub("_.*", "", colnames(comp.drift)[1]), ") - ", i, " (SNP)"),
-       ylab=paste0(dataset, " (", gsub("_.*", "", colnames(comp.drift)[2]), ") - ", i, " (SNP)"),
+       xlab=paste0(dataset, " (", gsub("_.*", "", colnames(comp.drift)[1]), ") - ", alt.ds, " (SNP)"),
+       ylab=paste0(dataset, " (", gsub("_.*", "", colnames(comp.drift)[2]), ") - ", alt.ds, " (SNP)"),
        main='Genetic drift between cell lines (Fraction of genome)')
   r <- round(cor(comp.drift, use="pairwise", method="pearson")[1,2], 2)
   text(c(1,1), labels = paste0("r = ", r, " (pearson)"), adj=1)
@@ -190,8 +190,8 @@ driftTech <- function(){
   })
   
   ## Plot individual cell lines
-  max.intersect <- colnames(idx.drift[[1]][,ord])[1]
-  max.intersect2 <- colnames(idx.drift[[1]][,ord])[6]
+  max.intersect <- names(which.max(idx.drift[[1]]['intersect',]))
+  max.intersect2 <- colnames(idx.drift[[1]][,ord])[41]
   max.rnaRef <- rcl.sub.drift[which.max(rcl.sub.drift$RNA_GDSC),]$ID
   par(mfrow=c(3,1), mar=c(0.5, 4.1, 0.5, 2.1))
   multiDriftPlot(seg.sig[-null.idx][[max.intersect]], ref.ds=dataset, alt.ds=alt.ds)
