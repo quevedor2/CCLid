@@ -136,3 +136,32 @@ sigDiffBaf <- function(each.sample, sig.es=NULL){
   }
   return(sig.es)
 }
+
+#' .getDrift
+#' @description Returns the genomic fraction of drift for significant
+#' regions (z>3)
+#' 
+#' @param i 
+#' @param idx 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+.getDrift <- function(i, idx=1){
+  if(length(i$frac) >= idx){
+    ## Select the "z > 3" row from all baf-drift estimates
+    ## idx = 1: Should be VCF compare to all matching cell lines
+    ## idx = 2: Should be SNP cell line compared to all other matching SNP cell line
+    if(is.list(i$frac)){
+      delta <- i$frac[[idx]][3,,drop=FALSE]
+    } else {
+      delta <- i$frac[3,,drop=FALSE]
+    }
+    rownames(delta) <- gsub("RNA_", "", names(i$frac)[1])
+  } else {
+    delta <- NULL
+  }
+  if(!is.null(delta)) colnames(delta) <- gsub("_.*", "", colnames(delta))
+  return(as.data.frame(delta))
+}

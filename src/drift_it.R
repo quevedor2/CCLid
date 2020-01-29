@@ -34,9 +34,9 @@ benchmarkCCLid <- function(bench){
                              analysis='baf', bin.size=5e5)
   ref.mat <- format.dat$mat
   var.dat <- format.dat$var
+  rm(format.dat)
   
-  ref.mat.bkup <- ref.mat
-  new.ids <- assignGrpIDs(ref.mat.bkup, meta.df)
+  new.ids <- assignGrpIDs(ref.mat, meta.df)
   new.ids[duplicated(new.ids)] <- gsub("_", "2_",new.ids[duplicated(new.ids)])
   colnames(ref.mat) <- new.ids
   
@@ -80,8 +80,9 @@ driftConcordance <- function(){
   # cl.pairs <- m.cls.idx[[1]]
   
   ## Load in CN bins
+  cn.dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/cnv_predictions/input/cn/50kb_bins'
   cn.dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/cnv_predictions/input/cn'
-  bins.file <- list.files(cn.dir, pattern="bins")
+  bins.file <- list.files(cn.dir, pattern="bins", include.dirs = FALSE)[-1]
   bins <- lapply(bins.file, function(b) readRDS(file.path(cn.dir, b)))
   names(bins) <- gsub("_.*", "",  bins.file)
   
@@ -90,46 +91,67 @@ driftConcordance <- function(){
   alt.ref.idx <- data.frame("id"=as.character(names(baf.drifts)),
                             "ref"=as.integer(sapply(paste0("_", names(baf.drifts), "$"), grep, x=ref.bin.ids)),
                             "alt"=as.integer(sapply(paste0("_", names(baf.drifts), "$"), grep, x=alt.bin.ids)))
-  
-  apply(alt.ref.idx, 1, function(ar.i){
-    ra.i <- cbind(assayData(bins[[dataset]])$exprs[,ar.i['ref'] ,drop=FALSE],
-                  assayData(bins[[alt.ds]])$exprs[,ar.i['alt'] ,drop=FALSE])
-    ra.i <- preprocessCore::normalize.quantiles(data.matrix(ra.i))
-    D = scale((ra.i[,1] - ra.i[,2]), center = FALSE)
-    smo <- 5
-    if (smo%%2 == 0) smo <- smo + 1
-    run.dat <- as.numeric(D[,1])
-    l2r.rm <- stats::runmed(na.omit(run.dat), 201)
-    plot(l2r.rm, type='l')
-    plot(as.numeric(D[,1]), type='l')
+  na.idx <- apply(alt.ref.idx, 1, function(i)  any(is.na(i)))
+  if(any(na.idx)) alt.ref.idx <- alt.ref.idx[-which(na.idx),]
+  cn.drift <- apply(alt.ref.idx, 1, function(ar.i){
+    require(DNAcopy)
+    ar.i <- setNames(as.integer(ar.i), names(ar.i))
+    print(paste(ar.i, collapse="_"))
+    ra.i <- cbind(assayData(bins[[dataset]])$exprs[,ar.i['ref'], drop=FALSE],
+                  assayData(bins[[alt.ds]])$exprs[,ar.i['alt'], drop=FALSE])
+    idx <- sample(1:nrow(ra.i), size=1000, replace=FALSE)
+    ra.i = scale(ra.i, scale=FALSE)
+    #scaling <- apply(ra.i, 2, norm_vec)
+    scaling <- sapply(1:100, function(i) apply(ra.i[sample(nrow(ra.i), 30000),], 2, norm_vec))
+    scaling <- apply(scaling, 2, function(i) i[1]/i[2])
+    scaling <- scaling[which.min(abs(scaling-1))]
+    ra.i[,1] <- ra.i[,1] / scaling # (scaling[1]/scaling[2])
+    ra.i <-as.data.frame(ra.i)
+    colnames(ra.i) <-c('ref', 'alt')
     
+    plot(ra.i[idx,], xlim=c(-1.5, 1.5), ylim=c(-1.5, 1.5))
+    abline(coef=c(0,1))
+    norm_vec <- function(x) sqrt(sum(x^2, na.rm=TRUE))
+    
+    ra.lm <- lm(alt ~ ref, data=ra.i)
+    
+    
+    #ra.i <- preprocessCore::normalize.quantiles(data.matrix(ra.i))
+    D = (ra.i[,1] - ra.i[,2])
+    D[is.na(D)] <- median(D,na.rm=TRUE)
+    D <- scale(D, scale = FALSE)
+    D <- ra.lm$residuals
 
-    
-    CNAo <- with(featureData(bins[[alt.ds]])@data,
+    CNAo <- with(featureData(bins[[alt.ds]])@data[names(ra.lm$residuals),],
                  CNA(genomdat=D, 
                      chrom=as.factor(seg.seqnames),
                      maploc=seg.start, 
                      data.type="logratio",
                      sampleid=alt.bin.ids[ar.i['alt']]))
     smoothed.CNAo <- smooth.CNA(CNAo)
-    seg.CNAo <- segment(smoothed.CNAo, verbose=1, alpha=0.001, eta=0.05, min.width=5)
-    #seg.CNAo$output$seg.sd <- sd(D,na.rm=TRUE)
-    seg.CNAo$output <- CCLid:::.addSegSd(seg.CNAo)
+    seg.CNAo <- segment(smoothed.CNAo, verbose=1, alpha=0.01, eta=0.05, min.width=5)
+    sd.D sd(D, na.rm=TRUE)
+    sd.D <- split(D, featureData(bins[[alt.ds]])@data[names(ra.lm$residuals),]$seg.seqnames)
+    sd.D <- quantile(sapply(sd.D, function(i) sd(i, na.rm=TRUE)), 0.33)
+    seg.CNAo$output$seg.sd <- sd.D
     
     seg.drift <- .estimateDrift(seg.CNAo, z.cutoff=1:3)
     seg.CNAo$output <- seg.drift$seg
     class(seg.CNAo) <- 'CCLid'
-    CCLid:::plot.CCLid(seg.CNAo)
+    # CCLid:::plot.CCLid(seg.CNAo)
     return(list("frac"=seg.drift$frac,
                 "cna.obj"=seg.CNAo))
-    
-    
-    par(mfrow=c(2,1))
-    CCLid:::plot.CCLid(bdf$cna.obj[[1]])
-    plot(a.i-r.i, pch=16, col=scales::alpha("black", 0.5), ylim=c(-5,5))
-    abline(h = 0, col="grey", lwd=2)
   })
+  names(cn.drift) <- alt.ref.idx$id
+  save(cn.drift, file="~/cn_drift.rda")
   
+  cn.drift.frac <- unlist(sapply(cn.drift, CCLid:::.getDrift, idx=1))
+  baf.drift.frac <- unlist(sapply(baf.drifts[names(cn.drift)], function(i) i$fraca))
+  df <- data.frame("cn"=cn.drift.frac,
+                   "baf"=baf.drift.frac)
+  
+  CCLid:::plot.CCLid(cn.drift[['42-MG-BA']]$cna.obj)
+  CCLid:::plot.CCLid(bdf$cna.obj[[1]])
 }
 
 ###################################
@@ -188,19 +210,7 @@ driftTech <- function(){
   save(vcf.drift, file="~/vcf_drift.rda")
 
   ## Private Function
-  .getDrift <- function(i, idx=1){
-    if(length(i$frac) >= idx){
-      ## Select the "z > 3" row from all baf-drift estimates
-      ## idx = 1: Should be VCF compare to all matching cell lines
-      ## idx = 2: Should be SNP cell line compared to all other matching SNP cell line
-      delta <- i$frac[[idx]][3,,drop=FALSE]
-      rownames(delta) <- gsub("RNA_", "", names(i$frac)[1])
-    } else {
-      delta <- NULL
-    }
-    if(!is.null(delta)) colnames(delta) <- gsub("_.*", "", colnames(delta))
-    return(as.data.frame(delta))
-  }
+  
 
   ## Identify drift pairs that are NULL and remove from future analysis
   seg.sig <- lapply(vcf.drift, function(i) if(length(i$sig) == 2) i$sig else NULL)
@@ -224,8 +234,8 @@ driftTech <- function(){
   ord <- order(tmp.m[3,], tmp.m[1,], tmp.m[2,])
   
   ## Aggregate the "z > 3" drift "fraction of the genome" data into a singular matrix
-  rna.drift <- do.call(gtools::smartbind, lapply(vcf.drift, .getDrift, idx=1)) #RNA - GDSC/CCLE
-  cl.drift <- do.call(gtools::smartbind, lapply(vcf.drift, .getDrift, idx=2)) # GDSC - CCLE
+  rna.drift <- do.call(gtools::smartbind, lapply(vcf.drift, CCLid:::.getDrift, idx=1)) #RNA - GDSC/CCLE
+  cl.drift <- do.call(gtools::smartbind, lapply(vcf.drift, CCLid:::.getDrift, idx=2)) # GDSC - CCLE
   colnames(rna.drift) <- paste0("RNA_", colnames(rna.drift))
   colnames(cl.drift) <- paste0(dataset, "_", colnames(cl.drift))
   rna.drift$ID <- rownames(rna.drift)
