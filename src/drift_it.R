@@ -1,16 +1,30 @@
 readinRnaFileMapping <- function(){
-  meta <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs/fileList1357.txt'
-  meta2 <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs/E-MTAB-3983.sdrf.txt'
+  meta <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/data/GDSC/fileList1357.txt'
+  meta.gdsc <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/data/GDSC/E-MTAB-3983.sdrf.txt'
+  meta.ccle <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/data/CCLE/CCLE_meta.txt'
+  pattern="[-\\(\\)\\.\\,\\_\\/ ]"
   
   meta <- read.table(meta, sep="\t", header=F, fill=TRUE)
-  meta2 <- read.table(meta2, sep="\t", header=T, fill=TRUE)
-  all.meta <- merge(meta, meta2, by.x='V2', by.y='Comment.EGA_SAMPLE.', all=TRUE)
-  all.meta <- all.meta[,c('V1','Source.Name', 'V4', 'Comment.EGA_RUN.')]
+  meta.gdsc <- read.table(meta.gdsc, sep="\t", header=T, fill=TRUE)
+  meta.ccle <- read.table(meta.ccle, sep=",", header=T, fill=TRUE)
   
-  all.meta$tmp <- gsub("[ -/]", "", all.meta$'Source.Name')
-  meta.df$tmp <- gsub("[ -/]", "", meta.df$ID)
-  all.meta.df <- merge(all.meta, meta.df, by="tmp", all.x=TRUE)
-  colnames(all.meta.df)[1:6] <- c("tmp", "V1", "ID2", "EGAF", "EGAR", "ID")
+  meta.gdsc$simpleid = toupper(gsub(pattern, "", meta.gdsc$Source.Name))
+  meta.ccle$simpleid = toupper(gsub(pattern, "", meta.ccle$Cell_Line))
+  ov = sort(intersect(meta.gdsc$simpleid, meta.ccle$simpleid))  ## 61 from non simple.id, 79 simple
+  gdsc.o = sort(setdiff(meta.gdsc$simpleid, meta.ccle$simpleid))
+  ccle.o = sort(setdiff(meta.ccle$simpleid, meta.gdsc$simpleid))
+  
+  # Merge by EGAF(meta) to EGAR (meta.gdsc) and cell-name by EGAN id
+  all.meta <- merge(meta, meta.gdsc, by.x='V2', by.y='Comment.EGA_SAMPLE.', all=TRUE)
+  all.meta <- merge(all.meta, meta.ccle, by='simpleid', all=TRUE)
+  all.meta <- all.meta[,c('V1','Source.Name', 'V4', 'Comment.EGA_RUN.', 'Run', 
+                          'Cell_Line', 'simpleid')]
+
+  meta.df$simpleid <- gsub(pattern, "", meta.df$ID)
+  meta.df[grep("^T-T$", meta.df$ID),]$simpleid <- 'T-T'
+  all.meta.df <- merge(all.meta, meta.df, by="simpleid", all.x=TRUE)
+  
+  colnames(all.meta.df)[1:8] <- c("tmp", "V1", "GDSC_ID", "EGAF", "EGAR", "SRR", "CCLE_ID", "ID")
   return(all.meta.df)
 }
 
@@ -86,43 +100,54 @@ driftConcordance <- function(){
   bins <- lapply(bins.file, function(b) readRDS(file.path(cn.dir, b)))
   names(bins) <- gsub("_.*", "",  bins.file)
   
-  alt.bin.ids <- assignGrpIDs(assayData(bins[[alt.ds]])$nAraw, meta.df)
-  ref.bin.ids <- assignGrpIDs(assayData(bins[[dataset]])$nAraw, meta.df)
+  # "exprs"  "nAraw"  "nBraw"  "nMajor" "nMinor" "TCN"   
+  alt.bin.ids <- assignGrpIDs(assayData(bins[[alt.ds]])$exprs, meta.df)
+  ref.bin.ids <- assignGrpIDs(assayData(bins[[dataset]])$exprs, meta.df)
   alt.ref.idx <- data.frame("id"=as.character(names(baf.drifts)),
-                            "ref"=as.integer(sapply(paste0("_", names(baf.drifts), "$"), grep, x=ref.bin.ids)),
-                            "alt"=as.integer(sapply(paste0("_", names(baf.drifts), "$"), grep, x=alt.bin.ids)))
+                            "ref"=as.integer(sapply(paste0("_", names(baf.drifts), "$"), 
+                                                    grep, x=ref.bin.ids)),
+                            "alt"=as.integer(sapply(paste0("_", names(baf.drifts), "$"), 
+                                                    grep, x=alt.bin.ids)))
   na.idx <- apply(alt.ref.idx, 1, function(i)  any(is.na(i)))
   if(any(na.idx)) alt.ref.idx <- alt.ref.idx[-which(na.idx),]
   cn.drift <- apply(alt.ref.idx, 1, function(ar.i){
+    ar.i = unlist(alt.ref.idx[5,])
+    ref.id = ref.bin.ids[ar.i['ref']]
+    alt.id = alt.bin.ids[ar.i['alt']]
+    for( id in list(ref.id, alt.id)){
+      did = gsub("_.*", "", id)
+      cat(paste("xmor", 
+                  file.path('/mnt/work1/users/pughlab/projects/cancer_cell_lines',
+                            did, 'eacon', names(id), 'ASCAT/L2R', paste0(names(id), '.SEG.ASCAT.png\n'))))
+    }
     require(DNAcopy)
     ar.i <- setNames(as.integer(ar.i), names(ar.i))
     print(paste(ar.i, collapse="_"))
     ra.i <- cbind(assayData(bins[[dataset]])$exprs[,ar.i['ref'], drop=FALSE],
                   assayData(bins[[alt.ds]])$exprs[,ar.i['alt'], drop=FALSE])
     idx <- sample(1:nrow(ra.i), size=1000, replace=FALSE)
-    ra.i = scale(ra.i, scale=FALSE)
-    #scaling <- apply(ra.i, 2, norm_vec)
-    scaling <- sapply(1:100, function(i) apply(ra.i[sample(nrow(ra.i), 30000),], 2, norm_vec))
-    scaling <- apply(scaling, 2, function(i) i[1]/i[2])
-    scaling <- scaling[which.min(abs(scaling-1))]
-    ra.i[,1] <- ra.i[,1] / scaling # (scaling[1]/scaling[2])
+    # ra.i = scale(ra.i, scale=FALSE)
+    # #scaling <- apply(ra.i, 2, norm_vec)
+    # scaling <- sapply(1:100, function(i) apply(ra.i[sample(nrow(ra.i), 30000),], 2, norm_vec))
+    # scaling <- apply(scaling, 2, function(i) i[1]/i[2])
+    # scaling <- scaling[which.min(abs(scaling-1))]
+    # ra.i[,1] <- ra.i[,1] / scaling # (scaling[1]/scaling[2])
     ra.i <-as.data.frame(ra.i)
     colnames(ra.i) <-c('ref', 'alt')
     
     plot(ra.i[idx,], xlim=c(-1.5, 1.5), ylim=c(-1.5, 1.5))
     abline(coef=c(0,1))
-    norm_vec <- function(x) sqrt(sum(x^2, na.rm=TRUE))
     
-    ra.lm <- lm(alt ~ ref, data=ra.i)
+    #ra.lm <- lm(alt ~ ref, data=ra.i)
     
     
     #ra.i <- preprocessCore::normalize.quantiles(data.matrix(ra.i))
     D = (ra.i[,1] - ra.i[,2])
-    D[is.na(D)] <- median(D,na.rm=TRUE)
-    D <- scale(D, scale = FALSE)
-    D <- ra.lm$residuals
+    # D[is.na(D)] <- median(D,na.rm=TRUE)
+    # D <- scale(D, scale = FALSE)
+    # D <- ra.lm$residuals
 
-    CNAo <- with(featureData(bins[[alt.ds]])@data[names(ra.lm$residuals),],
+    CNAo <- with(featureData(bins[[alt.ds]])@data, #[names(ra.lm$residuals),],
                  CNA(genomdat=D, 
                      chrom=as.factor(seg.seqnames),
                      maploc=seg.start, 
@@ -130,15 +155,20 @@ driftConcordance <- function(){
                      sampleid=alt.bin.ids[ar.i['alt']]))
     smoothed.CNAo <- smooth.CNA(CNAo)
     seg.CNAo <- segment(smoothed.CNAo, verbose=1, alpha=0.01, eta=0.05, min.width=5)
-    sd.D sd(D, na.rm=TRUE)
-    sd.D <- split(D, featureData(bins[[alt.ds]])@data[names(ra.lm$residuals),]$seg.seqnames)
-    sd.D <- quantile(sapply(sd.D, function(i) sd(i, na.rm=TRUE)), 0.33)
+    sd.D <- sd(D, na.rm=TRUE)
+    
+    number_of_chunks = ceiling(length(D) / 100)
+    number_of_chunks=100
+    sd.D <- sapply(split(seq_len(length(D)), 
+                 cut(seq_len(length(D)), pretty(seq_len(length(D)), number_of_chunks))),
+           function(x) sd(D[x], na.rm=TRUE))
+    sd.D <- mean(sd.D, na.rm=TRUE)
     seg.CNAo$output$seg.sd <- sd.D
     
-    seg.drift <- .estimateDrift(seg.CNAo, z.cutoff=1:3)
+    seg.drift <- CCLid:::.estimateDrift(seg.CNAo, z.cutoff=1:3)
     seg.CNAo$output <- seg.drift$seg
     class(seg.CNAo) <- 'CCLid'
-    # CCLid:::plot.CCLid(seg.CNAo)
+    CCLid:::plot.CCLid(seg.CNAo)
     return(list("frac"=seg.drift$frac,
                 "cna.obj"=seg.CNAo))
   })
@@ -207,10 +237,7 @@ driftTech <- function(){
     
     return(summ)
   }, mc.cores = 8)
-  save(vcf.drift, file="~/vcf_drift.rda")
-
-  ## Private Function
-  
+  save(vcf.drift, file=paste0("~/", dataset, "_vcf_drift.rda"))
 
   ## Identify drift pairs that are NULL and remove from future analysis
   seg.sig <- lapply(vcf.drift, function(i) if(length(i$sig) == 2) i$sig else NULL)

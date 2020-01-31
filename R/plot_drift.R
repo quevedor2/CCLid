@@ -111,9 +111,9 @@ driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
     return(list(na.mat, na.mat, na.mat))
   }
   grl <- as(unlist(seg), "GRangesList")
-  grl.idx <- setNames(c(.grepNA(paste0(ref.ds, "_.*", alt.ds), names(grl)),
-                        .grepNA(paste0("RNA_.*", alt.ds), names(grl)),
-                        .grepNA(paste0("RNA_.*", ref.ds), names(grl))),
+  grl.idx <- setNames(c(CCLid:::.grepNA(paste0(ref.ds, "_.*", alt.ds), names(grl)),
+                        CCLid:::.grepNA(paste0("RNA_.*", alt.ds), names(grl)),
+                        CCLid:::.grepNA(paste0("RNA_.*", ref.ds), names(grl))),
                       c(paste0(ref.ds, "/", alt.ds),
                         paste0("RNA/", alt.ds),
                         paste0("RNA/", ref.ds)))
@@ -121,8 +121,8 @@ driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
   cs <- combn(x=1:3, m=2)
   drift.ov <- apply(cs, 2, function(i){
     # i <- unlist(cs[,2])
-    gr1 <- if(is.na(grl.idx[i[1]]))  .blankGr() else grl[[grl.idx[i[1]]]]
-    gr2 <- if(is.na(grl.idx[i[2]]))  .blankGr() else grl[[grl.idx[i[2]]]]
+    gr1 <- if(is.na(grl.idx[i[1]]))  CCLid:::.blankGr() else grl[[grl.idx[i[1]]]]
+    gr2 <- if(is.na(grl.idx[i[2]]))  CCLid:::.blankGr() else grl[[grl.idx[i[2]]]]
     grI <- intersect(gr1, gr2)
     
     wI <- sum(width(grI))

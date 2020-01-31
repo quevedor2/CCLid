@@ -154,7 +154,7 @@ formatRefMat <- function(name, ref.mat, analysis,
 #' @export
 assignGrpIDs <- function(mat, meta.df){
   new.ids <- sapply(colnames(mat), function(i){
-    i <- gsub(".[xy]$", "", i)
+    i <- gsub("\\.[xy]$", "", i)
     cidx <- grep(i, meta.df, ignore.case = T)
     cidx <- cidx[length(cidx)]
     ridx <- grep(paste0("^", i, "(.cel)?$"), meta.df[,cidx], ignore.case = T)
