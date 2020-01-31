@@ -90,7 +90,10 @@ meta.df[278,]$CCLE <- meta.df[279,]$CCLE ## Fixes G-292_Clone_A141B1
 meta.df[486,]$CCLE <- meta.df[485,]$CCLE ## Fixes Ishikawa_Heraklio_02ER
 meta.df[941,]$CCLE <- meta.df[893,]$CCLE ## Fixes NIH:OVCAR-3
 meta.df[978,]$CCLE <- meta.df[979,]$CCLE ## Fixes PE/CA-PJ15
-meta.df <- meta.df[-c(15, 279, 485, 893, 979),]
+meta.df[1046,]$CCLE <- meta.df[1047,]$CCLE ## Fixes RS4-11/ RS4;11
+meta.df[886,]$CCLE <- meta.df[1130,]$CCLE ## Fixes NCI-SNU-1/ SNU-1
+
+meta.df <- meta.df[-c(15, 279, 485, 893, 979, 1047, 1130),]
 meta.df <- meta.df[, -grep("^tmp$", colnames(meta.df))]
 meta.df$ID <- gsub(" ", "-", meta.df$ID)
 
@@ -110,3 +113,99 @@ keep.idx <- switch(analysis,
 dat.r <- dat.r[keep.idx,]
 if(any(is.na(dat.r))) dat.r[is.na(dat.r)] <- median(as.matrix(dat.r), na.rm=T)
 
+
+
+###################
+#### affy.omni ####
+## Cell line name by filename dataframe
+
+#### Functions ####
+getSnp <- function(x, snp){
+  if(snp=='A'){
+    x %<>%
+      gsub('\\[', "", .) %>%
+      gsub("/.*", "", .) 
+  } else if (snp =='B'){
+    x %<>%
+      gsub('\\[./', "", .) %>%
+      gsub("\\]", "", .) 
+  } else {
+    stop("Specifiy snp=A or snp=B")
+  }
+  x
+}
+
+syncStrandedSnps <- function(snp, strand_x, strand_y){
+  revcomp <- list("A"="T",
+                  "T"="A",
+                  "C"="G",
+                  "G"="C")
+  strand.idx <- which(strand_x != strand_y)
+  snp[strand.idx] <- sapply(snp[strand.idx], function(x) revcomp[[x]])
+  snp
+}
+
+setSnpToggleFlag <- function(snp_x1, snp_x2, snp_y1, snp_y2){
+  tot.orient <- rep(NA, length(snp_x1))
+  
+  corr.orient <- (snp_x1 == snp_y1) & (snp_x2 == snp_y2)
+  tot.orient[which(corr.orient)] <- 'CORRECT'
+  
+  flip.orient <- (snp_x1 == snp_y2) & (snp_x2 == snp_y1)
+  tot.orient[which(flip.orient)] <- 'FLIP'
+  
+  tot.orient
+}
+
+
+#### Main  ####
+require(dplyr)
+require(Biobase)
+#setwd("/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/reference/annotations/mapping")
+setwd("~/git/CCL_authenticator/data-raw")
+affy <- read.table(gzfile("GenomeWideSNP_6.na35.annot.trimmed.csv.gz"), 
+                   header=TRUE, stringsAsFactors = FALSE, check.names=FALSE)
+omni <- read.table(gzfile("HumanOmni2.5-4v1_H.trimmed.csv.gz"), 
+                   header=TRUE, stringsAsFactors = FALSE, check.names=FALSE)
+
+affy.id <- apply(affy[,c("Chromosome", "Physical_Position")], 1, function(x)
+  paste(x, collapse=","))
+omni.id <- apply(omni[,c("Chr", "MapInfo")], 1, function(x)
+  paste(x, collapse=","))
+omni.id <- gsub(" ", "", omni.id)
+
+affy$mergeid <- affy.id
+omni$mergeid <- omni.id
+
+affy.omni <- merge(x=affy, y=omni, by="mergeid", all=TRUE)
+affy.omni.full <- affy.omni[which(apply(affy.omni, 1, function(x) !any(is.na(x)))),]
+
+affy.omni.full$SNP_A <- getSnp(affy.omni.full$SNP, 'A')
+affy.omni.full$SNP_B <- getSnp(affy.omni.full$SNP, 'B')
+
+affy.omni.full$scSNP_A <- with(affy.omni.full, syncStrandedSnps(SNP_A, Strand, RefStrand))
+affy.omni.full$scSNP_B <- with(affy.omni.full, syncStrandedSnps(SNP_B, Strand, RefStrand))
+
+affy.omni.full$flip <- with(affy.omni.full, setSnpToggleFlag(Allele_A, Allele_B, 
+                                                             scSNP_A, scSNP_B))
+metaData <- data.frame(labelDescription=c(
+  "Unique merge ID ([chr],[pos])",
+  "Affy6 probe set IDs",
+  "Affy6 dbSNP IDs",
+  "Affy6 Chromosome",
+  "Affy6 Genomic Loci (GRCh37)",
+  "Affy6 Strand", 
+  "Affy6 A-allele",
+  "Affy6 B-allele",
+  "Omni2.5quad probe set IDs",
+  "Omni2.5quad SNPs",
+  "Omni2.5quad Chromosome",
+  "Omni2.5quad Genomic Loci (GRCh37)",
+  "Omni2.5quad Strand",
+  "Omni2.5quad A-allele",
+  "Omni2.5quad B-allele",
+  "Omni2.5quad strand corrected A-allele (ref=Affy6)",
+  "Omni2.5quad strand corrected b-allele (ref=Affy6)",
+  "Omni2.5 order of alleles in reference to Affy6"))
+affy.omni <- AnnotatedDataFrame(data=affy.omni.full, varMetadata=metaData)
+usethis::use_data(affy.omni, overwrite = T)
