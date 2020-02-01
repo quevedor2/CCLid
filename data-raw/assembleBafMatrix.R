@@ -1,5 +1,6 @@
 library(Rfast)
 library(optparse)
+library(CCLid)
 
 ## This create loads in ./eacon/SAMPLE/SAMPLE__GenomeWideSNP_6_hg19_processed.RDS
 ## files to extract the PROBE-LEVEL baf adn lrr values in order to aggregate it
@@ -99,19 +100,41 @@ if(opt$section == 'matrix'){
 #######################################
 #### Combine datasets and distance ####
 if(opt$section == 'dist'){
-  datasets <- c('GDSC', 'CCLE')
+  library(CCLid)
+  datasets <- c('GDSC', 'GNE', 'CCLE') # 'CCLE', 
   dat.m <- lapply(datasets, function(i){
     path <- file.path('/mnt/work1/users/pughlab/projects/cancer_cell_lines/',
                       i, 'condensed',  paste0(opt$analysis, "-mat.rds"))
-    readRDS(path)
+    m <- readRDS(path)
+    if(colnames(m)[1] == 'ID') {
+      m[,-1] <- round(m[,-1],2)
+    } else {
+      m <- round(m, 2)
+    }
+    return(m)
   })
   names(dat.m) <- datasets
   
   keep.idx <- switch(opt$analysis,
-                     lrr=grep("CN", gsub("_.*", "", dat.m[[1]][,1])),
-                     baf=grep("SNP", gsub("_.*", "", dat.m[[1]][,1])))
+                     lrr=grep("CN", gsub("_.*", "", dat.m[['GDSC']][,1])),
+                     baf=grep("SNP", gsub("_.*", "", dat.m[['GDSC']][,1])))
+  if('GNE' %in% names(dat.m)){
+    data(affy.omni)
+    ao.map <- setNames(affy.omni@data$Name, affy.omni@data$Probe_Set_ID)
+    flip.map <- setNames(affy.omni@data$flip, affy.omni@data$Probe_Set_ID)
+
+    row.ord <- ao.map[dat.m[['GDSC']]$ID]
+    row.idx <- match(row.ord, rownames(dat.m[['GNE']]))
+    gne.mat <- dat.m[['GNE']][row.idx,]
+    rownames(gne.mat) <- dat.m[['GDSC']]$ID
+    
+    flip.idx <- which(flip.map[rownames(gne.mat)] == 'FLIP')
+    gne.mat[flip.idx,] <- (1-gne.mat[flip.idx,])
+    
+    dat.m[['GNE']] <- cbind(data.frame("ID"=rownames(gne.mat)), gne.mat)
+  }
   dat.m <- lapply(dat.m, function(i) {
-    i[,-1] <- round(i[,-1],2)
+    # i[,-1] <- round(i[,-1],2)
     i[keep.idx,]
   })
   na <- which(apply(dat.m[[1]][,-1], 1, function(x) all(is.na(x))))
