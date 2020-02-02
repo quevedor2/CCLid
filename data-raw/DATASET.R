@@ -50,8 +50,13 @@ col.ids <- list('CCLE'=c('Cell line primary name', 'SNP arrays'),
 ## Form metadata
 setwd("~/git/CCL_authenticator/data-raw/")
 meta <- lapply(datasets, function(i){
-  ds <- readRDS(file.path('.', paste0(i, "_CN.gene.RDS")))
-  pheno <- phenoData(ds)@data[,col.ids[[i]]]
+  if(i=='GNE'){
+    ds <- read.csv(file.path('.', 'GNE_mapping.tsv'), header=TRUE)
+    pheno <- ds[,col.ids[[i]]]
+  } else {
+    ds <- readRDS(file.path('.', paste0(i, "_CN.gene.RDS")))
+    pheno <- phenoData(ds)@data[,col.ids[[i]]]
+  }
   colnames(pheno)[1] <- "cellID"
   return(pheno)
 })
@@ -114,7 +119,7 @@ for(each.dup in names(dup.ids)){
   idc <- grep(paste0("^", each.dup, "$"), meta.df$tmp)
   ds.ids <- apply(meta.df[idc, datasets], 2, na.omit)
   for(each.ds in names(ds.ids)){
-    if(length(ds.ids[[each.ds]]) > 0) meta.df[idc,each.ds] <- ds.ids[[each.ds]]
+    if(length(ds.ids[[each.ds]]) > 0) meta.df[idc,each.ds] <- ds.ids[[each.ds]][1]
   }
 }
 meta.df <- meta.df[-which(duplicated(meta.df$tmp)),]
