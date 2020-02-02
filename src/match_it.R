@@ -45,7 +45,7 @@ benchmarkCCLid <- function(bench){
   PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
   analysis <- 'baf'
   ref.mat <- downloadRefCCL("BAF", saveDir = PDIR)
-  format.dat <- formatRefMat(name="BAF", ref.mat=ref.mat, 
+  format.dat <- formatRefMat(name="BAF", ref.mat=ref.mat, saveDir=PDIR, 
                              analysis='baf', bin.size=5e5)
   ref.mat <- format.dat$mat
   var.dat <- format.dat$var
@@ -69,6 +69,7 @@ snpsCellIdentity <- function(){
   rm.idx <- grep(ds.pattern, colnames(x.mat), invert = TRUE)
   x.mat <- x.mat[,-rm.idx]
   
+  boxplot(apply(x.mat, 1, function(i) { sum(is.na(i))}))
   x.dist <- similarityMatrix(x.mat, 'euclidean')
   D.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=meta.df)
   balanced <- balanceGrps(D.vals)

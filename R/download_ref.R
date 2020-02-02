@@ -66,7 +66,7 @@ availableRefCCL <- function (saveDir = file.path(".", "CCLid"),
 #' @examples
 formatRefMat <- function(name, ref.mat, analysis, 
                          varFileName=NULL, saveDir = file.path(".", "CCLid"), 
-                         bin.size=1e6, just.var=FALSE){
+                         bin.size=1e6, just.var=FALSE, fill.na=FALSE){
   ## Set filename and file path
   ccl.table <- CCLid::availableRefCCL(saveDir = saveDir)
   whichx <- match(name, ccl.table[, 1])
@@ -84,13 +84,13 @@ formatRefMat <- function(name, ref.mat, analysis,
                        baf=grep("SNP", gsub("_.*", "", rownames(ref.mat))),
                        stop("'analysis' parameter must be submitted: 'lrr, baf'"))
     ref.mat <- ref.mat[keep.idx,]
-    ref.mat[is.na(ref.mat)] <- median(as.matrix(ref.mat), na.rm=T)
+    if(fill.na) ref.mat[is.na(ref.mat)] <- median(as.matrix(ref.mat), na.rm=T)
   }
   
   ## Calculate variant features if file doesn't already exist
   if (!file.exists(file.path(saveDir, varFileName))) {
     print("Generate feature variance data")
-    var.feats <- .getVariantFeatures(ref.mat, bin.size)
+    var.feats <- CCLid:::.getVariantFeatures(ref.mat, bin.size)
     saveRDS(var.feats, file.path(saveDir, varFileName))
   } else {
     print("Reading existing variance data")
