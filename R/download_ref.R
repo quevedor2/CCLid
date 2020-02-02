@@ -26,9 +26,12 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
   }
   if (!file.exists(file.path(saveDir, refFileName))) {
     downloader::download(url = as.character(ccl.table[whichx, "URL"]), 
-                         destfile = file.path(saveDir, refFileName), 
+                         destfile = file.path(saveDir, paste0(refFileName, ".gz")), 
                          quiet = !verbose)
+    print(paste0("Unzipping: ", file.path(saveDir, paste0(refFileName, ".gz"))))
+    system(command = paste0('gunzip ', file.path(saveDir, paste0(refFileName, ".gz"))))
   }
+  
   ref.mat <- readRDS(file.path(saveDir, refFileName))
   return(ref.mat)
 }

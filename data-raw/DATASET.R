@@ -40,60 +40,89 @@ usethis::use_data(snp6.dat, overwrite = T)
 ## Cell line name by filename dataframe
 library(Biobase)
 
-datasets <- c('GDSC', 'CCLE')
+datasets <- c('GDSC', 'CCLE', 'GNE')
 col.ids <- list('CCLE'=c('Cell line primary name', 'SNP arrays'),
-                'GDSC'=c('Sample Name', 'cel'))
+                'GDSC'=c('Sample Name', 'cel'),
+                'GNE'=c('INVENTORY_SAMPLE_NAME', 'Sample_ID'))
 
 #pdir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/'
 #cn.dir <- file.path(pdir, 'rds')
-setwd("~/git/CCL_authenticator/data-raw/")
-cn.dat <- lapply(datasets, function(i){
-  readRDS(file.path('.', paste0(i, "_CN.gene.RDS")))
-})
-names(cn.dat) <- datasets
-
 ## Form metadata
+setwd("~/git/CCL_authenticator/data-raw/")
 meta <- lapply(datasets, function(i){
-  phenoData(cn.dat[[i]])@data[,col.ids[[i]]]
+  ds <- readRDS(file.path('.', paste0(i, "_CN.gene.RDS")))
+  pheno <- phenoData(ds)@data[,col.ids[[i]]]
+  colnames(pheno)[1] <- "cellID"
+  return(pheno)
 })
+names(meta) <- datasets
 
 ## Reduce to dataframe
-meta.df <- Reduce(function(x,y) merge(x,y, by.x='Sample Name', 
-                                      by.y='Cell line primary name', all=T), meta)
-meta.df <- taRifx::remove.factors(meta.df[-which(rowSums(is.na(meta.df)) == 3),])
+meta.df <- Reduce(function(x,y) merge(x,y, by='cellID', all=T), meta)
+meta.df <- taRifx::remove.factors(meta.df[-which(rowSums(is.na(meta.df)) == 4),])
 colnames(meta.df) <- c('ID', datasets)
-for(d in datasets){
-  meta.df[,d] <- as.character(meta.df[,d])
-}
+for(d in datasets){ meta.df[,d] <- as.character(meta.df[,d]) }
 
 
 meta.df$tmp <- tolower(gsub("[ -/]", "", meta.df$ID))
 ## Fix TT, T-T cell lines
-tt.idx <- grep("^tt$", meta.df$tmp)
-meta.df[grep("^T[-._]T$", meta.df$ID),]$tmp <- 't.t'
+{
+  meta.df[grep("^T[-._]T$", meta.df$ID),]$tmp <- 't.t'
+  meta.df[grep("^786o$", meta.df$tmp),]$tmp <- '7860'
+  meta.df[grep("^nih:ovcar3$", meta.df$tmp),]$tmp <- 'ovcar3'
+  meta.df[grep("^pecapj15$", meta.df$tmp),]$tmp <- 'pe_capj15'
+  meta.df[grep("^ncisnu1$", meta.df$tmp),]$tmp <- 'snu1'
+  meta.df[grep("^a3kawakami$", meta.df$tmp),]$tmp <- 'a3kaw'
+  meta.df[grep("^a4fukada$", meta.df$tmp),]$tmp <- 'a4fuk'
+  meta.df[grep("^bxpc3ivcc$", meta.df$tmp),]$tmp <- 'bxpc3'
+  meta.df[grep("^cfpac$", meta.df$tmp),]$tmp <- 'cfpac1'
+  meta.df[grep("^colo205ivcc$", meta.df$tmp),]$tmp <- 'colo205'
+  meta.df[grep("^colo320hsr$", meta.df$tmp),]$tmp <- 'colo320'
+  meta.df[grep("^ef027$", meta.df$tmp),]$tmp <- 'efo27'
+  meta.df[grep("^es2to$", meta.df$tmp),]$tmp <- 'es2'
+  meta.df[grep("^g292clonea141b1$", meta.df$tmp),]$tmp <- 'g292_clone_a141b1'
+  meta.df[grep("^hcc2157utsw$", meta.df$tmp),]$tmp <- 'hcc2157'
+  meta.df[grep("^hct116ivcc$", meta.df$tmp),]$tmp <- 'hct116'
+  meta.df[grep("^ht29ivcc$", meta.df$tmp),]$tmp <- 'ht29'
+  meta.df[grep("^ht55ivcc$", meta.df$tmp),]$tmp <- 'ht55'
+  meta.df[grep("^huh6clone5$", meta.df$tmp),]$tmp <- 'huh6'
+  meta.df[grep("^igrov1ivcc$", meta.df$tmp),]$tmp <- 'igrov1'
+  meta.df[grep("^ishikawaheraklio02er$", meta.df$tmp),]$tmp <- 'ishikawa_heraklio_02er'
+  meta.df[grep("^jiyoyep2003$", meta.df$tmp),]$tmp <- 'jiyoye'
+  meta.df[grep("^jurkatclonee61$", meta.df$tmp),]$tmp <- 'jurkat'
+  meta.df[grep("^lc1sqsf$", meta.df$tmp),]$tmp <- 'lc1sq'
+  meta.df[grep("^loximviivcc$", meta.df$tmp),]$tmp <- 'loximvi'
+  meta.df[grep("^mdamb134viatcc$", meta.df$tmp),]$tmp <- 'mdamb134vi'
+  meta.df[grep("^mdamb435$", meta.df$tmp),]$tmp <- 'mdamb435s'
+  meta.df[grep("^mdamb468ivcc$", meta.df$tmp),]$tmp <- 'mdamb468'
+  meta.df[grep("^mm1sivcc$", meta.df$tmp),]$tmp <- 'mm1s'
+  meta.df[grep("^ncih1437atcc$", meta.df$tmp),]$tmp <- 'ncih1437'
+  meta.df[grep("^ncih1975ivcc$", meta.df$tmp),]$tmp <- 'ncih1975'
+  meta.df[grep("^ncih510$", meta.df$tmp),]$tmp <- 'ncih510a'
+  meta.df[grep("^ncih727atcc$", meta.df$tmp),]$tmp <- 'ncih727'
+  meta.df[grep("^ov90ivcc$", meta.df$tmp),]$tmp <- 'ov90'
+  meta.df[grep("^rs4;11$", meta.df$tmp),]$tmp <- 'rs411'
+}
+
+
+
+
+
 
 dup.ids <- which(table(meta.df$tmp) > 1)
 for(each.dup in names(dup.ids)){
-  datasets <- c('GDSC', 'CCLE')
-  
   idc <- grep(paste0("^", each.dup, "$"), meta.df$tmp)
   ds.ids <- apply(meta.df[idc, datasets], 2, na.omit)
   for(each.ds in names(ds.ids)){
-    meta.df[idc,each.ds] <- ds.ids[each.ds]
+    if(length(ds.ids[[each.ds]]) > 0) meta.df[idc,each.ds] <- ds.ids[[each.ds]]
   }
 }
 meta.df <- meta.df[-which(duplicated(meta.df$tmp)),]
 rownames(meta.df) <- 1:nrow(meta.df)
 
-meta.df[14,]$CCLE <- meta.df[15,]$CCLE ## Fixes 786-0
-meta.df[278,]$CCLE <- meta.df[279,]$CCLE ## Fixes G-292_Clone_A141B1
-meta.df[486,]$CCLE <- meta.df[485,]$CCLE ## Fixes Ishikawa_Heraklio_02ER
-meta.df[941,]$CCLE <- meta.df[893,]$CCLE ## Fixes NIH:OVCAR-3
-meta.df[978,]$CCLE <- meta.df[979,]$CCLE ## Fixes PE/CA-PJ15
-meta.df[1046,]$CCLE <- meta.df[1047,]$CCLE ## Fixes RS4-11/ RS4;11
-meta.df[886,]$CCLE <- meta.df[1130,]$CCLE ## Fixes NCI-SNU-1/ SNU-1
+# id <- 'A141B1'
+# meta.df[grep(id, meta.df$ID),]
 
-meta.df <- meta.df[-c(15, 279, 485, 893, 979, 1047, 1130),]
 meta.df <- meta.df[, -grep("^tmp$", colnames(meta.df))]
 meta.df$ID <- gsub(" ", "-", meta.df$ID)
 
