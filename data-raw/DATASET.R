@@ -38,12 +38,15 @@ usethis::use_data(snp6.dat, overwrite = T)
 #################
 #### meta.df ####
 ## Cell line name by filename dataframe
+#devtools::install_github("quevedor2/Rcellosaurus")
+#devtools::reload(pkgload::inst('Rcellosaurus'))
+library(Rcellosaurus)
 library(Biobase)
 
 datasets <- c('GDSC', 'CCLE', 'GNE')
 col.ids <- list('CCLE'=c('Cell line primary name', 'SNP arrays'),
                 'GDSC'=c('Sample Name', 'cel'),
-                'GNE'=c('INVENTORY_SAMPLE_NAME', 'Sample_ID'))
+                'GNE'=c('curated_ID', 'Sample_ID'))
 
 #pdir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/'
 #cn.dir <- file.path(pdir, 'rds')
@@ -51,7 +54,7 @@ col.ids <- list('CCLE'=c('Cell line primary name', 'SNP arrays'),
 setwd("~/git/CCL_authenticator/data-raw/")
 meta <- lapply(datasets, function(i){
   if(i=='GNE'){
-    ds <- read.csv(file.path('.', 'GNE_mapping.tsv'), header=TRUE)
+    ds <- read.csv(file.path('.', 'GNE_mapping.csv'), header=TRUE)
     pheno <- ds[,col.ids[[i]]]
   } else {
     ds <- readRDS(file.path('.', paste0(i, "_CN.gene.RDS")))
@@ -79,40 +82,35 @@ meta.df$tmp <- tolower(gsub("[ -/]", "", meta.df$ID))
   meta.df[grep("^ncisnu1$", meta.df$tmp),]$tmp <- 'snu1'
   meta.df[grep("^a3kawakami$", meta.df$tmp),]$tmp <- 'a3kaw'
   meta.df[grep("^a4fukada$", meta.df$tmp),]$tmp <- 'a4fuk'
-  meta.df[grep("^bxpc3ivcc$", meta.df$tmp),]$tmp <- 'bxpc3'
+  # meta.df[grep("^bxpc3ivcc$", meta.df$tmp),]$tmp <- 'bxpc3'
   meta.df[grep("^cfpac$", meta.df$tmp),]$tmp <- 'cfpac1'
-  meta.df[grep("^colo205ivcc$", meta.df$tmp),]$tmp <- 'colo205'
+  # meta.df[grep("^colo205ivcc$", meta.df$tmp),]$tmp <- 'colo205'
   meta.df[grep("^colo320hsr$", meta.df$tmp),]$tmp <- 'colo320'
   meta.df[grep("^ef027$", meta.df$tmp),]$tmp <- 'efo27'
   meta.df[grep("^es2to$", meta.df$tmp),]$tmp <- 'es2'
   meta.df[grep("^g292clonea141b1$", meta.df$tmp),]$tmp <- 'g292_clone_a141b1'
-  meta.df[grep("^hcc2157utsw$", meta.df$tmp),]$tmp <- 'hcc2157'
-  meta.df[grep("^hct116ivcc$", meta.df$tmp),]$tmp <- 'hct116'
-  meta.df[grep("^ht29ivcc$", meta.df$tmp),]$tmp <- 'ht29'
-  meta.df[grep("^ht55ivcc$", meta.df$tmp),]$tmp <- 'ht55'
+  # meta.df[grep("^hcc2157utsw$", meta.df$tmp),]$tmp <- 'hcc2157'
+  # meta.df[grep("^hct116ivcc$", meta.df$tmp),]$tmp <- 'hct116'
+  # meta.df[grep("^ht29ivcc$", meta.df$tmp),]$tmp <- 'ht29'
+  # meta.df[grep("^ht55ivcc$", meta.df$tmp),]$tmp <- 'ht55'
   meta.df[grep("^huh6clone5$", meta.df$tmp),]$tmp <- 'huh6'
-  meta.df[grep("^igrov1ivcc$", meta.df$tmp),]$tmp <- 'igrov1'
+  # meta.df[grep("^igrov1ivcc$", meta.df$tmp),]$tmp <- 'igrov1'
   meta.df[grep("^ishikawaheraklio02er$", meta.df$tmp),]$tmp <- 'ishikawa_heraklio_02er'
   meta.df[grep("^jiyoyep2003$", meta.df$tmp),]$tmp <- 'jiyoye'
   meta.df[grep("^jurkatclonee61$", meta.df$tmp),]$tmp <- 'jurkat'
   meta.df[grep("^lc1sqsf$", meta.df$tmp),]$tmp <- 'lc1sq'
-  meta.df[grep("^loximviivcc$", meta.df$tmp),]$tmp <- 'loximvi'
-  meta.df[grep("^mdamb134viatcc$", meta.df$tmp),]$tmp <- 'mdamb134vi'
+  # meta.df[grep("^loximviivcc$", meta.df$tmp),]$tmp <- 'loximvi'
+  # meta.df[grep("^mdamb134viatcc$", meta.df$tmp),]$tmp <- 'mdamb134vi'
   meta.df[grep("^mdamb435$", meta.df$tmp),]$tmp <- 'mdamb435s'
-  meta.df[grep("^mdamb468ivcc$", meta.df$tmp),]$tmp <- 'mdamb468'
-  meta.df[grep("^mm1sivcc$", meta.df$tmp),]$tmp <- 'mm1s'
-  meta.df[grep("^ncih1437atcc$", meta.df$tmp),]$tmp <- 'ncih1437'
-  meta.df[grep("^ncih1975ivcc$", meta.df$tmp),]$tmp <- 'ncih1975'
+  # meta.df[grep("^mdamb468ivcc$", meta.df$tmp),]$tmp <- 'mdamb468'
+  # meta.df[grep("^mm1sivcc$", meta.df$tmp),]$tmp <- 'mm1s'
+  # meta.df[grep("^ncih1437atcc$", meta.df$tmp),]$tmp <- 'ncih1437'
+  # meta.df[grep("^ncih1975ivcc$", meta.df$tmp),]$tmp <- 'ncih1975'
   meta.df[grep("^ncih510$", meta.df$tmp),]$tmp <- 'ncih510a'
-  meta.df[grep("^ncih727atcc$", meta.df$tmp),]$tmp <- 'ncih727'
-  meta.df[grep("^ov90ivcc$", meta.df$tmp),]$tmp <- 'ov90'
+  # meta.df[grep("^ncih727atcc$", meta.df$tmp),]$tmp <- 'ncih727'
+  # meta.df[grep("^ov90ivcc$", meta.df$tmp),]$tmp <- 'ov90'
   meta.df[grep("^rs4;11$", meta.df$tmp),]$tmp <- 'rs411'
 }
-
-
-
-
-
 
 dup.ids <- which(table(meta.df$tmp) > 1)
 for(each.dup in names(dup.ids)){
@@ -127,7 +125,44 @@ rownames(meta.df) <- 1:nrow(meta.df)
 
 # id <- 'A141B1'
 # meta.df[grep(id, meta.df$ID),]
+data(melt.cells)
+cvcl.ids <- sapply(meta.df$ID, Rcellosaurus::getCVCL, melt.cells=melt.cells)
 
+# cvcls == 0
+{
+  nil.idx <- which(sapply(cvcl.ids, length) == 0)
+  cvcl.ids[[304]] <- 'CVCL_2047' # Fu-Ov-1
+  cvcl.ids[[306]] <- 'CVCL_2909' # G-292_Clone_A141B1
+  cvcl.ids[[464]] <- 'CVCL_0326' #   Hep_3B2_1-7   
+  cvcl.ids[[513]] <- 'CVCL_0846	' # Hs 688(A).T 
+  cvcl.ids[[516]] <- 'CVCL_0851' # Hs 69ST 
+  cvcl.ids[[528]] <- 'CVCL_0936' # Hs 832(C).T
+  cvcl.ids[[584]] <- 'CVCL_6543' # Ishikawa (Heraklio) 02 ER-
+  cvcl.ids[[692]] <- 'CVCL_1338' # KP4
+  cvcl.ids[[747]] <- 'CVCL_1381' # LOX-IMIV 
+  cvcl.ids[[769]] <- 'CVCL_0620' # MB361.1 
+  cvcl.ids[[859]] <- 'CVCL_3041' # NB_TU_1-10  
+  cvcl.ids[[1015]] <- 'CVCL_0035' #NCI-PC3 
+  cvcl.ids[[1042]] <- 'CVCL_1614' # OAW28NR
+  cvcl.ids[[1075]] <- 'CVCL_3935' # OvCA420
+  cvcl.ids[[1076]] <- 'CVCL_3936' # OvCA429
+  cvcl.ids[[1077]] <- 'CVCL_0475' # OvCA433
+  cvcl.ids[[1115]] <- 'CVCL_2679' # PE/CA-PJ34 (clone C12)
+  cvcl.ids[[1116]] <- 'CVCL_2680' # PE/CA-PJ41 (clone D2)
+  cvcl.ids[[1448]] <- 'CVCL_1779' # UACC-257
+}
+
+# cvcls > 1
+{
+  x <- which(sapply(cvcl.ids, length) > 1) # one cell matches to multiple names
+  cvcl.ids[[328]] <- 'CVCL_N736' # G96
+  cvcl.ids[[646]] <- 'CVCL_0374' # KG-1
+  cvcl.ids[[718]] <- 'CVCL_8147' # L3.3
+  cvcl.ids[[1106]] <- 'CVCL_0035' # PC-3
+  cvcl.ids[[1426]] <- 'CVCL_1774' # T.T
+}
+
+meta.df$CVCL <- cvcl.ids
 meta.df <- meta.df[, -grep("^tmp$", colnames(meta.df))]
 meta.df$ID <- gsub(" ", "-", meta.df$ID)
 

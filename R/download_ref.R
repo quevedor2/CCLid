@@ -90,7 +90,7 @@ formatRefMat <- function(name, ref.mat, analysis,
   ## Calculate variant features if file doesn't already exist
   if (!file.exists(file.path(saveDir, varFileName))) {
     print("Generate feature variance data")
-    var.feats <- CCLid:::.getVariantFeatures(ref.mat, bin.size)
+    var.feats <- .getVariantFeatures(ref.mat, bin.size)
     saveRDS(var.feats, file.path(saveDir, varFileName))
   } else {
     print("Reading existing variance data")
@@ -113,7 +113,7 @@ formatRefMat <- function(name, ref.mat, analysis,
   require(BSgenome.Hsapiens.UCSC.hg19)
   
   ## Gets variance of matrix
-  ref.vars <- apply(ref.mat, 1, var)
+  ref.vars <- apply(ref.mat, 1, var, na.rm=TRUE)
   
   ## Identifies genomic position of SNPs in ref.mat
   all.pb <-  as.data.frame(CCLid::snp6.dat$All)[,c(1:3)] #Loads in probeset meta data

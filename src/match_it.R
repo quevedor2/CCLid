@@ -46,7 +46,7 @@ benchmarkCCLid <- function(bench){
   analysis <- 'baf'
   ref.mat <- downloadRefCCL("BAF", saveDir = PDIR)
   format.dat <- formatRefMat(name="BAF", ref.mat=ref.mat, saveDir=PDIR, 
-                             analysis='baf', bin.size=5e5)
+                             analysis='baf', bin.size=5e5, fill.na=FALSE)
   ref.mat <- format.dat$mat
   var.dat <- format.dat$var
   rm(format.dat)
@@ -66,10 +66,8 @@ snpsCellIdentity <- function(){
   x.mat <- as.matrix(vcf.map.var)
   storage.mode(x.mat) <- 'numeric'
   ds.pattern = '(CCLE)_|(GDSC)_|(GDSC2)_|(CCLE2)_|(GNE)_|(GNE2)_'
-  rm.idx <- grep(ds.pattern, colnames(x.mat), invert = TRUE)
-  x.mat <- x.mat[,-rm.idx]
+  #x.mat[is.na(x.mat)] <- median(x.mat, na.rm=TRUE)
   
-  boxplot(apply(x.mat, 1, function(i) { sum(is.na(i))}))
   x.dist <- similarityMatrix(x.mat, 'euclidean')
   D.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=meta.df)
   balanced <- balanceGrps(D.vals)
@@ -79,9 +77,47 @@ snpsCellIdentity <- function(){
   pred <- assemblePredDat(x.vals, known.class=FALSE)
   pred <- mkPredictions(pred, models)
   
-  
   pred$g.truth <- gsub(ds.pattern, "", pred$Var1) == gsub(ds.pattern, "", pred$Var2)
   pred$g.truth <- c("NM", "M")[as.integer(pred$g.truth) + 1]
+  
+  # hm7.idx <- c(grep('GNE_LS174T', pred$Var1), grep('GNE_LS174T', pred$Var2))
+  # hm7.idx <- intersect(grep('LS-180', pred$Var1), grep('LS-180', pred$Var2))
+  # hm7 <- pred[hm7.idx,]
+  # head(hm7[order(hm7$baf.fit),])
+  
+  gne <- split(pred, gsub("_.*", "", pred$Var1))[['GNE']]
+  head(gne[order(gne$baf),])
+  gne.m <- split(gne, gne$g.truth)[['NM']]
+  head(gne.m[order(gne.m$baf),], 50)
+  
+  datasets <-c('CCLE', 'GDSC', 'GNE')
+  pred$ds <- paste(pred$Var1, pred$Var2, sep=";")
+  pred$ds <- gsub("_.*;", ";", pred$ds) %>%  gsub("_.*", "", .)
+  cmb.pred <- apply(combn(datasets, m = 2), 2, function(ds){
+    id1 <- paste(ds[1], ds[2], sep=";")
+    id2 <- paste(ds[2], ds[1], sep=";")
+    idx <- as.logical((pred$ds == id1) + (pred$ds == id2))
+    split(pred, f=idx)[['TRUE']]
+  })
+  names(cmb.pred) <- apply(combn(datasets, m=2), 2, paste, collapse="-")
+  
+  x <- cmb.pred[[1]]
+  x[which(x$baf.p.fit == 'NM' & x$g.truth == 'M'),]
+  x1 <- x[grep("HCC2157", x$Var2),]
+  head(x1[order(x1$baf, decreasing = FALSE),])
+
+  pdf(file.path(PDIR, "match_it", "gne-gdsc-ccle_conc.pdf"))
+  par(mfrow=c(3,2))
+  lapply(names(cmb.pred), function(pid){
+    p <- cmb.pred[[pid]]
+    conf.m <- table(p$baf.p.fit, p$g.truth)
+    fourfoldplot(conf.m, space = 0.2)
+    conf.m[2,2] <- sum(p$g.truth=='M')
+    fourfoldplot(conf.m, space = 0.2, conf.level = 0, std='ind.max', main=pid)
+  })
+  dev.off()
+  cat("rl ", file.path(PDIR, "match_it", "gne-gdsc-ccle_conc.pdf\n"))
+  
   conf.m <- table(pred$baf.p.fit, pred$g.truth)
   fourfoldplot(conf.m, space = 0.5)
   

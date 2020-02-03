@@ -102,6 +102,9 @@ balanceGrps <- function(D.vals){
   return(balanced)
 }
 
+
+
+
 #' similarityMatrix
 #' @description Creates a similarity/concordance matrix given a
 #' SNP x Sample matrix and a method of concordance
@@ -114,10 +117,18 @@ balanceGrps <- function(D.vals){
 similarityMatrix <- function(mat, method){
   require(Rfast)
   require(philentropy)
-  D <- switch(method,
-              "cor"=cor(mat),
-              "jaccard"=philentropy::distance(t(mat), method='jaccard'),
-              "euclidean"=Rfast::Dist(t(mat), method='euclidean'))
+  if(any(is.na(mat))){
+    D <- switch(method,
+                "euclidean"=dist(t(mat)),
+                stop("Only 'euclidean' is set up for matrices with NA values"))
+    D <- as.matrix(D)
+  } else {
+    D <- switch(method,
+                "cor"=cor(mat),
+                "jaccard"=philentropy::distance(t(mat), method='jaccard'),
+                "euclidean"=Rfast::Dist(t(mat), method='euclidean'))
+  }
+  
   colnames(D) <- rownames(D) <- colnames(mat)
   return(D)
 }
