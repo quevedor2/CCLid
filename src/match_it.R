@@ -80,6 +80,8 @@ snpsCellIdentity <- function(){
   pred <- mkPredictions(pred, models)
   
   ## Format extra columns on prediction matrix
+  pred$Var1 <- as.character(pred$Var1)
+  pred$Var2 <- as.character(pred$Var2)
   pred$clA <- as.character(gsub(ds.pattern, "", pred$Var1))
   pred$clB <- as.character(gsub(ds.pattern, "", pred$Var2))
   pred$cvclA <- meta.df[match(pred$clA, meta.df$ID),]$CVCL
@@ -126,36 +128,30 @@ snpsCellIdentity <- function(){
             col=c("FALSE"="#f4a582", "TRUE"="#b2182b"), border=NA)
     return(p.m.nm)
   })
+  names(P.m.nm) <- names(cmb.pred)
   dev.off()
   cat("rl ", file.path(PDIR, "match_it", "gne-gdsc-ccle_conc.pdf\n"))
-  
-  P.m.nm2 <- lapply(P.m.nm, function(l){
-    ld <- genErrBp(l)
-    
+
+  ## Write otu unknown cases for manual curation
+  lapply(names(P.m.nm), function(Pid){
+    P <- P.m.nm[[Pid]]
+    write.table(P[,-c(6:10)], file=file.path(PDIR, "match_it", paste0("X-", Pid, ".tsv")),
+                quote = FALSE, sep = "\t", row.names = FALSE, col.names=TRUE)
+  })
+
+  lapply(c("CCLE", "GDSC", "GNE"), function(ds.id){
+    ds.cl.ids <- sapply(names(P.m.nm), function(Pid){
+      P <- P.m.nm[[Pid]]
+      row.idx <- which(P$err=='X' & (!as.logical(P$pcl)))
+      cl.ids <- c(P[row.idx,]$Var1, P[row.idx,]$Var2)
+      unique(cl.ids[grep(ds.id, cl.ids)])
+    })
+    cat(paste(unique(sort(unlist(ds.cl.ids))), collapse="\n"))
   })
   
-  # hm7.idx <- c(grep('GNE_LS174T', pred$Var1), grep('GNE_LS174T', pred$Var2))
-  # hm7.idx <- intersect(grep('LS-180', pred$Var1), grep('LS-180', pred$Var2))
-  # hm7 <- pred[hm7.idx,]
-  # head(hm7[order(hm7$baf.fit),])
-  # 
-  # 
-  # gne <- split(pred, gsub("_.*", "", pred$Var1))[['GNE']]
-  # gne.m <- split(gne, gne$g.truth)[['NM']]
-  # gne.m.nm <- split(gne.m, gne.m$baf.p.fit)[['M']]
-  # head(gne.m[order(gne.m$baf),], 50)
-  # 
-  # mat <- gne.m[order(gne.m$baf),][1:50,]
-  # mat$cellosaurus <- checkAgainst(mat)
-  # 
-  # 
-  # 
-  # 
-  # 
-  # 
-  # 
-  # x <- cmb.pred[[1]]
-  # x[which(x$baf.p.fit == 'NM' & x$g.truth == 'M'),]
-  # x1 <- x[grep("HCC2157", x$Var2),]
-  # head(x1[order(x1$baf, decreasing = FALSE),])
+  lapply(names(P.m.nm), function(Pid){
+    P <- P.m.nm[[Pid]]
+    write.table(P[,-c(6:10)], file=file.path(PDIR, "match_it", paste0("X-", Pid, ".tsv")),
+                quote = FALSE, sep = "\t", row.names = FALSE, col.names=TRUE)
+  })
 }
