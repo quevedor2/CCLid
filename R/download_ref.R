@@ -146,7 +146,7 @@ formatRefMat <- function(name, ref.mat, analysis,
   return(var.l)
 }
 
-#' assignGrpIDs
+#' pIDs
 #' @description Creates a standardized set of group names for 
 #' samples using a reference
 #' 
@@ -156,9 +156,10 @@ formatRefMat <- function(name, ref.mat, analysis,
 #' @return
 #' @export
 assignGrpIDs <- function(mat, meta.df){
+  cvcl.idx <- grep("CVCL", colnames(meta.df))
   new.ids <- sapply(colnames(mat), function(i){
     i <- gsub("\\.[xy]$", "", i)
-    cidx <- grep(i, meta.df, ignore.case = T)
+    cidx <- grep(i, meta.df[,-cvcl.idx], ignore.case = T)
     cidx <- cidx[length(cidx)]
     ridx <- grep(paste0("^", i, "(.cel)?$"), meta.df[,cidx], ignore.case = T)
     

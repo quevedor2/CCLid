@@ -36,6 +36,8 @@ readinRnaFileMapping <- function(){
 benchmarkCCLid <- function(bench){
   library(VariantAnnotation)
   library(CCLid)
+  library(Rcellosaurus)
+  require(dplyr)
   
   ## Set dataset colors
   dataset.cols <- setNames(RColorBrewer::brewer.pal(6, "Dark2"),
@@ -77,130 +79,83 @@ snpsCellIdentity <- function(){
   pred <- assemblePredDat(x.vals, known.class=FALSE)
   pred <- mkPredictions(pred, models)
   
-  pred$g.truth <- gsub(ds.pattern, "", pred$Var1) == gsub(ds.pattern, "", pred$Var2)
+  ## Format extra columns on prediction matrix
+  pred$clA <- as.character(gsub(ds.pattern, "", pred$Var1))
+  pred$clB <- as.character(gsub(ds.pattern, "", pred$Var2))
+  pred$cvclA <- meta.df[match(pred$clA, meta.df$ID),]$CVCL
+  pred$cvclB <- meta.df[match(pred$clB, meta.df$ID),]$CVCL
+  pred$g.truth <- with(pred, clA == clB)
   pred$g.truth <- c("NM", "M")[as.integer(pred$g.truth) + 1]
-  
-  # hm7.idx <- c(grep('GNE_LS174T', pred$Var1), grep('GNE_LS174T', pred$Var2))
-  # hm7.idx <- intersect(grep('LS-180', pred$Var1), grep('LS-180', pred$Var2))
-  # hm7 <- pred[hm7.idx,]
-  # head(hm7[order(hm7$baf.fit),])
-  
-  gne <- split(pred, gsub("_.*", "", pred$Var1))[['GNE']]
-  head(gne[order(gne$baf),])
-  gne.m <- split(gne, gne$g.truth)[['NM']]
-  head(gne.m[order(gne.m$baf),], 50)
-  
+  pred$g.truth <- factor(pred$g.truth, levels=c("M", "NM"))
+  pred$baf.p.fit <- factor(pred$baf.p.fit, levels=c("M", "NM"))
   datasets <-c('CCLE', 'GDSC', 'GNE')
-  pred$ds <- paste(pred$Var1, pred$Var2, sep=";")
-  pred$ds <- gsub("_.*;", ";", pred$ds) %>%  gsub("_.*", "", .)
-  cmb.pred <- apply(combn(datasets, m = 2), 2, function(ds){
+  pred$ds <- with(pred, paste(Var1, Var2, sep=";")) %>% 
+    gsub("_.*;", ";", .) %>% gsub("_.*", "", .)
+  
+  ## Split based on datasets
+  comb <- cbind(combn(datasets, m = 2),
+                matrix(rep(datasets, 2), ncol=3, byrow = TRUE))
+  cmb.pred <- apply(comb, 2, function(ds){
     id1 <- paste(ds[1], ds[2], sep=";")
     id2 <- paste(ds[2], ds[1], sep=";")
     idx <- as.logical((pred$ds == id1) + (pred$ds == id2))
     split(pred, f=idx)[['TRUE']]
   })
-  names(cmb.pred) <- apply(combn(datasets, m=2), 2, paste, collapse="-")
-  
-  x <- cmb.pred[[1]]
-  x[which(x$baf.p.fit == 'NM' & x$g.truth == 'M'),]
-  x1 <- x[grep("HCC2157", x$Var2),]
-  head(x1[order(x1$baf, decreasing = FALSE),])
+  names(cmb.pred) <- apply(comb, 2, paste, collapse="-")
 
-  pdf(file.path(PDIR, "match_it", "gne-gdsc-ccle_conc.pdf"))
-  par(mfrow=c(3,2))
-  lapply(names(cmb.pred), function(pid){
+  ## Plot the confusion matrix between any two datasets
+  pdf(file.path(PDIR, "match_it", "gne-gdsc-ccle_conc.pdf"), height = 12)
+  par(mfrow=c(6,3), mar=c(3, 2, 3, 2))
+  P.m.nm <- lapply(names(cmb.pred), function(pid){
     p <- cmb.pred[[pid]]
     conf.m <- table(p$baf.p.fit, p$g.truth)
     fourfoldplot(conf.m, space = 0.2)
-    conf.m[2,2] <- sum(p$g.truth=='M')
-    fourfoldplot(conf.m, space = 0.2, conf.level = 0, std='ind.max', main=pid)
+    # conf.m[2,2] <- sum(p$g.truth=='M')
+    conf.m[2,2] <- 600
+    fourfoldplot(conf.m, space = 0.2, conf.level = 0, std='ind.max', 
+                 main=pid, col=c("#ca0020", "#404040"))
+    
+    p.m.nm <- CCLid:::splitToMNM(p) #CCLid:::
+    p.m.nm$cellosaurus <- CCLid:::checkAgainst(p.m.nm) #CCLid:::
+    err.pcl <- CCLid:::genErrBp(p.m.nm) #CCLid:::
+    p.m.nm <- cbind(p.m.nm, err.pcl)
+    p.m.nm <- p.m.nm[order(err.pcl[,1], err.pcl[,2]),]
+    
+    print(table(err.pcl))
+    barplot(t(table(err.pcl)), horiz=TRUE, las=1, xlim=c(0,80), 
+            col=c("FALSE"="#f4a582", "TRUE"="#b2182b"), border=NA)
+    return(p.m.nm)
   })
   dev.off()
   cat("rl ", file.path(PDIR, "match_it", "gne-gdsc-ccle_conc.pdf\n"))
   
-  conf.m <- table(pred$baf.p.fit, pred$g.truth)
-  fourfoldplot(conf.m, space = 0.5)
-  
-  ## Check for clear isogenic variants based on annotation
-  p.FN$strdist <- apply(p.FN, 1, function(i) {
-    a=toupper(gsub("[^a-zA-Z0-9]", "", gsub(ds.pattern, "", i['Var1'])))
-    b=toupper(gsub("[^a-zA-Z0-9]", "", gsub(ds.pattern, "", i['Var2'])))
-    if(nchar(a) > nchar(b)) grepl(b,a) else grepl(a,b)
+  P.m.nm2 <- lapply(P.m.nm, function(l){
+    ld <- genErrBp(l)
+    
   })
   
-  pred2 <- pred
-  pred2$Var1 <- gsub("GDSC", "GNE", pred2$Var1)
-  pred2$Var2 <- gsub("GDSC", "GNE", pred2$Var2)
-  p.FN <- .getFN(pred, ds.pattern=ds.pattern)
-  p2.FN <- .getFN(pred2, ds.pattern=ds.pattern)
-  
-  pG.FN <- list("G1"=p.FN, "G2"=p2.FN)
-  unique(as.character(sapply(pG.FN, function(i) i$pair)))
-  
-  .simplePair <- function(p, ds.pattern){
-    CLid <- data.frame("A"=gsub(ds.pattern, "", p$Var1),
-                       "B"=gsub(ds.pattern, "", p$Var2))
-    apply(CLid, 1, function(i) paste(sort(i), collapse="_"))
-  }
-  
-  .getFN <- function(p, ...){
-    FN <- intersect(which(p$baf.p.fit=='M'), which(p$g.truth=='NM'))
-    FN.df <- p[FN,]
-    FN.df <- FN.df[order(FN.df$baf.p.fit),]
-    FN.df$pair <- .simplePair(FN.df, ...)
-    return(FN.df)
-  }
-  
-  FN <- intersect(which(pred$baf.p.fit=='M'), which(pred$g.truth=='NM'))
-  FN.df <- pred[FN,]
-  FN.df <- FN.df[order(FN.df$baf.p.fit),]
-  unmapped <- unique(c(grep(ds.pattern, FN.df$Var1, invert = TRUE), grep(ds.pattern, FN.df$Var2, invert = TRUE)))
-  FN.df <- FN.df[-unmapped,]
-  head(FN.df); tail(FN.df)
-  head(pred[FN,][order(pred[FN,]$baf.fit),1:5], 100)
-  
-  
-  fits <- lapply(setNames(c('baf.fit', 'z'), c('baf', 'z')), function(f){
-    fit <- Reduce(function(x,y) merge(x,y,by="Var1"), lapply(frac.score, function(i) i[,c('Var1', f)]))
-    colnames(fit) <- c('ID', r)
-    
-    m.df <- melt(fit)
-    m.df$variable <- num.snps[as.character(m.df$variable)]
-    
-    coi <- rep(scales::alpha("black", 0.5), nrow(m.df))
-    coi[grep(paste0("CCLE_", names(vcf.file), "$"), m.df$ID)] <- scales::alpha(dataset.cols['CCLE'], 0.5)
-    coi[grep(paste0("GDSC_", names(vcf.file), "$"), m.df$ID)] <- scales::alpha(dataset.cols['GDSC'], 0.5)
-    m.df$clid <- coi
-    return(m.df)
-  })
-  fit.style <- 'z'
-  m.df <- fits[[fit.style]]
-  if(fit.style == 'baf') m.df$value <- 1-m.df$value
-  
-  
-  ## Plotting....
-  pdf(file.path(vcf.dir, paste0(fit.style, "_", names(vcf.file), ".pdf")), height = 4, width=5)
-  {
-    boxplot(value ~ variable, data = m.df, col="#0000ff22", las=1, cex.axis=0.8,
-            xlab="Number of SNPs", main=paste0(toupper(data.type), ": ", names(vcf.file)),
-            ylab=switch(fit.style, "baf"="Probability", "z"="Z-statistic"),
-            ylim=switch(fit.style, "baf"=c(0,1), "z"=c(-10, 5)),
-            outline=FALSE, border=FALSE, xaxt='n')
-    axis(side=1, at=c(1:length(num.snps)), labels=rep('', length(num.snps)), lwd.ticks = 0.5)
-    axis(side = 1, at=seq(1, length(num.snps), by=2), labels = rev(num.snps[c(FALSE,TRUE)]), tick = TRUE, line=0, cex.axis=0.7)
-    axis(side = 1, at=seq(2, length(num.snps), by=2), labels = rev(num.snps[c(TRUE,FALSE)]), tick = FALSE, line=1, cex.axis=0.7)
-    if(fit.style=='z') abline(h = -3, lty=2)
-    
-    spl <- split(m.df, m.df$variable)
-    ext.m.df <- do.call(rbind, lapply(spl, function(i){
-      switch(fit.style,
-             "baf"=i[i$value > quantile(i$value, 0.95),],
-             "z"=i[i$value < quantile(i$value, 0.05),])
-    }))
-    beeswarm(value ~ variable, data = ext.m.df, method = 'swarm', corral = 'gutter',
-             cex=0.8, pch = 16, pwcol=clid, add=TRUE)
-  }
-  dev.off()
-  
-  print(file.path(vcf.dir, paste0(fit.style, "_", names(vcf.file), ".pdf")))
+  # hm7.idx <- c(grep('GNE_LS174T', pred$Var1), grep('GNE_LS174T', pred$Var2))
+  # hm7.idx <- intersect(grep('LS-180', pred$Var1), grep('LS-180', pred$Var2))
+  # hm7 <- pred[hm7.idx,]
+  # head(hm7[order(hm7$baf.fit),])
+  # 
+  # 
+  # gne <- split(pred, gsub("_.*", "", pred$Var1))[['GNE']]
+  # gne.m <- split(gne, gne$g.truth)[['NM']]
+  # gne.m.nm <- split(gne.m, gne.m$baf.p.fit)[['M']]
+  # head(gne.m[order(gne.m$baf),], 50)
+  # 
+  # mat <- gne.m[order(gne.m$baf),][1:50,]
+  # mat$cellosaurus <- checkAgainst(mat)
+  # 
+  # 
+  # 
+  # 
+  # 
+  # 
+  # 
+  # x <- cmb.pred[[1]]
+  # x[which(x$baf.p.fit == 'NM' & x$g.truth == 'M'),]
+  # x1 <- x[grep("HCC2157", x$Var2),]
+  # head(x1[order(x1$baf, decreasing = FALSE),])
 }

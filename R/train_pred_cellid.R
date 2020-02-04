@@ -303,3 +303,4 @@ splitSnpDist <- function(dm, meta.df){
   pred.mat$id <- c(rep("M", ncol(m.d)), rep("NM", ncol(nm.d)))
   return(pred.mat)
 }
+

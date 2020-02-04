@@ -162,7 +162,7 @@ cvcl.ids <- sapply(meta.df$ID, Rcellosaurus::getCVCL, melt.cells=melt.cells)
   cvcl.ids[[1426]] <- 'CVCL_1774' # T.T
 }
 
-meta.df$CVCL <- cvcl.ids
+meta.df$CVCL <- as.character(cvcl.ids)
 meta.df <- meta.df[, -grep("^tmp$", colnames(meta.df))]
 meta.df$ID <- gsub(" ", "-", meta.df$ID)
 
@@ -188,7 +188,7 @@ if(any(is.na(dat.r))) dat.r[is.na(dat.r)] <- median(as.matrix(dat.r), na.rm=T)
 #### affy.omni ####
 ## Cell line name by filename dataframe
 
-#### Functions ####
+### Functions ###
 getSnp <- function(x, snp){
   if(snp=='A'){
     x %<>%
@@ -227,7 +227,7 @@ setSnpToggleFlag <- function(snp_x1, snp_x2, snp_y1, snp_y2){
 }
 
 
-#### Main  ####
+### Main  ###
 require(dplyr)
 require(Biobase)
 #setwd("/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/reference/annotations/mapping")

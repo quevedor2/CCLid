@@ -2,7 +2,7 @@
 % Please edit documentation in R/download_ref.R
 \name{assignGrpIDs}
 \alias{assignGrpIDs}
-\title{assignGrpIDs}
+\title{pIDs}
 \usage{
 assignGrpIDs(mat, meta.df)
 }
