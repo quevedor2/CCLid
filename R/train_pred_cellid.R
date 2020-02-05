@@ -209,6 +209,8 @@ mkPredictions <- function(pred, models){
   pred$z <- .zval(pred$baf)
   pred$p <- .zval(pred$baf, p=TRUE)
   pred$q <- p.adjust(pred$p, method='fdr')
+  pred$Var1 <- as.character(pred$Var1)
+  pred$Var2 <- as.character(pred$Var2)
   
   return(pred)
 }

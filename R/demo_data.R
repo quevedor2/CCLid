@@ -219,52 +219,30 @@ combineSamples <- function(data.type, sample.mat, prop){
 }
 
 .demoRna <- function(){
-  library(VariantAnnotation)
   library(CCLid)
-  
+  require(VariantAnnotation)
+
+  ## Load in Ref mat file
   PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
-  analysis <- 'baf'
-  ref.mat <- downloadRefCCL("BAF", saveDir = PDIR)
-  format.dat <- formatRefMat(name="BAF", ref.mat=ref.mat, 
-                             analysis='baf', bin.size=5e5)
-  ref.mat <- format.dat$mat
-  var.dat <- format.dat$var
+  ref.dat <- CCLid::loadRef(PDIR, 'baf', bin.size=5e5)
   
-  vcfFile='/mnt/work1/users/home2/quever/xfer/NGSST_04.mutect2.hg19.vcf' ## Mix
-  vcfFile='/mnt/work1/users/home2/quever/xfer/NGSST_05.mutect2.hg19.vcf' ## Mix
+  ## Load in VCF file of external data
   vcfFile <- '/mnt/work1/users/home2/quever/xfer/A549.sample_id.vcf' ## A549 WES
-  vcf.map <- mapVcf2Affy(vcfFile)
+  vcf.mat <- compareVcf(vcfFile, var.dat=ref.dat$var, ref.mat=ref.dat$ref)
   
-  ## Combine matrices and reduce features
-  ## Find the overlap between the COMParator and the REFerence
-  vcf.map.var <- mapVariantFeat(vcf.map, var.dat)
-  vcf.to.use <- vcf.map.var
-  ov.idx <- overlapPos(comp = vcf.to.use$BAF,
-                       ref=ref.mat, mapping = 'probeset')
-  x.mat <- cbind(vcf.to.use$BAF$BAF[ov.idx$comp], 
-                 ref.mat[ov.idx$ref,])
+  ## Look for similarity
+  sample=basename(vcfFile)
+  colnames(vcf.mat)[1] <- sample
+  pred <- checkForConcordance(vcf.mat, sampleID=sample) 
   
-  ## Calculate evidence of genetic drift between sample X and A549
-  ccle.id <- 'ARLES_p_NCLE_DNAAffy2_S_GenomeWideSNP_6_B06_256036'
-  gdsc.id <- '^A549$'
-  x.drift <- bafDrift(sample.mat=x.mat[,c(grep(ccle.id, colnames(x.mat)), 
-                                          grep(gdsc.id, colnames(x.mat)), 
-                                          1, 5)])
-  plot(x.drift$cna.obj[[ccle.id]])
-  x.drift$frac
+  ## Look for drift
+  all.ids <- unique(unlist(pred$pred$M[,c('Var1', 'Var2')]))
+  bdf <- bafDrift(vcf.mat[,c(sample, all.ids[grep(sample, all.ids, invert = TRUE)])])
+  #CCLid:::plot.CCLid(bdf$cna.obj[[2]])
   
-  
-  ## Look for overall similarity
-  x.dist <- similarityMatrix(x.mat, 'euclidean')[,1,drop=FALSE]
-  as.matrix(c(head(x.dist[order(x.dist, decreasing = TRUE),], 10),
-              head(x.dist[order(x.dist, decreasing = FALSE),], 10)))
-  
-  ccle.id <- 'ARLES_p_NCLE_DNAAffy2_S_GenomeWideSNP_6_B06_256036'
-  gdsc.id <- '^A549$'
-  gdsc.id <- 'ACN'
-  
-  x.mat2 <- x.mat[,c(grep(ccle.id, colnames(x.mat)), grep(gdsc.id, colnames(x.mat)))]
-  x.mat2 <- x.mat[,c(1, grep(gdsc.id, colnames(x.mat)))]
-  plot(x.mat2, xlim=c(-0.5, 1.5), ylim=c(-0.5, 1.5))
+  ## Return finished object for WebApp
+  list("pred"=pred$pred$M,
+       "drift"=bdf$frac[[1]],
+       "seg"=bdf$cna.obj[[sample]]$output)
 }
 
