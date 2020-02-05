@@ -28,6 +28,39 @@ readinRnaFileMapping <- function(){
   return(all.meta.df)
 }
 
+isolateL2Rpsets <- function(){
+  setwd("/mnt/work1/users/pughlab/projects/cancer_cell_lines/cnv_predictions/input/cn/log2r_bins")
+  for(i in c("CCLE", "GDSC")){
+    require(Biobase)
+    pset=readRDS(file.path("..", paste0(i, "_CN.bins.RDS")))
+    env <- new.env()
+    env[['exprs']] <- assayData(pset)$Log2Ratio
+    assayData(pset) <- env
+    saveRDS(pset, file=paste0(i, "_CN.l2r_bins.RDS"))
+  }
+}
+
+getSegSD <- function(id, CNAo){
+  idx <- grep(paste0("^X?", id, "$"), colnames(CNAo$data))
+  D <- CNAo$data[,idx]
+  
+  number_of_chunks = ceiling(length(D) / 100)
+  number_of_chunks=100
+  sd.D <- sapply(split(seq_len(length(D)), 
+                       cut(seq_len(length(D)), pretty(seq_len(length(D)), number_of_chunks))),
+                 function(x) sd(D[x], na.rm=TRUE))
+  sd.D <- mean(sd.D, na.rm=TRUE)
+  return(sd.D)
+}
+
+addSegDat <- function(ids, CNAo){
+  sds <- sapply(ids, getSegSD, CNAo=CNAo)
+  CNAo$output$seg.sd <- rep(sds, table(CNAo$output$ID))
+  seg.drift <- CCLid:::.estimateDrift(CNAo, z.cutoff=1:3)
+  CNAo$output <- seg.drift$seg
+  return(CNAo)
+}
+
 ###########################
 #### Preliminary steps ####
 ###########################
@@ -35,6 +68,7 @@ readinRnaFileMapping <- function(){
 benchmarkCCLid <- function(bench){
   library(VariantAnnotation)
   library(CCLid)
+  require(DNAcopy)
   
   ## Set dataset colors
   dataset.cols <- setNames(RColorBrewer::brewer.pal(6, "Dark2"),
@@ -90,13 +124,15 @@ driftConcordance <- function(){
 
     return(drift.score)
   })
-  save(baf.drifts, "~/baf_drift.rda")
+  save(baf.drifts, file=file.path(PDIR, "drift_it", 
+                             paste0(dataset, "-", alt.ds, "_baf_drift.rda")))
   # cl.pairs <- m.cls.idx[[1]]
   
   ## Load in CN bins
   cn.dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/cnv_predictions/input/cn/50kb_bins'
   cn.dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/cnv_predictions/input/cn'
-  bins.file <- list.files(cn.dir, pattern="bins", include.dirs = FALSE)[-1]
+  cn.dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/cnv_predictions/input/cn/log2r_bins'
+  bins.file <- list.files(cn.dir, pattern="bins", include.dirs = FALSE)
   bins <- lapply(bins.file, function(b) readRDS(file.path(cn.dir, b)))
   names(bins) <- gsub("_.*", "",  bins.file)
   
@@ -110,68 +146,72 @@ driftConcordance <- function(){
                                                     grep, x=alt.bin.ids)))
   na.idx <- apply(alt.ref.idx, 1, function(i)  any(is.na(i)))
   if(any(na.idx)) alt.ref.idx <- alt.ref.idx[-which(na.idx),]
+  alt.ref.idx$id <- as.character(alt.ref.idx$id)
   cn.drift <- apply(alt.ref.idx, 1, function(ar.i){
-    ar.i = unlist(alt.ref.idx[5,])
+    # ar.i = unlist(alt.ref.idx[1,])
     ref.id = ref.bin.ids[ar.i['ref']]
     alt.id = alt.bin.ids[ar.i['alt']]
-    for( id in list(ref.id, alt.id)){
-      did = gsub("_.*", "", id)
-      cat(paste("xmor", 
-                  file.path('/mnt/work1/users/pughlab/projects/cancer_cell_lines',
-                            did, 'eacon', names(id), 'ASCAT/L2R', paste0(names(id), '.SEG.ASCAT.png\n'))))
-    }
-    require(DNAcopy)
-    ar.i <- setNames(as.integer(ar.i), names(ar.i))
-    print(paste(ar.i, collapse="_"))
-    ra.i <- cbind(assayData(bins[[dataset]])$exprs[,ar.i['ref'], drop=FALSE],
-                  assayData(bins[[alt.ds]])$exprs[,ar.i['alt'], drop=FALSE])
+    
+  
+    print(paste(ar.i['id'], grep(ar.i['id'], alt.ref.idx$id), sep="_"))
+    ra.i <- cbind(assayData(bins[[dataset]])$exprs[,as.integer(ar.i['ref']), drop=FALSE],
+                  assayData(bins[[alt.ds]])$exprs[,as.integer(ar.i['alt']), drop=FALSE])
     idx <- sample(1:nrow(ra.i), size=1000, replace=FALSE)
-    # ra.i = scale(ra.i, scale=FALSE)
-    # #scaling <- apply(ra.i, 2, norm_vec)
-    # scaling <- sapply(1:100, function(i) apply(ra.i[sample(nrow(ra.i), 30000),], 2, norm_vec))
-    # scaling <- apply(scaling, 2, function(i) i[1]/i[2])
-    # scaling <- scaling[which.min(abs(scaling-1))]
-    # ra.i[,1] <- ra.i[,1] / scaling # (scaling[1]/scaling[2])
     ra.i <-as.data.frame(ra.i)
     colnames(ra.i) <-c('ref', 'alt')
     
-    plot(ra.i[idx,], xlim=c(-1.5, 1.5), ylim=c(-1.5, 1.5))
-    abline(coef=c(0,1))
-    
-    #ra.lm <- lm(alt ~ ref, data=ra.i)
-    
-    
-    #ra.i <- preprocessCore::normalize.quantiles(data.matrix(ra.i))
     D = (ra.i[,1] - ra.i[,2])
-    # D[is.na(D)] <- median(D,na.rm=TRUE)
-    # D <- scale(D, scale = FALSE)
-    # D <- ra.lm$residuals
-
-    CNAo <- with(featureData(bins[[alt.ds]])@data, #[names(ra.lm$residuals),],
-                 CNA(genomdat=D, 
-                     chrom=as.factor(seg.seqnames),
-                     maploc=seg.start, 
-                     data.type="logratio",
-                     sampleid=alt.bin.ids[ar.i['alt']]))
-    smoothed.CNAo <- smooth.CNA(CNAo)
-    seg.CNAo <- segment(smoothed.CNAo, verbose=1, alpha=0.01, eta=0.05, min.width=5)
-    sd.D <- sd(D, na.rm=TRUE)
-    
-    number_of_chunks = ceiling(length(D) / 100)
-    number_of_chunks=100
-    sd.D <- sapply(split(seq_len(length(D)), 
-                 cut(seq_len(length(D)), pretty(seq_len(length(D)), number_of_chunks))),
-           function(x) sd(D[x], na.rm=TRUE))
-    sd.D <- mean(sd.D, na.rm=TRUE)
-    seg.CNAo$output$seg.sd <- sd.D
-    
-    seg.drift <- CCLid:::.estimateDrift(seg.CNAo, z.cutoff=1:3)
-    seg.CNAo$output <- seg.drift$seg
-    class(seg.CNAo) <- 'CCLid'
-    CCLid:::plot.CCLid(seg.CNAo)
-    return(list("frac"=seg.drift$frac,
-                "cna.obj"=seg.CNAo))
+    return(D)
   })
+
+  CNAo <- switch(segmenter,
+                 "PCF"={
+                   CNdata <- with(featureData(bins[[alt.ds]])@data,
+                                  cbind(as.factor(seg.seqnames), seg.start, cn.drift))
+                   colnames(CNdata) <- c("chrom", "pos", alt.ref.idx$id)
+                   CNdata <- as.data.frame(CNdata)
+                   pcf.dat <- copynumber::pcf(CNdata, pos.unit = "bp", kmin = 100, 
+                                              gamma = 20, normalize = FALSE, 
+                                              fast = TRUE, assembly = "hg19", 
+                                              digits = 2, verbose = TRUE)
+                   f <- factor(pcf.dat$sampleID, levels=alt.ref.idx$id)
+                   pcf.dat <- pcf.dat[,c("sampleID", "chrom", "start.pos",
+                                         "end.pos", "n.probes", "mean", "arm")]
+                   colnames(pcf.dat) <- c("ID", "chrom", "loc.start", "loc.end", 
+                                          "num.mark", "seg.mean", "arm")
+                   
+                   pcf.CNAo <- list("data"=CNdata,
+                                    "output"=pcf.dat[order(f),],
+                                    "segRows"=NULL,
+                                    "call"=NULL)
+                   pcf.CNAo
+                 },
+                 "CBS"={
+                   CNAo <- with(featureData(bins[[alt.ds]])@data, #[names(ra.lm$residuals),],
+                                CNA(genomdat=cn.drift,
+                                    chrom=as.factor(seg.seqnames),
+                                    maploc=seg.start,
+                                    data.type="logratio",
+                                    sampleid=alt.ref.idx$id))
+                   smoothed.CNAo <- smooth.CNA(CNAo)
+                   seg.CNAo <- segment(smoothed.CNAo,alpha = 0.001, eta=0.05, verbose=1, min.width=5)
+                   seg.CNAo
+                 })
+  sd.CNAo <- addSegDat(ids=alt.ref.idx$id, CNAo=CNAo)
+  class(sd.CNAo) <- 'CCLid'
+  # CCLid:::plot.CCLid(pcf.CNAo)
+  save(sd.CNAo, file=file.path(PDIR, "drift_it", 
+                                paste0(dataset, "-", alt.ds, "_segCNAo.rda")))
+  
+  
+  
+  seg.drift <- CCLid:::.estimateDrift(seg.CNAo, z.cutoff=1:3)
+  seg.CNAo$output <- seg.drift$seg
+  class(seg.CNAo) <- 'CCLid'
+  # CCLid:::plot.CCLid(seg.CNAo)
+  list("frac"=seg.drift$frac,
+       "cna.obj"=seg.CNAo)
+  
   names(cn.drift) <- alt.ref.idx$id
   save(cn.drift, file="~/cn_drift.rda")
   

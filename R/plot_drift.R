@@ -156,6 +156,18 @@ driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
 plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01, hi.sig.alpha=0.2) {
   require(scales)
   chroms <- paste0("chr", c(1:22, "X", "Y"))
+  if(any(grepl("(23)|(24)$", obj$data$chrom))){
+    require(dplyr)
+    obj$data$chrom <- gsub("23$", "X", obj$data$chrom) %>%
+      gsub("24$", "Y", .)
+    obj$output$chrom <- gsub("23$", "X", obj$output$chrom) %>%
+      gsub("24$", "Y", .)
+  }
+  if(any(!grepl("^chr", obj$data$chrom))){
+    obj$data$chrom <- paste0("chr", obj$data$chrom)
+    obj$output$chrom <- paste0("chr", obj$output$chrom)
+  }
+  
   chr.data <- split(obj$data, obj$data$chrom)
   chr.seg <- split(obj$output, obj$output$chrom)
   samples <- colnames(obj$data)[-c(1:2)]
@@ -164,7 +176,9 @@ plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01, hi.sig.alpha=0.
   sig.col <- 'red'
   
   uylim <- max(abs(obj$data[, -(1:2)]), na.rm = TRUE)
+  uylim <- 1
   ylim <- c(-uylim, uylim)
+  pos.col <- colnames(obj$data)[2]
   
   ## Segment yb chromosome
   for(s in samples){
@@ -174,7 +188,7 @@ plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01, hi.sig.alpha=0.
     
     for(chr in chroms){
       chr.col <- chr.cols[(match(chr, chroms) %% 2) + 1]
-      sample.dat <- as.data.frame(chr.data[[chr]][,c('maploc', s), drop=FALSE])
+      sample.dat <- as.data.frame(chr.data[[chr]][,c(pos.col, s), drop=FALSE])
       if(nrow(sample.dat) == 0) next
       
       size <- min(nrow(sample.dat), sample.size)
@@ -182,10 +196,10 @@ plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01, hi.sig.alpha=0.
       sample.dat <- sample.dat[sample.idx,,drop=FALSE]
       
       plot(sample.dat, ylim=ylim, col=chr.col, pch=16, 
-           xlim=c(1, max(sample.dat$maploc)), xlab='', 
+           xlim=c(1, max(sample.dat[,pos.col])), xlab='', 
            yaxt='n', xaxt='n', axes=FALSE, cex=0.6)
       abline(v = 1, lwd=0.5, col='grey')
-      axis(side=1, at=median(sample.dat$maploc, na.rm=TRUE), 
+      axis(side=1, at=median(sample.dat[,pos.col], na.rm=TRUE), 
            labels=gsub("chr", "", chr),
            tick=FALSE, line=(match(chr, chroms) %% 2))
       abline(h = 0, col="grey", lty=1, lwd=1)
@@ -199,7 +213,7 @@ plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01, hi.sig.alpha=0.
       
       ## Identifies significant different regions
       s.chr.seg <- s.chr.seg[which(s.chr.seg$ID %in% s),,drop=FALSE]
-      if(any(s.chr.seg$t > 0)){
+      if(any(na.omit(s.chr.seg$t) > 0)){
         sig.chr.seg <- s.chr.seg[which(s.chr.seg$t > 0),]
         sig.chr.seg$alpha <- 0
         sig.chr.seg$alpha[sig.chr.seg$t < 3] <- low.sig.alpha
@@ -220,3 +234,35 @@ plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01, hi.sig.alpha=0.
     }
   }
 }
+
+
+
+# 
+# sample.ids <- unique(obj$output$ID)
+# lapply(sample.ids, function(id){
+#   print(paste0("Plotting sample: ", id))  
+#   
+  # chroms <- paste0("chr", c(1:22, "X", "Y"))
+  # if(any(grepl("(23)|(24)$", obj$data$chrom))){
+  #   require(dplyr)
+  #   obj$data$chrom <- gsub("23$", "X", obj$data$chrom) %>%
+  #     gsub("24$", "Y", .)
+  #   obj$output$chrom <- gsub("23$", "X", obj$output$chrom) %>%
+  #     gsub("24$", "Y", .)
+  # }
+#   
+  # if(any(!grepl("^chr", obj$data$chrom))){
+  #   obj$data$chrom <- paste0("chr", obj$data$chrom)
+  #   obj$output$chrom <- paste0("chr", obj$output$chrom)
+  # }
+#   
+#   chr.data <- split(obj$data[,id], obj$data$chrom)
+#   id.idx <- grep(paste0("^", id, "$"), obj$output$ID)
+#   chr.seg <- split(obj$output[id.idx,], obj$output[id.idx,]$chrom)
+#   samples <- id
+#   chr.cols <- c('black', 'green')
+#   seg.col <- 'orange'
+#   sig.col <- 'red'
+#   
+#   
+# })
