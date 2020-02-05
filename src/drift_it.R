@@ -198,23 +198,42 @@ driftConcordance <- function(){
                    seg.CNAo
                  })
   sd.CNAo <- addSegDat(ids=alt.ref.idx$id, CNAo=CNAo)
+  seg.drift <- CCLid:::.estimateDrift(sd.CNAo, z.cutoff=1:3)
+  sd.CNAo$output <- seg.drift$seg
   class(sd.CNAo) <- 'CCLid'
-  # CCLid:::plot.CCLid(pcf.CNAo)
-  save(sd.CNAo, file=file.path(PDIR, "drift_it", 
-                                paste0(dataset, "-", alt.ds, "_segCNAo.rda")))
+  # CCLid:::plot.CCLid(sd.CNAo)
+  cn.drift <- list("frac"=seg.drift$frac,
+                   "cna.obj"=sd.CNAo)
+  save(cn.drift, file=file.path(PDIR, "drift_it", 
+                                paste0(dataset, "-", alt.ds, "_cn_drift.rda")))
+  
+  ## Extract and combine BAF drifts and CN drifts
+  cn.drift.frac <- reshape::melt(sapply(cn.drift$frac, function(i) i[[3]]))
+  cn.drift.frac$L1 <- rownames(cn.drift.frac)
+  baf.drift.frac <- sapply(baf.drifts, function(i) i$frac)
+  null.idx <- which(sapply(baf.drift.frac, is.null))
+  baf.drift.frac[null.idx] <- NA
+  baf.drift.frac <- reshape::melt(baf.drift.frac)
+  
+  ## Merge the BAF and CN data
+  cn.baf.drift <- merge(cn.drift.frac, baf.drift.frac, by="L1", all=TRUE)
+  rownames(cn.baf.drift) <- cn.baf.drift$L1
+  cn.baf.drift <- cn.baf.drift[,-1]
+  colnames(cn.baf.drift) <- c("CN", "BAF")
+  
+  ## Plot the correlation
+  plot(cn.baf.drift, xlim=c(0,1), ylim=c(0,1), main="Fraction of genome drifted")
+  r <- round(cor(cn.baf.drift, use = "complete.obs")[1,2],2)
+  abline(coef=c(0,1), col="grey", lty=2)
+  
+  ## Extract and combine BAF drifts and CN drifts
   
   
   
-  seg.drift <- CCLid:::.estimateDrift(seg.CNAo, z.cutoff=1:3)
-  seg.CNAo$output <- seg.drift$seg
-  class(seg.CNAo) <- 'CCLid'
-  # CCLid:::plot.CCLid(seg.CNAo)
-  list("frac"=seg.drift$frac,
-       "cna.obj"=seg.CNAo)
   
-  names(cn.drift) <- alt.ref.idx$id
-  save(cn.drift, file="~/cn_drift.rda")
   
+  [[1]]$
+  names(cn.drift)
   cn.drift.frac <- unlist(sapply(cn.drift, CCLid:::.getDrift, idx=1))
   baf.drift.frac <- unlist(sapply(baf.drifts[names(cn.drift)], function(i) i$fraca))
   df <- data.frame("cn"=cn.drift.frac,

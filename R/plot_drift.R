@@ -153,7 +153,8 @@ driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
 #' @return
 #'
 #' @examples
-plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01, hi.sig.alpha=0.2) {
+plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01, 
+                        hi.sig.alpha=0.2, add.chr.sep=TRUE) {
   require(scales)
   chroms <- paste0("chr", c(1:22, "X", "Y"))
   if(any(grepl("(23)|(24)$", obj$data$chrom))){
@@ -202,7 +203,7 @@ plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01, hi.sig.alpha=0.
       axis(side=1, at=median(sample.dat[,pos.col], na.rm=TRUE), 
            labels=gsub("chr", "", chr),
            tick=FALSE, line=(match(chr, chroms) %% 2))
-      abline(h = 0, col="grey", lty=1, lwd=1)
+      if(add.chr.sep) abline(h = 0, col="grey", lty=1, lwd=1)
       s.chr.seg <- chr.seg[[chr]]
       
       if(match(chr, chroms) == 1){
