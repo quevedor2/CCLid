@@ -9,9 +9,6 @@
 \arguments{
 \item{vcf.gt}{VariantAnnotation ob ject}
 }
-\value{
-
-}
 \description{
 Reverse complements the Alleles
 }

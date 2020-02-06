@@ -9,9 +9,6 @@
 \arguments{
 \item{seg.obj}{an object returned from DNAcopy::segment()}
 }
-\value{
-
-}
 \description{
 Adds segment SD to CBS segment objects
 }

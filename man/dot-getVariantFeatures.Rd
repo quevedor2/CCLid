@@ -11,9 +11,6 @@
 
 \item{bin.size}{}
 }
-\value{
-
-}
 \description{
 Calculates the features/probesets with the most variance from a 
 given matrix (rownames).  Returns equally spaced Variant Probesets

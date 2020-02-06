@@ -11,9 +11,6 @@ mkPredictions(pred, models)
 
 \item{models}{}
 }
-\value{
-
-}
 \description{
 Uses a trained model to predict on a pred data structure
 }

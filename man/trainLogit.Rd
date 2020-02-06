@@ -11,9 +11,6 @@ trainLogit(balanced, ...)
 
 \item{...}{}
 }
-\value{
-
-}
 \description{
 Trains a logistic regression
 }

@@ -4,12 +4,8 @@
 \alias{downloadRefCCL}
 \title{downloadRefCCL}
 \usage{
-downloadRefCCL(
-  name,
-  saveDir = file.path(".", "CCLid"),
-  refFileName = NULL,
-  verbose = TRUE
-)
+downloadRefCCL(name, saveDir = file.path(".", "CCLid"),
+  refFileName = NULL, verbose = TRUE)
 }
 \arguments{
 \item{name}{}
@@ -19,9 +15,6 @@ downloadRefCCL(
 \item{refFileName}{}
 
 \item{verbose}{}
-}
-\value{
-
 }
 \description{
 Downloads the precomputed RDS data structures for reference

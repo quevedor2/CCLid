@@ -13,9 +13,6 @@ combineSamples(data.type, sample.mat, prop)
 
 \item{prop}{}
 }
-\value{
-
-}
 \description{
 Combines the BAF or Geno or two or samples given a set proportion
 }

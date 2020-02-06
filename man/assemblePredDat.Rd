@@ -11,9 +11,6 @@ assemblePredDat(D.vals, known.class = FALSE)
 
 \item{known.class}{}
 }
-\value{
-
-}
 \description{
 Creates a melted data-structure designed for predictions,
 much in the same vain as the training dataset: Sample X, sample 2, value

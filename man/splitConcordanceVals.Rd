@@ -11,9 +11,6 @@ splitConcordanceVals(dm, meta.df)
 
 \item{meta.df}{}
 }
-\value{
-
-}
 \description{
 Melts the data structure into Sample 1, Sample 2, concordance
 and separates into Match/nonmatch if a reference metadata is given

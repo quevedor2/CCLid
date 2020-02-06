@@ -9,9 +9,6 @@ balanceGrps(D.vals)
 \arguments{
 \item{D.vals}{}
 }
-\value{
-
-}
 \description{
 Part of the process needed to balance the groups for a logistic
 regression. It undersamples the non-matching group to be comparable with the

@@ -11,9 +11,6 @@
 
 \item{idx}{}
 }
-\value{
-
-}
 \description{
 Returns the genomic fraction of drift for significant
 regions (z>3)
