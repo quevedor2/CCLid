@@ -1,3 +1,137 @@
+############################
+#### drift_it.R Support ####
+############################
+getSegSD <- function(id, CNAo){
+  idx <- grep(paste0("^X?", id, "$"), colnames(CNAo$data))
+  D <- CNAo$data[,idx]
+  
+  number_of_chunks = ceiling(length(D) / 100)
+  number_of_chunks=100
+  sd.D <- sapply(split(seq_len(length(D)), 
+                       cut(seq_len(length(D)), pretty(seq_len(length(D)), number_of_chunks))),
+                 function(x) sd(D[x], na.rm=TRUE))
+  sd.D <- mean(sd.D, na.rm=TRUE)
+  return(sd.D)
+}
+
+addSegDat <- function(ids, CNAo){
+  sds <- sapply(ids, getSegSD, CNAo=CNAo)
+  CNAo$output$seg.sd <- rep(sds, table(CNAo$output$ID))
+  seg.drift <- CCLid:::.estimateDrift(CNAo, z.cutoff=1:3)
+  CNAo$output <- seg.drift$seg
+  return(CNAo)
+}
+
+#' getBafDrifts
+#' @description Gets the drift GRanges and genomic fraction of drift
+#' for any pair of cell lines from different datasets given
+#' @param cl.pairs Vector of indices for cell line pairs in x.mat
+#' @param x.mat Input matrix containing probeset BAF data
+#' @param ref.ds Reference dataset (e.g. CCLE)
+#' @param alt.ds Comparing dataset (e.g. GDSC)
+#'
+#' @return Drift object
+#' @export
+getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL){
+  ref.idx <- grep(paste0(ref.ds, "_"), colnames(x.mat)[cl.pairs])
+  alt.idx <- grep(paste0(alt.ds, "_"), colnames(x.mat)[cl.pairs])
+  all.idx <- c(ref.idx, alt.idx)
+  
+  if(length(all.idx) == 2){
+    bdf <- bafDrift(x.mat[,cl.pairs[all.idx]])
+    #CCLid:::plot.CCLid(bdf$cna.obj[[1]])
+    drift.score <- list("sig.gr"=CCLid::sigDiffBaf(bdf$cna.obj[[1]]),
+                        "frac"=bdf$frac[[1]][3,])
+  } else {
+    drift.score <- list("sig.gr"=NULL, "frac"=NULL)
+  }
+  
+  return(drift.score)
+}
+
+#' getCnDrifts
+#' @description Gets the drift GRanges and genomic fraction of drift
+#' for any pair of cell lines from different datasets given L2R data
+#' @param ref.l2r Matrix of L2R data of genomic bins by samples for reference dataset
+#' @param alt.l2r Matrix of L2R data of genomic bins by samples for comparison dataset
+#' @param cell.ids All cell line IDs to compare drift between
+#' @param segmenter Segmentation algorithm, either 'PCF' (fast) or 'CBS' (slow)
+#'
+#' @return CN drift object
+#' @export
+getCNDrifts <- function(ref.l2r, alt.l2r, cell.ids, segmenter='PCF'){
+  ## Index matching cell line pairs for the CN PSets
+  alt.bin.ids <- assignGrpIDs(ref.l2r, meta.df)
+  ref.bin.ids <- assignGrpIDs(alt.l2r, meta.df)
+  alt.ref.idx <- data.frame("id"=as.character(cell.ids),
+                            "ref"=as.integer(sapply(paste0("_", cell.ids, "$"), 
+                                                    grep, x=ref.bin.ids)),
+                            "alt"=as.integer(sapply(paste0("_", cell.ids, "$"), 
+                                                    grep, x=alt.bin.ids)))
+  na.idx <- apply(alt.ref.idx, 1, function(i)  any(is.na(i)))
+  if(any(na.idx)) alt.ref.idx <- alt.ref.idx[-which(na.idx),]
+  alt.ref.idx$id <- as.character(alt.ref.idx$id)
+  
+  ## Create a distance betweeen L2R matrix:
+  
+  cn.drift <- apply(alt.ref.idx, 1, function(ar.i){
+    ref.id = ref.bin.ids[ar.i['ref']]
+    alt.id = alt.bin.ids[ar.i['alt']]
+    
+    ra.i <- as.data.frame(cbind(ref.l2r[,as.integer(ar.i['ref']), drop=FALSE],
+                                alt.l2r[,as.integer(ar.i['alt']), drop=FALSE]))
+    D = (ra.i[,1] - ra.i[,2])
+    return(D)
+  })
+  rm(ref.l2r, alt.l2r); gc()
+  
+  ## Segment and find discordant regions
+  CNAo <- switch(segmenter,
+                 "PCF"={
+                   CNdata <- with(featureData(bins[[alt.ds]])@data,
+                                  cbind(as.factor(seg.seqnames), seg.start, cn.drift))
+                   colnames(CNdata) <- c("chrom", "pos", alt.ref.idx$id)
+                   CNdata <- as.data.frame(CNdata)
+                   pcf.dat <- copynumber::pcf(CNdata, pos.unit = "bp", kmin = 100, 
+                                              gamma = 20, normalize = FALSE, 
+                                              fast = TRUE, assembly = "hg19", 
+                                              digits = 2, verbose = TRUE)
+                   f <- factor(pcf.dat$sampleID, levels=alt.ref.idx$id)
+                   pcf.dat <- pcf.dat[,c("sampleID", "chrom", "start.pos",
+                                         "end.pos", "n.probes", "mean", "arm")]
+                   colnames(pcf.dat) <- c("ID", "chrom", "loc.start", "loc.end", 
+                                          "num.mark", "seg.mean", "arm")
+                   
+                   pcf.CNAo <- list("data"=CNdata,
+                                    "output"=pcf.dat[order(f),],
+                                    "segRows"=NULL,
+                                    "call"=NULL)
+                   pcf.CNAo
+                 },
+                 "CBS"={
+                   CNAo <- with(featureData(bins[[alt.ds]])@data, #[names(ra.lm$residuals),],
+                                CNA(genomdat=cn.drift,
+                                    chrom=as.factor(seg.seqnames),
+                                    maploc=seg.start,
+                                    data.type="logratio",
+                                    sampleid=alt.ref.idx$id))
+                   smoothed.CNAo <- smooth.CNA(CNAo)
+                   seg.CNAo <- segment(smoothed.CNAo,alpha = 0.001, eta=0.05, verbose=1, min.width=5)
+                   seg.CNAo
+                 })
+  sd.CNAo <- CCLid:::addSegDat(ids=alt.ref.idx$id, CNAo=CNAo)
+  seg.drift <- CCLid:::.estimateDrift(sd.CNAo, z.cutoff=1:4)
+  sd.CNAo$output <- seg.drift$seg
+  class(sd.CNAo) <- 'CCLid'
+  # CCLid:::plot.CCLid(sd.CNAo)
+  cn.drift <- list("frac"=seg.drift$frac,
+                   "cna.obj"=sd.CNAo)
+  return(cn.drift)
+}
+
+############################
+#### match_it.R Support ####
+############################
 #' splitToMNM
 #' @description Reduces the prediction dataframe to samples with a predicted
 #' Match and a ground truth of non-match (based on anontations)

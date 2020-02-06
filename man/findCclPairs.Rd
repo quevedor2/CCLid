@@ -4,15 +4,17 @@
 \alias{findCclPairs}
 \title{findCclPairs}
 \usage{
-findCclPairs(meta.df, dr.nm)
+findCclPairs(meta.df, dr.nm, ds = NULL)
 }
 \arguments{
 \item{meta.df}{}
 
 \item{dr.nm}{matrix where column names are cell lines/datasets}
+
+\item{ds}{Dataset (if any) to return (e.g. c('CCLE', 'GDSC'))}
 }
 \value{
-
+A list of indices indicating pair of cell lines for the data matrix
 }
 \description{
 Finds indices for cell lines that are found

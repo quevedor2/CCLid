@@ -52,10 +52,20 @@ overlapPos <- function(comp, ref, mapping='probeset'){
 #' 
 #' @param meta.df 
 #' @param dr.nm  matrix where column names are cell lines/datasets
+#' @param ds Dataset (if any) to return (e.g. c('CCLE', 'GDSC'))
 #'
-#' @return
+#' @return A list of indices indicating pair of cell lines for the data matrix
 #' @export
-findCclPairs <- function(meta.df, dr.nm){
-  all.idx <- sapply(meta.df$ID, function(i) grep(paste0("_", i, "$"), x=colnames(dr.nm)))
+findCclPairs <- function(meta.df, dr.nm, ds=NULL){
+  all.idx <- sapply(meta.df$ID, function(i) {
+    id <- grep(paste0("_", i, "$"), x=colnames(dr.nm))
+    id <- setNames(id, colnames(dr.nm)[id])
+    if(!is.null(ds)){
+      ds <- c('CCLE', 'GDSC')
+      id[grep(paste(ds, collapse="|"), names(id))]
+    } else {
+      id
+    }
+  })
   return(all.idx)
 }

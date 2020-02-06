@@ -40,26 +40,7 @@ isolateL2Rpsets <- function(){
   }
 }
 
-getSegSD <- function(id, CNAo){
-  idx <- grep(paste0("^X?", id, "$"), colnames(CNAo$data))
-  D <- CNAo$data[,idx]
-  
-  number_of_chunks = ceiling(length(D) / 100)
-  number_of_chunks=100
-  sd.D <- sapply(split(seq_len(length(D)), 
-                       cut(seq_len(length(D)), pretty(seq_len(length(D)), number_of_chunks))),
-                 function(x) sd(D[x], na.rm=TRUE))
-  sd.D <- mean(sd.D, na.rm=TRUE)
-  return(sd.D)
-}
 
-addSegDat <- function(ids, CNAo){
-  sds <- sapply(ids, getSegSD, CNAo=CNAo)
-  CNAo$output$seg.sd <- rep(sds, table(CNAo$output$ID))
-  seg.drift <- CCLid:::.estimateDrift(CNAo, z.cutoff=1:3)
-  CNAo$output <- seg.drift$seg
-  return(CNAo)
-}
 
 ###########################
 #### Preliminary steps ####
@@ -74,20 +55,8 @@ benchmarkCCLid <- function(bench){
   dataset.cols <- setNames(RColorBrewer::brewer.pal(6, "Dark2"),
                            c("GDSC", "CCLE", "gCSI", "CGP", "Pfizer"))
   
-  ## Load in Ref mat file
   PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
-  analysis <- 'baf'
-  ref.mat <- downloadRefCCL("BAF", saveDir = PDIR)
-  format.dat <- formatRefMat(name="BAF", ref.mat=ref.mat, 
-                             analysis='baf', bin.size=5e5)
-  ref.mat <- format.dat$mat
-  var.dat <- format.dat$var
-  rm(format.dat)
-  
-  new.ids <- assignGrpIDs(ref.mat, meta.df)
-  new.ids[duplicated(new.ids)] <- gsub("_", "2_",new.ids[duplicated(new.ids)])
-  colnames(ref.mat) <- new.ids
-  
+  ref.dat <- CCLid::loadRef(PDIR, 'baf', bin.size=5e5)
 }
 
 
@@ -103,30 +72,15 @@ driftConcordance <- function(){
   alt.ds <- 'CCLE'
   
   ## Find variant features and isolate for cell lines shared in datasets
-  ref.mat.var <- mapVariantFeat(ref.mat, var.dat)
-  cl.idx <- findCclPairs(meta.df, ref.mat.var)
+  ref.mat.var <- mapVariantFeat(ref.dat$ref, ref.dat$var)
+  cl.idx <- CCLid::findCclPairs(meta.df, ref.mat.var, ds=c('CCLE', 'GDSC'))
   m.cls.idx <- cl.idx[sapply(cl.idx, function(i) length(i) >= 2)]
   
-  ## Get drift distance between CL pairs
-  baf.drifts <- lapply(m.cls.idx, function(cl.pairs){
-    ref.idx <- grep(paste0(dataset, "_"), colnames(ref.mat.var)[cl.pairs])
-    alt.idx <- grep(paste0(alt.ds, "_"), colnames(ref.mat.var)[cl.pairs])
-    all.idx <- c(ref.idx, alt.idx)
-    
-    if(length(all.idx) == 2){
-      bdf <- bafDrift(ref.mat.var[,cl.pairs[all.idx]])
-      #CCLid:::plot.CCLid(bdf$cna.obj[[1]])
-      drift.score <- list("sig.gr"=sigDiffBaf(bdf$cna.obj[[1]]),
-                          "frac"=bdf$frac[[1]][3,])
-    } else {
-      drift.score <- list("sig.gr"=NULL, "frac"=NULL)
-    }
-
-    return(drift.score)
-  })
+  ## Get drift distance between CL pairs using BAF
+  baf.drifts <- lapply(m.cls.idx, CCLid::getBafDrifts, x.mat=ref.mat.var, 
+                       ref.ds=dataset, alt.ds=alt.ds)
   save(baf.drifts, file=file.path(PDIR, "drift_it", 
                              paste0(dataset, "-", alt.ds, "_baf_drift.rda")))
-  # cl.pairs <- m.cls.idx[[1]]
   
   ## Load in CN bins
   cn.dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/cnv_predictions/input/cn/50kb_bins'
@@ -136,79 +90,16 @@ driftConcordance <- function(){
   bins <- lapply(bins.file, function(b) readRDS(file.path(cn.dir, b)))
   names(bins) <- gsub("_.*", "",  bins.file)
   
-  # "exprs"  "nAraw"  "nBraw"  "nMajor" "nMinor" "TCN"   
-  alt.bin.ids <- assignGrpIDs(assayData(bins[[alt.ds]])$exprs, meta.df)
-  ref.bin.ids <- assignGrpIDs(assayData(bins[[dataset]])$exprs, meta.df)
-  alt.ref.idx <- data.frame("id"=as.character(names(baf.drifts)),
-                            "ref"=as.integer(sapply(paste0("_", names(baf.drifts), "$"), 
-                                                    grep, x=ref.bin.ids)),
-                            "alt"=as.integer(sapply(paste0("_", names(baf.drifts), "$"), 
-                                                    grep, x=alt.bin.ids)))
-  na.idx <- apply(alt.ref.idx, 1, function(i)  any(is.na(i)))
-  if(any(na.idx)) alt.ref.idx <- alt.ref.idx[-which(na.idx),]
-  alt.ref.idx$id <- as.character(alt.ref.idx$id)
-  cn.drift <- apply(alt.ref.idx, 1, function(ar.i){
-    # ar.i = unlist(alt.ref.idx[1,])
-    ref.id = ref.bin.ids[ar.i['ref']]
-    alt.id = alt.bin.ids[ar.i['alt']]
-    
-  
-    print(paste(ar.i['id'], grep(ar.i['id'], alt.ref.idx$id), sep="_"))
-    ra.i <- cbind(assayData(bins[[dataset]])$exprs[,as.integer(ar.i['ref']), drop=FALSE],
-                  assayData(bins[[alt.ds]])$exprs[,as.integer(ar.i['alt']), drop=FALSE])
-    idx <- sample(1:nrow(ra.i), size=1000, replace=FALSE)
-    ra.i <-as.data.frame(ra.i)
-    colnames(ra.i) <-c('ref', 'alt')
-    
-    D = (ra.i[,1] - ra.i[,2])
-    return(D)
-  })
-
-  CNAo <- switch(segmenter,
-                 "PCF"={
-                   CNdata <- with(featureData(bins[[alt.ds]])@data,
-                                  cbind(as.factor(seg.seqnames), seg.start, cn.drift))
-                   colnames(CNdata) <- c("chrom", "pos", alt.ref.idx$id)
-                   CNdata <- as.data.frame(CNdata)
-                   pcf.dat <- copynumber::pcf(CNdata, pos.unit = "bp", kmin = 100, 
-                                              gamma = 20, normalize = FALSE, 
-                                              fast = TRUE, assembly = "hg19", 
-                                              digits = 2, verbose = TRUE)
-                   f <- factor(pcf.dat$sampleID, levels=alt.ref.idx$id)
-                   pcf.dat <- pcf.dat[,c("sampleID", "chrom", "start.pos",
-                                         "end.pos", "n.probes", "mean", "arm")]
-                   colnames(pcf.dat) <- c("ID", "chrom", "loc.start", "loc.end", 
-                                          "num.mark", "seg.mean", "arm")
-                   
-                   pcf.CNAo <- list("data"=CNdata,
-                                    "output"=pcf.dat[order(f),],
-                                    "segRows"=NULL,
-                                    "call"=NULL)
-                   pcf.CNAo
-                 },
-                 "CBS"={
-                   CNAo <- with(featureData(bins[[alt.ds]])@data, #[names(ra.lm$residuals),],
-                                CNA(genomdat=cn.drift,
-                                    chrom=as.factor(seg.seqnames),
-                                    maploc=seg.start,
-                                    data.type="logratio",
-                                    sampleid=alt.ref.idx$id))
-                   smoothed.CNAo <- smooth.CNA(CNAo)
-                   seg.CNAo <- segment(smoothed.CNAo,alpha = 0.001, eta=0.05, verbose=1, min.width=5)
-                   seg.CNAo
-                 })
-  sd.CNAo <- addSegDat(ids=alt.ref.idx$id, CNAo=CNAo)
-  seg.drift <- CCLid:::.estimateDrift(sd.CNAo, z.cutoff=1:3)
-  sd.CNAo$output <- seg.drift$seg
-  class(sd.CNAo) <- 'CCLid'
-  # CCLid:::plot.CCLid(sd.CNAo)
-  cn.drift <- list("frac"=seg.drift$frac,
-                   "cna.obj"=sd.CNAo)
-  save(cn.drift, file=file.path(PDIR, "drift_it", 
+  cn.drift=CCLid::getCNDrifts(ref.l2r=assayData(cn.bins[[dataset]])$exprs,
+                              alt.l2r=assayData(cn.bins[[alt.ds]])$exprs,
+                              cell.ids=names(baf.drifts), segmenter='PCF')
+  save(cn.drifts, file=file.path(PDIR, "drift_it", 
                                 paste0(dataset, "-", alt.ds, "_cn_drift.rda")))
   
+  ## Find overlap between GRanges of BAF to CN drift
+  
   ## Extract and combine BAF drifts and CN drifts
-  cn.drift.frac <- reshape::melt(sapply(cn.drift$frac, function(i) i[[3]]))
+  cn.drift.frac <- reshape::melt(sapply(cn.drifts$frac, function(i) i[[3]]))
   cn.drift.frac$L1 <- rownames(cn.drift.frac)
   baf.drift.frac <- sapply(baf.drifts, function(i) i$frac)
   null.idx <- which(sapply(baf.drift.frac, is.null))
