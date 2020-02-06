@@ -7,5 +7,5 @@
 .demoRna()
 }
 \description{
-export
+demoRna function
 }
