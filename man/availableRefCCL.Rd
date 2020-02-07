@@ -4,8 +4,11 @@
 \alias{availableRefCCL}
 \title{availableRefCCL}
 \usage{
-availableRefCCL(saveDir = file.path(".", "CCLid"),
-  myfn = "downloadTable.csv", verbose = TRUE)
+availableRefCCL(
+  saveDir = file.path(".", "CCLid"),
+  myfn = "downloadTable.csv",
+  verbose = TRUE
+)
 }
 \arguments{
 \item{saveDir}{}
@@ -13,6 +16,9 @@ availableRefCCL(saveDir = file.path(".", "CCLid"),
 \item{myfn}{}
 
 \item{verbose}{}
+}
+\value{
+
 }
 \description{
 table describing the different datasets for download

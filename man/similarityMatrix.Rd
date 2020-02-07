@@ -11,6 +11,9 @@ similarityMatrix(mat, method)
 
 \item{method}{Either 'cor', 'jaccard', or 'euclidean'}
 }
+\value{
+
+}
 \description{
 Creates a similarity/concordance matrix given a
 SNP x Sample matrix and a method of concordance

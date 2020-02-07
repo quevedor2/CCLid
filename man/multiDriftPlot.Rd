@@ -15,6 +15,9 @@ multiDriftPlot(seg, chr.size.gr = NULL, ref.ds = NULL, alt.ds = NULL)
 
 \item{alt.ds}{}
 }
+\value{
+
+}
 \description{
 multiDriftPlot
 }

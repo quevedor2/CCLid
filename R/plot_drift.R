@@ -30,7 +30,7 @@
                                                     "loc.end"=chr.lengths))
   chr.len.gr$cum.end <- cumsum(as.numeric(end(chr.len.gr)))
   chr.len.gr$cum.start <- chr.len.gr$cum.end - (end(chr.len.gr) -1)
-  chr.len.gr$cum.mid <- with(chr.len.gr, (cum.start + ((cum.end - cum.start)/2)))
+  chr.len.gr$cum.mid <- (chr.len.gr$cum.start + ((chr.len.gr$cum.end - chr.len.gr$cum.start)/2))
   return(chr.len.gr)
 }
 
@@ -74,9 +74,9 @@ multiDriftPlot <- function(seg, chr.size.gr=NULL,
   
   lapply(seq_along(grl.idx), function(i){
     ## Draw empty chromosomes
-    with(chr.size.gr, rect(xleft = cum.start, ybottom = rep(i - 0.9, length(chr.size.gr)), 
-                           xright = cum.end, ytop = rep(i - 0.1, length(chr.size.gr)), 
-                           col = "gray95", border="black", lwd=1))
+    rect(xleft = chr.size.gr$cum.start, ybottom = rep(i - 0.9, length(chr.size.gr)), 
+         xright = chr.size.gr$cum.end, ytop = rep(i - 0.1, length(chr.size.gr)), 
+         col = "gray95", border="black", lwd=1)
     
     ## populate with sig.diff regions
     if(!is.na(grl.idx[i])){
@@ -118,8 +118,7 @@ driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
                         paste0("RNA/", alt.ds),
                         paste0("RNA/", ref.ds)))
   
-  cs <- combn(x=1:3, m=2)
-  drift.ov <- apply(cs, 2, function(i){
+  drift.ov <- apply(combn(x=1:3, m=2), 2, function(i){
     # i <- unlist(cs[,2])
     gr1 <- if(is.na(grl.idx[i[1]]))  CCLid:::.blankGr() else grl[[grl.idx[i[1]]]]
     gr2 <- if(is.na(grl.idx[i[2]]))  CCLid:::.blankGr() else grl[[grl.idx[i[2]]]]

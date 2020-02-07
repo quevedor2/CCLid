@@ -11,6 +11,12 @@ sigDiffBaf(each.sample, sig.es = NULL)
 
 \item{sig.es}{}
 }
+\value{
+GRanges object of significant BAF drift (z > 3)
+for a cna.obj returned by bafDrift$cna.obj
+
+
+}
 \description{
 sigDiffBaf
 }

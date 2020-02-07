@@ -11,6 +11,9 @@
 
 \item{affy.gt}{}
 }
+\value{
+
+}
 \description{
 Switches the genotype to adjust for the reverse complement switch (0/0 -> 1/1)
 }

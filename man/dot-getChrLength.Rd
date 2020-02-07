@@ -6,6 +6,9 @@
 \usage{
 .getChrLength()
 }
+\value{
+
+}
 \description{
 .getChrLength
 }

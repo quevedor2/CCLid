@@ -7,6 +7,7 @@
 #' @export
 bafDrift <- function(sample.mat){
   require(DNAcopy)
+  data(snp6.dat)
   ## Get pairwise distance between loci
   M <- CCLid:::.normBAF(sample.mat)
   D.l <- list()
@@ -32,9 +33,9 @@ bafDrift <- function(sample.mat){
                 data.type="logratio",sampleid=colnames(D)[-1])
     smoothed.CNAo <- smooth.CNA(CNAo)
     seg.CNAo <- segment(smoothed.CNAo, verbose=1, alpha=0.01, eta=0.05, min.width=5)
-    seg.CNAo$output <- .addSegSd(seg.CNAo)
+    seg.CNAo$output <- CCLid:::.addSegSd(seg.CNAo)
     
-    seg.drift <- .estimateDrift(seg.CNAo, z.cutoff=1:3)
+    seg.drift <- CCLid:::.estimateDrift(seg.CNAo, z.cutoff=1:3)
     seg.CNAo$output <- seg.drift$seg
     class(seg.CNAo) <- 'CCLid'
     return(list("frac"=seg.drift$frac,

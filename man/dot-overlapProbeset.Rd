@@ -11,6 +11,9 @@
 
 \item{comp.ids}{}
 }
+\value{
+
+}
 \description{
 Overlaps probesets and orders based on chr position
 }

@@ -13,6 +13,9 @@ mapVariantFeat(vcf.map, var.dat, slow.method = FALSE)
 
 \item{slow.method}{}
 }
+\value{
+
+}
 \description{
 Selects only the features with the highest variance
 per bin

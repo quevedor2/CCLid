@@ -9,6 +9,9 @@ plotHist(D)
 \arguments{
 \item{D}{}
 }
+\value{
+
+}
 \description{
 Plots the histogram for matching/non-matching dataset
 }

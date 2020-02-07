@@ -11,6 +11,9 @@ splitSnpDist(dm, meta.df)
 
 \item{meta.df}{}
 }
+\value{
+
+}
 \description{
 splitSnpDist
 }

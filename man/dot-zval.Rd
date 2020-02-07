@@ -9,6 +9,9 @@
 \arguments{
 \item{dat}{}
 }
+\value{
+
+}
 \description{
 z-statistic
 }

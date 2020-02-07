@@ -1,6 +1,7 @@
 ############################
 #### drift_it.R Support ####
 ############################
+### Functions for CN - BAF drift overlap
 getSegSD <- function(id, CNAo){
   idx <- grep(paste0("^X?", id, "$"), colnames(CNAo$data))
   D <- CNAo$data[,idx]
@@ -40,7 +41,7 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL){
   if(length(all.idx) == 2){
     bdf <- bafDrift(x.mat[,cl.pairs[all.idx]])
     #CCLid:::plot.CCLid(bdf$cna.obj[[1]])
-    drift.score <- list("sig.gr"=CCLid::sigDiffBaf(bdf$cna.obj[[1]]),
+    drift.score <- list("sig.gr"=bdf$cna.obj, #CCLid::sigDiffBaf(bdf$cna.obj[[1]]),
                         "frac"=bdf$frac[[1]][3,])
   } else {
     drift.score <- list("sig.gr"=NULL, "frac"=NULL)
@@ -59,7 +60,7 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL){
 #'
 #' @return CN drift object
 #' @export
-getCNDrifts <- function(ref.l2r, alt.l2r, cell.ids, segmenter='PCF'){
+getCNDrifts <- function(ref.l2r, alt.l2r,fdat, cell.ids, segmenter='PCF'){
   ## Index matching cell line pairs for the CN PSets
   alt.bin.ids <- assignGrpIDs(ref.l2r, meta.df)
   ref.bin.ids <- assignGrpIDs(alt.l2r, meta.df)
@@ -73,7 +74,6 @@ getCNDrifts <- function(ref.l2r, alt.l2r, cell.ids, segmenter='PCF'){
   alt.ref.idx$id <- as.character(alt.ref.idx$id)
   
   ## Create a distance betweeen L2R matrix:
-  
   cn.drift <- apply(alt.ref.idx, 1, function(ar.i){
     ref.id = ref.bin.ids[ar.i['ref']]
     alt.id = alt.bin.ids[ar.i['alt']]
@@ -88,8 +88,8 @@ getCNDrifts <- function(ref.l2r, alt.l2r, cell.ids, segmenter='PCF'){
   ## Segment and find discordant regions
   CNAo <- switch(segmenter,
                  "PCF"={
-                   CNdata <- with(featureData(bins[[alt.ds]])@data,
-                                  cbind(as.factor(seg.seqnames), seg.start, cn.drift))
+                   CNdata <- with(fdat, cbind(as.factor(seg.seqnames), 
+                                              seg.start, cn.drift))
                    colnames(CNdata) <- c("chrom", "pos", alt.ref.idx$id)
                    CNdata <- as.data.frame(CNdata)
                    pcf.dat <- copynumber::pcf(CNdata, pos.unit = "bp", kmin = 100, 
@@ -109,7 +109,7 @@ getCNDrifts <- function(ref.l2r, alt.l2r, cell.ids, segmenter='PCF'){
                    pcf.CNAo
                  },
                  "CBS"={
-                   CNAo <- with(featureData(bins[[alt.ds]])@data, #[names(ra.lm$residuals),],
+                   CNAo <- with(fdat, #[names(ra.lm$residuals),],
                                 CNA(genomdat=cn.drift,
                                     chrom=as.factor(seg.seqnames),
                                     maploc=seg.start,
@@ -127,6 +127,108 @@ getCNDrifts <- function(ref.l2r, alt.l2r, cell.ids, segmenter='PCF'){
   cn.drift <- list("frac"=seg.drift$frac,
                    "cna.obj"=sd.CNAo)
   return(cn.drift)
+}
+
+#' driftOverlapMetric
+#' @description Calculate the amount of overlap between the CN and BAF inferred drift
+#' GRanges objects
+#'
+#' @param gr.baf GRangesList of cell lines an their BAF-drifted regions
+#' @param gr.cn GRangesList of cell lines an their CN-drifted regions
+#' @param ov.frac overlap fraction cutoff: (Default: seq(0, 1, by=0.01))
+#' @param cell.ids Vector of cell line names to check drift of
+#'
+#' @return List containing the following elements:
+#' "model" = non-linear least-square model fitted to concordance and sensitvity
+#' "saturation"=Matrix of total saturation and concordance cutoff
+#' "sens"=Matrix of sensitivity value for each concordance cutoff
+#' "dat"=Matrix of concordance cutoff by cell lines
+#' @export
+driftOverlapMetric <- function(gr.baf, gr.cn, cell.ids, ov.frac=seq(0, 1, by=0.01)){
+  ## calculate genomic overlap metric with different concordance-thresholds
+  ov.dat <- sapply(cell.ids, function(cid){
+    if(! is.null(gr.cn[[cid]])){
+      if(!is.null(gr.baf[[cid]])){
+        ov.baf.cn <- findOverlapPairs(gr.baf[[cid]], gr.cn[[cid]])
+        baf.cn <- pintersect(ov.baf.cn)
+        mcols(baf.cn) <- NULL
+        
+        baf.cn$baf <- ov.baf.cn@first$t > 2
+        baf.cn$cn <- ov.baf.cn@second$t > 2
+        m.idx <- with(baf.cn, baf==cn)
+        conc.drift <- sum(width(baf.cn[which(m.idx),])) / sum(width(baf.cn))
+        
+        setNames(conc.drift > ov.frac, ov.frac)
+      } else {
+        setNames(rep(0, length(ov.frac)), ov.frac)
+      }
+    } else {
+      setNames(rep(NA, length(ov.frac)), ov.frac)
+    }
+    
+    
+  })
+  
+  ## Organize sensitivity and assign a non-linear least-squares model
+  ov.df <- data.frame("y"=rev(rowSums(ov.dat, na.rm=TRUE) / ncol(ov.dat)),
+                      "x"=as.numeric(rownames(ov.dat)))
+  m<-with(ov.df, nls(y~ SSasymp(x, Asym, R0, lrc)))
+  
+  ## Calculate saturation points
+  Asym_coef <- summary(m)$coefficients[1] ## horizontal asymptote
+  R0_coef <- summary(m)$coefficients[2] ## response when x == 0
+  lrc_coef <- summary(m)$coefficients[3] ## rate constant
+  sat.values <- seq(0, 1, by=0.01)
+  conc.sat <- sapply(setNames(sat.values, sat.values), function(saturation){
+    satX <- Asym_coef * saturation
+    -(log((satX-Asym_coef)/(R0_coef-Asym_coef))/exp(lrc_coef)) # Conc. threshold to reach X% sensitvity saturation
+  })
+  conc.sat <- as.matrix(round(conc.sat, 3))
+  # rownames(conc.sat) <- rev(rownames(conc.sat))
+  
+  return(list("model"=m,
+              "saturation"=conc.sat,
+              "sens"=ov.df,
+              "dat"=ov.dat))
+}
+
+### Functions for RNA (BAF) - SNP (BAF) drift overlap
+#' getVcfDrifts
+#' @description Check the drift of a given VCF file and all matching
+#' cell line names based on the meta-data matched IDs
+#' @param vcfFile path to vcf file
+#' @param rna.meta.df Meta file linking RNA files to cell names
+#'
+#' @return A list containing the fraction of genome drifted,
+#' as well the significantly drifted regions CNAo
+#' @export
+getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df){
+  vcf <- basename(vcfFile)
+  cat(basename(vcf), "...\n")
+  ## Load in VCF data and leftjoin to existing ref.mat
+  vcf.mat <- compareVcf(vcfFile, var.dat=ref.dat$var, 
+                        ref.mat=ref.dat$ref)
+  rna.idx <- switch(dataset,
+                    "GDSC"=grep(gsub(".snpOut.*", "", vcf), rna.meta.df$EGAF),
+                    "CCLE"=grep(gsub(".snpOut.*", "", vcf), rna.meta.df$SRR))  ## ADJUST THE GREP
+  colnames(vcf.mat)[1] <- paste0("RNA_", rna.meta.df[rna.idx, 'ID'])
+  
+  ## Identify matching cell line data to RNAseq
+  ## Calculate drift of Cell line with RNAseq with external control
+  match.idx <- grep(paste0("_", rna.meta.df[rna.idx,]$ID, "$"), colnames(vcf.mat))
+  if(length(match.idx) > 0){
+    x.drift <- bafDrift(sample.mat=vcf.mat[,match.idx])
+    
+    ## Isolate siginificant different regions
+    sig.diff.gr <- lapply(x.drift$cna.obj, sigDiffBaf)
+    frac.cnt <- x.drift$frac
+    
+    summ <- list("frac"=frac.cnt,
+                 "sig"=sig.diff.gr)
+  } else {
+    summ=NULL
+  }
+  return(summ)
 }
 
 ############################

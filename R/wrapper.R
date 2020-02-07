@@ -57,7 +57,7 @@ compareVcf <- function(vcfFile, var.dat, ref.mat){
   vcf.map.var <- CCLid::mapVariantFeat(vcf.map, var.dat)
   vcf.to.use <- vcf.map.var
   ov.idx <- CCLid::overlapPos(comp = vcf.to.use$BAF,
-                       ref=ref.mat, mapping = 'probeset')
+                              ref=ref.mat, mapping = 'probeset')
   x.mat <- cbind(vcf.to.use$BAF$BAF[ov.idx$comp], 
                  ref.mat[ov.idx$ref,])
   return(x.mat)

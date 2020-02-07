@@ -13,6 +13,9 @@ genDemoData(data.type = "BAF", n.pop = 10, ...)
 
 \item{...}{}
 }
+\value{
+
+}
 \description{
 Generates random demo data to play with
 }

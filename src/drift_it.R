@@ -46,7 +46,7 @@ isolateL2Rpsets <- function(){
 #### Preliminary steps ####
 ###########################
 ## Run before executing any of the following 3 analyses
-benchmarkCCLid <- function(bench){
+loadInData <- function(bench){
   library(VariantAnnotation)
   library(CCLid)
   require(DNAcopy)
@@ -77,7 +77,7 @@ driftConcordance <- function(){
   m.cls.idx <- cl.idx[sapply(cl.idx, function(i) length(i) >= 2)]
   
   ## Get drift distance between CL pairs using BAF
-  baf.drifts <- lapply(m.cls.idx, CCLid::getBafDrifts, x.mat=ref.mat.var, 
+  baf.drifts <- lapply(m.cls.idx, getBafDrifts, x.mat=ref.mat.var, 
                        ref.ds=dataset, alt.ds=alt.ds)
   save(baf.drifts, file=file.path(PDIR, "drift_it", 
                              paste0(dataset, "-", alt.ds, "_baf_drift.rda")))
@@ -90,48 +90,63 @@ driftConcordance <- function(){
   bins <- lapply(bins.file, function(b) readRDS(file.path(cn.dir, b)))
   names(bins) <- gsub("_.*", "",  bins.file)
   
-  cn.drift=CCLid::getCNDrifts(ref.l2r=assayData(cn.bins[[dataset]])$exprs,
-                              alt.l2r=assayData(cn.bins[[alt.ds]])$exprs,
+  cn.drift=CCLid::getCNDrifts(ref.l2r=assayData(bins[[dataset]])$exprs,
+                              alt.l2r=assayData(bins[[alt.ds]])$exprs,
+                              fdat=featureData(bins[[alt.ds]])@data,
                               cell.ids=names(baf.drifts), segmenter='PCF')
   save(cn.drifts, file=file.path(PDIR, "drift_it", 
                                 paste0(dataset, "-", alt.ds, "_cn_drift.rda")))
   
   ## Find overlap between GRanges of BAF to CN drift
+  df.cn <- cn.drifts$cna.obj$output
+  df.cn$chrom <- gsub("23", "X", df.cn$chrom) %>% 
+    gsub("24", "Y", .) %>% paste0("chr", .)
+  gr.cn <- makeGRangesFromDataFrame(df.cn, keep.extra.columns = TRUE)
+  gr.cn <- split(gr.cn, gr.cn$ID)
+  df.baf <- lapply(baf.drifts, function(i) {
+    d <- i$sig.gr[[1]]$output
+    d$ID <- gsub("(GDSC_)|(CCLE_)", "", names(i$sig.gr)[1])
+    return(d)
+  })
+  gr.baf <- makeGRangesFromDataFrame(do.call(rbind, df.baf), keep.extra.columns = TRUE)
+  gr.baf <- split(gr.baf, gr.baf$ID)
   
-  ## Extract and combine BAF drifts and CN drifts
-  cn.drift.frac <- reshape::melt(sapply(cn.drifts$frac, function(i) i[[3]]))
-  cn.drift.frac$L1 <- rownames(cn.drift.frac)
-  baf.drift.frac <- sapply(baf.drifts, function(i) i$frac)
-  null.idx <- which(sapply(baf.drift.frac, is.null))
-  baf.drift.frac[null.idx] <- NA
-  baf.drift.frac <- reshape::melt(baf.drift.frac)
-  
-  ## Merge the BAF and CN data
-  cn.baf.drift <- merge(cn.drift.frac, baf.drift.frac, by="L1", all=TRUE)
-  rownames(cn.baf.drift) <- cn.baf.drift$L1
-  cn.baf.drift <- cn.baf.drift[,-1]
-  colnames(cn.baf.drift) <- c("CN", "BAF")
-  
-  ## Plot the correlation
-  plot(cn.baf.drift, xlim=c(0,1), ylim=c(0,1), main="Fraction of genome drifted")
-  r <- round(cor(cn.baf.drift, use = "complete.obs")[1,2],2)
-  abline(coef=c(0,1), col="grey", lty=2)
-  
-  ## Extract and combine BAF drifts and CN drifts
+  drift.dat <- driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.cn, 
+                                  cell.ids = names(baf.drifts))
   
   
+  ## Plot the saturation-sensitvity curve
+  pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf")),
+      width=5, height=5)
+  with(drift.dat$sens, plot(x=x, y=y, pch=16, las=1, col=scales::alpha("grey", 0.8),
+                            main="Agreement between inference of CN and BAF drift", xaxt='n',
+                            ylim=c(0,1), ylab="Sensitivity", xlab="Conc. Threshold"))
+  axis(side = 1, at = seq(0,1, by=0.2), labels = rev(seq(0,1, by=0.2)), las=1)
+  lines(drift.dat$sens$x, predict(drift.dat$model),lty=2,col="black",lwd=2)
+  ## add saturation points
+  sat.points <- as.character(c(0.9, 0.95, 0.99))
+  sat.cols <- c("#feb24c", "#fd8d3c", "#f03b20")
+  abline(v=drift.dat$saturation[sat.points,], col=sat.cols)
+  text(x =drift.dat$saturation[sat.points,], y=rep(1, length(sat.points)), 
+       labels = sat.points, cex=0.8, adj=0 )
+  print(1-drift.dat$saturation[sat.points,])
+  # 0.90    0.95    0.99 
+  # 0.781   0.714   0.558
+  dev.off()
+  cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf .\n"))))
   
+  ## Plot the drift CN-BAF examples
+  pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf")),
+      width=5, height=5)
   
-  
-  [[1]]$
-  names(cn.drift)
-  cn.drift.frac <- unlist(sapply(cn.drift, CCLid:::.getDrift, idx=1))
-  baf.drift.frac <- unlist(sapply(baf.drifts[names(cn.drift)], function(i) i$fraca))
-  df <- data.frame("cn"=cn.drift.frac,
-                   "baf"=baf.drift.frac)
-  
-  CCLid:::plot.CCLid(cn.drift[['42-MG-BA']]$cna.obj)
+  ccl.id <-'COLO-205'
+  CNAo <- cn.drifts$cna.obj
+  CNAo$output <- split(CNAo$output, CNAo$output$ID)[[ccl.id]]
+  CNAo$data <- CNAo$data[,c(1,2,grep(paste0("^", ccl.id, "$"), colnames(CNAo$data)))]
+  CCLid:::plot.CCLid(CNAo)
+  CCLid:::plot.CCLid(cn.drifts$cna.obj[['42-MG-BA']]$cna.obj)
   CCLid:::plot.CCLid(bdf$cna.obj[[1]])
+  dev.off()
 }
 
 ###################################
@@ -153,42 +168,22 @@ driftTech <- function(){
   
   ## Compare every VCF to the entire ref matrix to calculate BAF drift
   vcf.drift <- mclapply(all.vcfs, function(vcf){
-    cat(paste0(vcf, "(", match(vcf, all.vcfs), "/", length(all.vcfs), "): "))
-    vcf.map <- mapVcf2Affy(file.path(vcf.dir, vcf))
-    vcf.map.var <- mapVariantFeat(vcf.map, var.dat)
-    vaf.to.map <- vcf.map.var
-    
-    ## Overlap the two VCFs to form a single matrix to combine
-    ov.idx <- overlapPos(comp = vaf.to.map$BAF,
-                         ref=ref.mat, mapping = 'probeset')
-    x.mat <- cbind(vaf.to.map$BAF$BAF[ov.idx$comp], 
-                   ref.mat[ov.idx$ref,])
-    
-    ## Identify matching cell line data to RNAseq
-    rna.idx <- grep(gsub(".snpOut.*", "", vcf), rna.meta.df$EGAF)
-    match.idx <- grep(paste0("_", rna.meta.df[rna.idx,]$ID, "$"), colnames(x.mat))
-    colnames(x.mat)[1] <- paste0("RNA_", rna.meta.df[rna.idx, 'ID'])
-    
-    ## Calculate drift of Cell line with RNAseq with external control
-    print(match.idx)
-    if(length(match.idx) > 0){
-      x.drift <- bafDrift(sample.mat=x.mat[,c(1, match.idx)])
-
-      ## Isolate siginificant different regions
-      sig.diff.gr <- lapply(x.drift$cna.obj, sigDiffBaf)
-      frac.cnt <- x.drift$frac
-      
-      summ <- list("frac"=frac.cnt,
-                   "sig"=sig.diff.gr)
-    } else {
-      summ=NULL
-    }
-    
-    
-    return(summ)
+    getVcfDrifts(file.path(vcf.dir, vcf), ref.dat, rna.meta.df)
   }, mc.cores = 8)
-  save(vcf.drift, file=paste0("~/", dataset, "_vcf_drift.rda"))
+  save(vcf.drift, file=file.path(PDIR, "drift_it", 
+                                 paste0(dataset, "-", alt.ds, "_vcf_drift.rda")))
 
+  ## Drift overlaps between a given sample
+  rna.meta.df[match(names(seg.sig[-null.idx])[cl.idx], rna.meta.df$EGAF),]
+  ##################################################################################################
+  ccl.id <- "CL-40"
+  srr.file <- as.character(rna.meta.df[grep(ccl.id, rna.meta.df$ID),]$SRR)
+  egaf.file <- as.character(rna.meta.df[grep(ccl.id, rna.meta.df$ID),]$EGAF)
+  
+  vcf.x <- getVcfDrifts(vcfFile = file.path(vcf.dir, paste0(egaf.file, ".snpOut.vcf.gz")), 
+                        ref.dat=ref.dat, rna.meta.df = rna.meta.df)
+  multiDriftPlot(vcf.x$sig, chr.size.gr=.getChrLength(), ref.ds=dataset, alt.ds=alt.ds)
+  
   ## Identify drift pairs that are NULL and remove from future analysis
   seg.sig <- lapply(vcf.drift, function(i) if(length(i$sig) == 2) i$sig else NULL)
   null.idx <- which(sapply(seg.sig, is.null))
@@ -244,7 +239,8 @@ driftTech <- function(){
   par(mfrow=c(3,1), mar=c(0.5, 4.1, 0.5, 2.1))
   sapply(colnames(idx.drift[[1]][,ord])[cl.idx], function(cl.ids){
     #rna.meta.df[sapply(colnames(idx.drift[[1]][,ord])[cl.idx], grep, rna.meta.df$EGAF),]$ID
-    multiDriftPlot(seg.sig[-null.idx][[cl.ids]], ref.ds=dataset, alt.ds=alt.ds)
+    multiDriftPlot(seg.sig[-null.idx][[cl.ids]], chr.size.gr=.getChrLength(), 
+                   ref.ds=dataset, alt.ds=alt.ds)
   })
   
   ## Plot the drift overlap matrix

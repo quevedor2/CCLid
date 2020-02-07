@@ -4,7 +4,7 @@
 \alias{getCNDrifts}
 \title{getCnDrifts}
 \usage{
-getCNDrifts(ref.l2r, alt.l2r, cell.ids, segmenter = "PCF")
+getCNDrifts(ref.l2r, alt.l2r, fdat, cell.ids, segmenter = "PCF")
 }
 \arguments{
 \item{ref.l2r}{Matrix of L2R data of genomic bins by samples for reference dataset}

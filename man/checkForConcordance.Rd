@@ -4,9 +4,17 @@
 \alias{checkForConcordance}
 \title{checkForConcordance}
 \usage{
-checkForConcordance(x.mat, metric = "euclidean", meta.dat = NULL,
-  verbose = FALSE, return.matrix = FALSE, return.pred = TRUE,
-  fill.na = TRUE, rm.gcsi = TRUE, sampleID = "Sample")
+checkForConcordance(
+  x.mat,
+  metric = "euclidean",
+  meta.dat = NULL,
+  verbose = FALSE,
+  return.matrix = FALSE,
+  return.pred = TRUE,
+  fill.na = TRUE,
+  rm.gcsi = TRUE,
+  sampleID = "Sample"
+)
 }
 \arguments{
 \item{x.mat}{Input matrix from compareVcf, or ref.mat}

@@ -13,6 +13,9 @@ overlapPos(comp, ref, mapping = "probeset")
 
 \item{mapping}{}
 }
+\value{
+
+}
 \description{
 parent function that handles how overlaps are done between COMParing 
 group and REFerence datasets

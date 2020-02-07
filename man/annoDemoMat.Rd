@@ -11,6 +11,9 @@ annoDemoMat(sample.ord, demo.mat)
 
 \item{demo.mat}{}
 }
+\value{
+
+}
 \description{
 Annotate the demo SNP x Sample matrix to generate meta.df
 }

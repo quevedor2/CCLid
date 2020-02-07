@@ -36,11 +36,11 @@
 overlapPos <- function(comp, ref, mapping='probeset'){
   switch(mapping,
          "probeset"={
-           if(grepl("Probe_Set_ID", colnames(comp))){
-             .overlapProbeset(ref.ids=rownames(ref), 
+           if(any(grepl("Probe_Set_ID", colnames(comp)))){
+             CCLid:::.overlapProbeset(ref.ids=rownames(ref), 
                                      comp.ids=comp$Probe_Set_ID)
            } else {
-             .overlapProbeset(ref.ids=rownames(ref), 
+             CCLid:::.overlapProbeset(ref.ids=rownames(ref), 
                               comp.ids=rownames(comp))
            }
            })

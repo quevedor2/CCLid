@@ -9,6 +9,9 @@ bafDrift(sample.mat)
 \arguments{
 \item{sample.mat}{}
 }
+\value{
+
+}
 \description{
 bafDrift
 }

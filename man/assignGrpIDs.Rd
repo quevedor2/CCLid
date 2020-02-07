@@ -11,6 +11,9 @@ assignGrpIDs(mat, meta.df)
 
 \item{meta.df}{}
 }
+\value{
+
+}
 \description{
 Creates a standardized set of group names for 
 samples using a reference
