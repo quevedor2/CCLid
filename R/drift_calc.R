@@ -1,17 +1,84 @@
+#' segmentDrift
+#' @description Segments a matrix (D) given a set of genomic coordinates
+#' stored in fdat using either CBS or PCF
+#' @param segmenter either CBS or PCF (Default: PCF)
+#' @param fdat Genomic data-frame where first two columns are "chrom" and "pos"
+#' @param D Matrix corresponding to fdat containing distances to plot, samples in 
+#' columns, rows are the genomic pos
+#'
+#' @return CNA object
+#' @export
+segmentDrift <- function(segmenter='PCF', fdat, D){
+  if(any(colnames(fdat)[1:2] != c('chrom', 'pos'))){
+    warning(paste0("Column names: ", paste(colnames(fdat)[1:2], collapse=","), 
+                   " are not 'chrom' and 'pos' and will be replaced"))
+    colnames(fdat)[1:2] <- c("chrom", "pos")
+  }
+  
+  CNAo <- switch(segmenter,
+                 "PCF"={
+                   CNdata <- with(fdat, cbind(as.factor(chrom), pos, D))
+                   CNdata <- as.data.frame(CNdata)
+                   pcf.dat <- copynumber::pcf(CNdata, pos.unit = "bp", kmin = 100, 
+                                              gamma = 20, normalize = FALSE, 
+                                              fast = TRUE, assembly = "hg19", 
+                                              digits = 2, verbose = FALSE)
+                   f <- factor(pcf.dat$sampleID, levels=colnames(D))
+                   pcf.dat <- pcf.dat[,c("sampleID", "chrom", "start.pos",
+                                         "end.pos", "n.probes", "mean", "arm")]
+                   colnames(pcf.dat) <- c("ID", "chrom", "loc.start", "loc.end", 
+                                          "num.mark", "seg.mean", "arm")
+                   
+                   colnames(CNdata)[1:2] <- c('chrom', 'pos')
+                   CNdata$chrom <- gsub("^23$", "X", CNdata$chrom) %>% gsub("^24$", "Y", .) %>% gsub("^", "chr", .)
+                   pcf.dat$chrom <- gsub("^23$", "X", pcf.dat$chrom) %>% gsub("^24$", "Y", .) %>% gsub("^", "chr", .)
+                   
+                   pcf.CNAo <- list("data"=CNdata,
+                                    "output"=pcf.dat[order(f),],
+                                    "segRows"=NULL,
+                                    "call"=NULL)
+                   pcf.CNAo
+                 },
+                 "CBS"={
+                   CNAo <- with(fdat, #[names(ra.lm$residuals),],
+                                CNA(genomdat=D,
+                                    chrom=as.factor(chrom),
+                                    maploc=pos,
+                                    data.type="logratio",
+                                    sampleid=colnames(D)))
+                   smoothed.CNAo <- smooth.CNA(CNAo)
+                   seg.CNAo <- segment(smoothed.CNAo,alpha = 0.001, eta=0.05, verbose=1, min.width=5)
+                   seg.CNAo
+                 })
+  return(CNAo)
+}
+
+
 #' bafDrift
 #' @definition Calcualtes the amount of genetic drift in a sample
 #' 
 #' @param sample.mat 
-#'
+#' @param debug should be set to FALSE and only changed when debugging
 #' @return
 #' @export
-bafDrift <- function(sample.mat){
+bafDrift <- function(sample.mat, segmenter='PCF', debug=FALSE){
   require(DNAcopy)
   data(snp6.dat)
   ## Get pairwise distance between loci
   M <- CCLid:::.normBAF(sample.mat)
   D.l <- list()
   
+  ## Order based on genomic position
+  match.idx <- match(rownames(M), snp6.dat$SNP$Probe_Set_ID)
+  if(any(is.na(match.idx))) {
+    rm.idx <- which(is.na(match.idx))
+    M <- M[-rm.idx,]
+    match.idx <- match.idx[-rm.idx]
+  }
+  M <- M[order(match.idx),]
+  g.loci <- snp6.dat$SNP[which(snp6.dat$SNP$Probe_Set_ID %in% rownames(M)),]
+  
+  ## calculate distance
   if(ncol(M) > 10) stop(paste0("Too many samples being compared for drift: n=", ncol(M)))
   while(ncol(M) > 1){
     D <- apply(M, 2, function(m){
@@ -23,21 +90,15 @@ bafDrift <- function(sample.mat){
   }
   names(D.l) <- colnames(sample.mat)[-ncol(sample.mat)]
   
-  ## CBS the difference
-  g.loci <- snp6.dat$SNP[match(rownames(sample.mat), snp6.dat$SNP$Probe_Set_ID),]
-  
+  ## Segment (CBS/PCF) the difference
   cna.drift <- lapply(D.l, function(D){
-    CNAo <- CNA(genomdat=D[,-1,drop=FALSE], 
-                chrom=as.factor(seqnames(g.loci)),
-                maploc=start(g.loci), 
-                data.type="logratio",sampleid=colnames(D)[-1])
-    smoothed.CNAo <- smooth.CNA(CNAo)
-    seg.CNAo <- segment(smoothed.CNAo, verbose=1, alpha=0.01, eta=0.05, min.width=5)
+    seg.CNAo <- segmentDrift(segmenter='PCF', fdat = as.data.frame(g.loci), D=D )
     seg.CNAo$output <- CCLid:::.addSegSd(seg.CNAo)
     
     seg.drift <- CCLid:::.estimateDrift(seg.CNAo, z.cutoff=1:3)
     seg.CNAo$output <- seg.drift$seg
     class(seg.CNAo) <- 'CCLid'
+    if(debug) CCLid:::plot.CCLid(seg.CNAo)
     return(list("frac"=seg.drift$frac,
                 "cna.obj"=seg.CNAo))
   })
@@ -61,7 +122,8 @@ bafDrift <- function(sample.mat){
     
     ## Loop through each segment and find SD of the raw data
     gr.dat <- makeGRangesFromDataFrame(seg.dat, seqnames.field='chrom', 
-                                       start.field = 'maploc', end.field = 'maploc', 
+                                       start.field = c('maploc', 'pos'),
+                                       end.field = c('maploc', 'pos'), 
                                        keep.extra.columns = TRUE)
     gr.seg <- makeGRangesFromDataFrame(seg, keep.extra.columns = TRUE)
     seqlevelsStyle(gr.seg) <- seqlevelsStyle(gr.dat) <- 'UCSC'

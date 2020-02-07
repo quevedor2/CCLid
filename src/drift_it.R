@@ -90,10 +90,10 @@ driftConcordance <- function(){
   bins <- lapply(bins.file, function(b) readRDS(file.path(cn.dir, b)))
   names(bins) <- gsub("_.*", "",  bins.file)
   
-  cn.drift=CCLid::getCNDrifts(ref.l2r=assayData(bins[[dataset]])$exprs,
-                              alt.l2r=assayData(bins[[alt.ds]])$exprs,
-                              fdat=featureData(bins[[alt.ds]])@data,
-                              cell.ids=names(baf.drifts), segmenter='PCF')
+  cn.drifts=CCLid::getCNDrifts(ref.l2r=assayData(bins[[dataset]])$exprs,
+                               alt.l2r=assayData(bins[[alt.ds]])$exprs,
+                               fdat=featureData(bins[[alt.ds]])@data,
+                               cell.ids=names(baf.drifts), segmenter='PCF')
   save(cn.drifts, file=file.path(PDIR, "drift_it", 
                                 paste0(dataset, "-", alt.ds, "_cn_drift.rda")))
   
@@ -139,7 +139,7 @@ driftConcordance <- function(){
   pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf")),
       width=5, height=5)
   
-  ccl.id <-'COLO-205'
+  ccl.id <-'786-0'
   CNAo <- cn.drifts$cna.obj
   CNAo$output <- split(CNAo$output, CNAo$output$ID)[[ccl.id]]
   CNAo$data <- CNAo$data[,c(1,2,grep(paste0("^", ccl.id, "$"), colnames(CNAo$data)))]
@@ -179,7 +179,8 @@ driftTech <- function(){
   ccl.id <- "CL-40"
   srr.file <- as.character(rna.meta.df[grep(ccl.id, rna.meta.df$ID),]$SRR)
   egaf.file <- as.character(rna.meta.df[grep(ccl.id, rna.meta.df$ID),]$EGAF)
-  
+  # col.idx <- grep("(UNK)|(GNE_)", colnames(ref.dat$ref))
+  # ref.dat$ref <- ref.dat$ref[,-col.idx]
   vcf.x <- getVcfDrifts(vcfFile = file.path(vcf.dir, paste0(egaf.file, ".snpOut.vcf.gz")), 
                         ref.dat=ref.dat, rna.meta.df = rna.meta.df)
   multiDriftPlot(vcf.x$sig, chr.size.gr=.getChrLength(), ref.ds=dataset, alt.ds=alt.ds)

@@ -12,12 +12,17 @@
 #' @examples
 #' PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
 #' loadRef(PDIR, 'baf', bin.size=5e5)
-loadRef <- function(pdir=NULL, analysis='baf', ...){
+loadRef <- function(pdir=NULL, analysis='baf', rm.gne=FALSE, ...){
   print("Attaching/downloading reference matrix...")
   ref.mat <- downloadRefCCL(toupper(analysis), saveDir = PDIR)
   
+  if(rm.gne){
+    rm.idx <- grep("^Unk*", colnames(ref.mat))
+    ref.mat <- ref.mat[,-rm.idx]
+  }
+  
   print("Ensuring proper format and caluclating variance per bin...")
-  format.dat <- formatRefMat(name=toupper(analysis), ref.mat=ref.mat, 
+  format.dat <- formatRefMat(name=toupper(analysis), ref.mat=ref.mat, saveDir = PDIR, 
                              analysis=tolower(analysis), ...) #bin.size=5e5
   ref.mat <- format.dat$mat
   var.dat <- format.dat$var

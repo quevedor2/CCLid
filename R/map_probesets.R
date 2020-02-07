@@ -76,6 +76,7 @@
 #' .normBAF(x=seq(0, 1, by=0.1), lower=F)
 .normBAF <- function(x, lower=T){
   #x <- seq(0, 1, by=0.1)
+  x[x>1] <- 1; x[x<0] <- 0
   if(lower){
     nBAF <- (0.5 - abs(x - 0.5))
   } else {

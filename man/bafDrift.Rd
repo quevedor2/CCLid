@@ -4,10 +4,12 @@
 \alias{bafDrift}
 \title{bafDrift}
 \usage{
-bafDrift(sample.mat)
+bafDrift(sample.mat, segmenter = "PCF", debug = FALSE)
 }
 \arguments{
 \item{sample.mat}{}
+
+\item{debug}{should be set to FALSE and only changed when debugging}
 }
 \value{
 

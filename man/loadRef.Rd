@@ -4,7 +4,7 @@
 \alias{loadRef}
 \title{loadRef}
 \usage{
-loadRef(pdir = NULL, analysis = "baf", ...)
+loadRef(pdir = NULL, analysis = "baf", rm.gne = FALSE, ...)
 }
 \arguments{
 \item{pdir}{Path to directory containing or to download reference data}
