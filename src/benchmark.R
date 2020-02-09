@@ -14,7 +14,7 @@ benchmarkCCLid <- function(bench){
   PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
   analysis <- 'baf'
   ref.mat <- downloadRefCCL("BAF", saveDir = PDIR)
-  format.dat <- formatRefMat(name="BAF", ref.mat=ref.mat, saveDIR=PDIR, 
+  format.dat <- formatRefMat(name="BAF", ref.mat=ref.mat, saveDir=PDIR, 
                              analysis='baf', bin.size=5e5)
   # var.dat10mb <- var.dat2
   # var.dat5mb <- var.dat2

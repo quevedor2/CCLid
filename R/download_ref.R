@@ -67,6 +67,9 @@ availableRefCCL <- function (saveDir = file.path(".", "CCLid"),
 formatRefMat <- function(name, ref.mat, analysis, 
                          varFileName=NULL, saveDir = file.path(".", "CCLid"), 
                          bin.size=1e6, just.var=FALSE, fill.na=FALSE){
+  # saveDir=PDIR
+  # name='BAF'
+  # analysis='baf'
   # just.var=FALSE
   # fill.na=FALSE
   # varFileName=NULL
@@ -117,11 +120,11 @@ formatRefMat <- function(name, ref.mat, analysis,
   
   ## Gets variance of matrix
   ref.vars <- apply(ref.mat, 1, var, na.rm=TRUE)
-  ref.vars <- setNames(round(ref.vars,3), ref.mat$ID)
+  ref.vars <- setNames(round(ref.vars,3), rownames(ref.mat))
   
   ## Get tally of non-NA sites:
   na.per.snp <- apply(ref.mat, 1, function(i) sum(is.na(i)))
-  na.per.snp <- setNames(na.per.snp, ref.mat$ID)
+  na.per.snp <- setNames(na.per.snp, rownames(ref.mat))
   
   ## Identifies genomic position of SNPs in ref.mat
   all.pb <-  as.data.frame(CCLid::snp6.dat$All)[,c(1:3)] #Loads in probeset meta data
