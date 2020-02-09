@@ -4,7 +4,7 @@
 \alias{bafDrift}
 \title{bafDrift}
 \usage{
-bafDrift(sample.mat, segmenter = "PCF", debug = FALSE)
+bafDrift(sample.mat, debug = FALSE, ...)
 }
 \arguments{
 \item{sample.mat}{}

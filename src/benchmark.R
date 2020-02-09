@@ -60,7 +60,7 @@ geneticDrift <- function(){
   ## Calculate drift of Cell line with RNAseq with external control
   cl.idx <- grep(names(vcf.file), colnames(x.mat))
   em2.idx <- grep('_EM-2$', colnames(x.mat))
-  x.drift <- bafDrift(sample.mat=x.mat[,c(cl.idx, 1, em2.idx)])
+  x.drift <- bafDrift(sample.mat=x.mat[,c(cl.idx, 1, em2.idx)], segmenter='CBS')
   
   pdf(file.path(vcf.dir, paste0("drift_", names(vcf.file), ".pdf")), height = 4, width=5)
   plot(x.drift$cna.obj[[1]], low.sig.alpha=0, sample.size=70)

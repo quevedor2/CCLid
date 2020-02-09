@@ -155,24 +155,18 @@ mapVariantFeat <- function(vcf.map, var.dat, slow.method=FALSE){
   
   if(!slow.method){
     # New fast method
-    var.dat.m <- reshape::melt(var.dat)
-    var.dat.m$variable <- gsub("^[0-9]*\\.", "", names(unlist(var.dat)))
-    var.dat.m$init <- var.dat.m$variable %in% baf$Probe_Set_ID
+    var.dat.m <- do.call(rbind, var.dat)
+    var.dat.m$idx <- rep(names(var.dat), sapply(var.dat, nrow))
+    var.dat.m$var.snps <- with(var.dat.m, log((num.snps / var)^-1)) # Max SNPs, Low Variance
+    var.dat.m$probeset <- unlist(sapply(var.dat, rownames))
+    var.dat.m$init <- var.dat.m$probeset %in% baf$Probe_Set_ID
     var.dat.m <- var.dat.m[which(var.dat.m$init),]
-    max.var.ids <- sapply(split(var.dat.m, var.dat.m$L1), function(i) {
-      i[which.min(i$value),]$variable
+    max.var.ids <- sapply(split(var.dat.m, var.dat.m$idx), function(i) {
+      i[which.max(i$var.snps),]$probeset # Min variance (var), max coverage (num.snps), returns probeset (probeset)
     })
     baf.var <- baf[as.character(max.var.ids),,drop=FALSE]
-  } else {
-    # Old slow method
-    max.var <- lapply(var.dat, function(v){
-      #max.var <- head(sort(v[names(v) %in% baf$Probe_Set_ID], decreasing = TRUE),1)
-      max.var <- head(sort(v[names(v) %in% baf$Probe_Set_ID]),1)
-      return(baf[names(max.var),])
-    }) 
-    baf.var <- do.call(rbind, max.var)
   }
-
+  
   if(class(vcf.map)=='list'){
     geno.var <- geno[baf.var$Probe_Set_ID,]
     return(list("BAF"=baf.var,

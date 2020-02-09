@@ -115,12 +115,16 @@ formatRefMat <- function(name, ref.mat, analysis,
   ## Gets variance of matrix
   ref.vars <- apply(ref.mat, 1, var, na.rm=TRUE)
   
+  ## Get tally of non-NA sites:
+  na.per.snp <- apply(ref.mat, 1, function(i) sum(is.na(i)))
+  
   ## Identifies genomic position of SNPs in ref.mat
   all.pb <-  as.data.frame(CCLid::snp6.dat$All)[,c(1:3)] #Loads in probeset meta data
   rownames(all.pb) <- CCLid::snp6.dat$All$Probe_Set_ID
   var.pb <- all.pb[names(ref.vars),] # Selects rows based on probeset IDs
-  var.pb$var <- ref.vars  # Variance column
+  var.pb$var <- round(ref.vars,3)  # Variance column
   var.pb$Probe_Set_ID <- names(ref.vars)  # Probe_Set_ID column
+  var.pb$num.snps <- na.per.snp # Number of samples that have BAF value
   na.idx <- which(is.na(var.pb$seqnames)) #Removes NA if any
   if(length(na.idx) > 0) var.pb <- var.pb[-na.idx,]
   var.gr <- sort(makeGRangesFromDataFrame(var.pb, keep.extra.columns = TRUE))
@@ -137,7 +141,7 @@ formatRefMat <- function(name, ref.mat, analysis,
   ## For each bin, selects the Probeset with the max variance and returns that
   var.l <- lapply(ov.split, function(i){
     binned.var <- var.gr[subjectHits(i),]
-    n.var <- setNames(round(binned.var$var, 3), binned.var$Probe_Set_ID)
+    n.var <- as.data.frame(binned.var)[,c("var", "num.snps")]
     n.var
     # max.idx <- which.max(search.space$var)
     # search.space[max.idx,]

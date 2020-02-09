@@ -8,7 +8,7 @@
 #'
 #' @return CNA object
 #' @export
-segmentDrift <- function(segmenter='PCF', fdat, D){
+segmentDrift <- function(segmenter='PCF', fdat, D, kmin=5){
   if(any(colnames(fdat)[1:2] != c('chrom', 'pos'))){
     warning(paste0("Column names: ", paste(colnames(fdat)[1:2], collapse=","), 
                    " are not 'chrom' and 'pos' and will be replaced"))
@@ -17,9 +17,10 @@ segmentDrift <- function(segmenter='PCF', fdat, D){
   
   CNAo <- switch(segmenter,
                  "PCF"={
+                   require(dplyr)
                    CNdata <- with(fdat, cbind(as.factor(chrom), pos, D))
                    CNdata <- as.data.frame(CNdata)
-                   pcf.dat <- copynumber::pcf(CNdata, pos.unit = "bp", kmin = 100, 
+                   pcf.dat <- copynumber::pcf(CNdata, pos.unit = "bp", kmin = kmin, 
                                               gamma = 20, normalize = FALSE, 
                                               fast = TRUE, assembly = "hg19", 
                                               digits = 2, verbose = FALSE)
@@ -40,6 +41,7 @@ segmentDrift <- function(segmenter='PCF', fdat, D){
                    pcf.CNAo
                  },
                  "CBS"={
+                   require(DNAcopy)
                    CNAo <- with(fdat, #[names(ra.lm$residuals),],
                                 CNA(genomdat=D,
                                     chrom=as.factor(chrom),
@@ -61,7 +63,7 @@ segmentDrift <- function(segmenter='PCF', fdat, D){
 #' @param debug should be set to FALSE and only changed when debugging
 #' @return
 #' @export
-bafDrift <- function(sample.mat, segmenter='PCF', debug=FALSE){
+bafDrift <- function(sample.mat, debug=FALSE, ...){
   require(DNAcopy)
   data(snp6.dat)
   ## Get pairwise distance between loci
@@ -91,9 +93,9 @@ bafDrift <- function(sample.mat, segmenter='PCF', debug=FALSE){
   names(D.l) <- colnames(sample.mat)[-ncol(sample.mat)]
   
   ## Segment (CBS/PCF) the difference
-  cna.drift <- lapply(D.l, function(D){
-    seg.CNAo <- segmentDrift(segmenter='PCF', fdat = as.data.frame(g.loci), D=D )
-    seg.CNAo$output <- CCLid:::.addSegSd(seg.CNAo)
+  cna.drift <- lapply(D.l, function(D, ...){
+    seg.CNAo <- segmentDrift(fdat = as.data.frame(g.loci), D=D[,-1], ...)
+    seg.CNAo$output <- .addSegSd(seg.CNAo)
     
     seg.drift <- CCLid:::.estimateDrift(seg.CNAo, z.cutoff=1:3)
     seg.CNAo$output <- seg.drift$seg
@@ -129,9 +131,13 @@ bafDrift <- function(sample.mat, segmenter='PCF', debug=FALSE){
     seqlevelsStyle(gr.seg) <- seqlevelsStyle(gr.dat) <- 'UCSC'
     
     ov.idx <- findOverlaps(gr.dat, gr.seg)
-    s.idx <- grep(unique(gr.seg$ID), colnames(mcols(gr.dat)))
+    s.idx <- grep(unique(gr.seg$ID), colnames(mcols(gr.dat)), fixed = TRUE)
     sd.per.seg <- sapply(split(ov.idx, subjectHits(ov.idx)), function(ov.i){
-      round(sd(mcols(gr.dat[queryHits(ov.i),])[, s.idx], na.rm = TRUE),3)
+      dat <- mcols(gr.dat[queryHits(ov.i),])[, s.idx]
+      lim <- quantile(dat, probs=c(0.05, 0.95), na.rm=TRUE) ##winsorization
+      dat[dat < lim[1] ] <- lim[1]
+      dat[dat > lim[2] ] <- lim[2]
+      round(mad(dat, na.rm = TRUE),3)
     })
     seg$seg.sd <- sd.per.seg
     
@@ -156,9 +162,11 @@ bafDrift <- function(sample.mat, segmenter='PCF', debug=FALSE){
   seg.gr <- makeGRangesFromDataFrame(seg.obj$output, keep.extra.columns = TRUE)
   drift.dat <- lapply(split(seg.gr, seg.gr$ID), function(seg, z.cutoff=c(1:4)){
     ##Calculate Z-score of each seg.mean
-    seg.sd <- mean(rep(seg$seg.sd, (width(seg) / 1000000)))
-    #seg.z <- round((seg$seg.mean) / (seg.sd / sqrt(seg$num.mark)), 3) ## t
-    seg.z <- round((seg$seg.mean / seg.sd), 3) ## z
+    seg.sd <- mean(rep(seg$seg.sd, (width(seg) / 1000000)), na.rm=TRUE)
+    seg.z <- round((seg$seg.mean) / (seg.sd / sqrt(seg$num.mark)), 3) ## t
+    #seg.z <- round((seg$seg.mean / seg.sd), 3) ## z
+    seg.z2 <- round((seg$seg.mean / seg$seg.sd), 3) ## z
+    seg.z4 <- round((seg$seg.mean) / (seg$seg.sd / sqrt(seg$num.mark)), 3) ## t
     seg$seg.z <- seg.z 
     
     frac.cnv <- round(width(seg) / sum(width(seg)),3)
