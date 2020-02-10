@@ -69,7 +69,7 @@ segmentDrift <- function(segmenter='PCF', fdat, D, kmin=5, rm.homo=FALSE){
 #' @param debug should be set to FALSE and only changed when debugging
 #' @return
 #' @export
-bafDrift <- function(sample.mat, debug=FALSE, ...){
+bafDrift <- function(sample.mat, debug=FALSE, centering='none', ...){
   require(DNAcopy)
   data(snp6.dat)
   ## Get pairwise distance between loci
@@ -112,7 +112,13 @@ bafDrift <- function(sample.mat, debug=FALSE, ...){
     D <- apply(M, 2, function(m){
       M[,1] - m
     })
-    D <- scale(D, scale=FALSE)
+    D <- switch(centering,
+                "median"={
+                  colmed <- apply(D, 2, median, na.rm=TRUE)
+                  summary(D - colmed)
+                },
+                "mean"=scale(D, scale=FALSE),
+                D)
     D.l <- append(D.l, list(D))
     M <- M[,-1,drop=F]
   }
@@ -121,8 +127,8 @@ bafDrift <- function(sample.mat, debug=FALSE, ...){
   ## Segment (CBS/PCF) the difference
   cna.drift <- lapply(D.l, function(D, ...){
     seg.CNAo <- CCLid::segmentDrift(fdat = as.data.frame(g.loci), D=D[,-1], 
-                             segmenter=segmenter, rm.homo=FALSE)
-    seg.CNAo$output <- CCLid:::.addSegSd(seg.CNAo)
+                             rm.homo=FALSE, ...)
+    seg.CNAo$output <- CCLid:::.addSegSd(seg.CNAo, ...)
     
     seg.drift <- CCLid:::.estimateDrift(seg.CNAo, z.cutoff=1:3)
     seg.CNAo$output <- seg.drift$seg
@@ -146,7 +152,7 @@ bafDrift <- function(sample.mat, debug=FALSE, ...){
 #' @param seg.obj an object returned from DNAcopy::segment()
 #'
 #' @return
-.addSegSd <- function(seg.obj, winsor=0.95){
+.addSegSd <- function(seg.obj, winsor=0.95, ...){
   adj.segs <- lapply(split(seg.obj$output, f=seg.obj$output$ID), function(seg){
     seg.dat <- as.data.frame(seg.obj$data)
     seg.dat$chrom <- as.character(seg.dat$chrom)
@@ -161,11 +167,13 @@ bafDrift <- function(sample.mat, debug=FALSE, ...){
     
     ov.idx <- findOverlaps(gr.dat, gr.seg)
     s.idx <- grep(unique(gr.seg$ID), colnames(mcols(gr.dat)), fixed = TRUE)
-    sd.per.seg <- sapply(split(ov.idx, subjectHits(ov.idx)), function(ov.i){
+    sd.per.seg <- sapply(split(ov.idx, subjectHits(ov.idx)), function(ov.i, winsorize.data){
       dat <- mcols(gr.dat[queryHits(ov.i),])[, s.idx]
-      # lim <- quantile(dat, probs=c(winsor, 1-winsor), na.rm=TRUE) ##winsorization
-      # dat[dat < min(lim) ] <- min(lim)
-      # dat[dat > max(lim) ] <- max(lim)
+      if(winsorize.data){
+        lim <- quantile(dat, probs=c(winsor, 1-winsor), na.rm=TRUE) ##winsorization
+        dat[dat < min(lim) ] <- min(lim)
+        dat[dat > max(lim) ] <- max(lim)
+      }
       # round(sd(dat, na.rm = TRUE),3)
       t.dat <- tryCatch({
         t.test(na.omit(dat))
@@ -174,7 +182,7 @@ bafDrift <- function(sample.mat, debug=FALSE, ...){
       })
       setNames(round(c(t.dat$statistic, t.dat$p.value),5),
                c("t", "p"))
-    })
+    }, ...)
     # seg$seg.sd <- sd.per.seg
     seg <- cbind(seg, abs(t(sd.per.seg)))
     seg$'seg.sd' <- 0
