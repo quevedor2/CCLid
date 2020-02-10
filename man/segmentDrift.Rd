@@ -4,7 +4,7 @@
 \alias{segmentDrift}
 \title{segmentDrift}
 \usage{
-segmentDrift(segmenter = "PCF", fdat, D, kmin = 5)
+segmentDrift(segmenter = "PCF", fdat, D, kmin = 5, rm.homo = FALSE)
 }
 \arguments{
 \item{segmenter}{either CBS or PCF (Default: PCF)}

@@ -10,7 +10,9 @@ plot.CCLid(
   sample.size = 50,
   low.sig.alpha = 0.01,
   hi.sig.alpha = 0.2,
-  add.chr.sep = TRUE
+  add.chr.sep = TRUE,
+  atype = "sd",
+  add.points = TRUE
 )
 }
 \arguments{

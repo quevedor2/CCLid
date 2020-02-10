@@ -8,13 +8,19 @@
 #'
 #' @return CNA object
 #' @export
-segmentDrift <- function(segmenter='PCF', fdat, D, kmin=5){
+segmentDrift <- function(segmenter='PCF', fdat, D, kmin=5, rm.homo=FALSE){
   if(any(colnames(fdat)[1:2] != c('chrom', 'pos'))){
     warning(paste0("Column names: ", paste(colnames(fdat)[1:2], collapse=","), 
                    " are not 'chrom' and 'pos' and will be replaced"))
     colnames(fdat)[1:2] <- c("chrom", "pos")
   }
   
+  if(rm.homo){
+    med.val <- apply(D, 1, median, na.rm=TRUE)
+    rm.idx <- which(med.val < 0.02) 
+    fdat <- fdat[-rm.idx,]
+    D <- D[-rm.idx,]
+  }
   CNAo <- switch(segmenter,
                  "PCF"={
                    require(dplyr)
@@ -49,7 +55,7 @@ segmentDrift <- function(segmenter='PCF', fdat, D, kmin=5){
                                     data.type="logratio",
                                     sampleid=colnames(D)))
                    smoothed.CNAo <- smooth.CNA(CNAo)
-                   seg.CNAo <- segment(smoothed.CNAo,alpha = 0.001, eta=0.05, verbose=1, min.width=5)
+                   seg.CNAo <- segment(smoothed.CNAo,alpha = 0.01, eta=0.05, verbose=1, min.width=5)
                    seg.CNAo
                  })
   return(CNAo)
@@ -80,6 +86,26 @@ bafDrift <- function(sample.mat, debug=FALSE, ...){
   M <- M[order(match.idx),]
   g.loci <- snp6.dat$SNP[which(snp6.dat$SNP$Probe_Set_ID %in% rownames(M)),]
   
+  
+  # ## Segment the BAF profiles
+  # seg.CNAo <- segmentDrift(fdat = as.data.frame(g.loci), 
+  #                          D=M, segmenter=segmenter, rm.homo=FALSE)
+  # seg.output <- .compSegs(seg.CNAo)
+  # segs.CNAo <- lapply(seg.output, function(seg.out){
+  #   names(seg.out) <- NULL
+  #   seg.out <- as.data.frame(seg.out)
+  #   colnames(seg.out)[1:4] <- c("chrom", "loc.start", "loc.end", "num.mark")
+  #   seg.out <- seg.out[,c("ID", "chrom", "loc.start", "loc.end", "num.mark", 
+  #                         "seg.mean", "p", "t", "seg.a", "seg.b", "refID")]
+  #   seg.out$seg.sd <- 0
+  #   seg.CNAo$output <- seg.out
+  #   class(seg.CNAo) <- 'CCLid'
+  #   return(seg.CNAo)
+  # })
+  # pdf("~/test.pdf", width=12)
+  # if(debug) plot.CCLid(segs.CNAo[[2]])
+  # dev.off()
+
   ## calculate distance
   if(ncol(M) > 10) stop(paste0("Too many samples being compared for drift: n=", ncol(M)))
   while(ncol(M) > 1){
@@ -94,13 +120,16 @@ bafDrift <- function(sample.mat, debug=FALSE, ...){
   
   ## Segment (CBS/PCF) the difference
   cna.drift <- lapply(D.l, function(D, ...){
-    seg.CNAo <- segmentDrift(fdat = as.data.frame(g.loci), D=D[,-1], ...)
-    seg.CNAo$output <- .addSegSd(seg.CNAo)
+    seg.CNAo <- CCLid::segmentDrift(fdat = as.data.frame(g.loci), D=D[,-1], 
+                             segmenter=segmenter, rm.homo=FALSE)
+    seg.CNAo$output <- CCLid:::.addSegSd(seg.CNAo)
     
     seg.drift <- CCLid:::.estimateDrift(seg.CNAo, z.cutoff=1:3)
     seg.CNAo$output <- seg.drift$seg
     class(seg.CNAo) <- 'CCLid'
-    if(debug) CCLid:::plot.CCLid(seg.CNAo)
+    # pdf("~/test3.pdf")
+    # if(debug) CCLid:::plot.CCLid(seg.CNAo) #
+    # dev.off()
     return(list("frac"=seg.drift$frac,
                 "cna.obj"=seg.CNAo))
   })
@@ -117,7 +146,7 @@ bafDrift <- function(sample.mat, debug=FALSE, ...){
 #' @param seg.obj an object returned from DNAcopy::segment()
 #'
 #' @return
-.addSegSd <- function(seg.obj){
+.addSegSd <- function(seg.obj, winsor=0.95){
   adj.segs <- lapply(split(seg.obj$output, f=seg.obj$output$ID), function(seg){
     seg.dat <- as.data.frame(seg.obj$data)
     seg.dat$chrom <- as.character(seg.dat$chrom)
@@ -134,18 +163,94 @@ bafDrift <- function(sample.mat, debug=FALSE, ...){
     s.idx <- grep(unique(gr.seg$ID), colnames(mcols(gr.dat)), fixed = TRUE)
     sd.per.seg <- sapply(split(ov.idx, subjectHits(ov.idx)), function(ov.i){
       dat <- mcols(gr.dat[queryHits(ov.i),])[, s.idx]
-      lim <- quantile(dat, probs=c(0.05, 0.95), na.rm=TRUE) ##winsorization
-      dat[dat < lim[1] ] <- lim[1]
-      dat[dat > lim[2] ] <- lim[2]
-      round(mad(dat, na.rm = TRUE),3)
+      # lim <- quantile(dat, probs=c(winsor, 1-winsor), na.rm=TRUE) ##winsorization
+      # dat[dat < min(lim) ] <- min(lim)
+      # dat[dat > max(lim) ] <- max(lim)
+      # round(sd(dat, na.rm = TRUE),3)
+      t.dat <- tryCatch({
+        t.test(na.omit(dat))
+      }, error=function(e){
+        data.frame("statistic"=NA, "p.value"=NA)
+      })
+      setNames(round(c(t.dat$statistic, t.dat$p.value),5),
+               c("t", "p"))
     })
-    seg$seg.sd <- sd.per.seg
+    # seg$seg.sd <- sd.per.seg
+    seg <- cbind(seg, abs(t(sd.per.seg)))
+    seg$'seg.sd' <- 0
     
     return(seg)
   })
   
   return(do.call(rbind, adj.segs))
 }
+
+
+#' .compSegs
+#' @description compare the difference between BAF profiles between pairwise
+#' samples using a t-test of the raw probeset data
+#' @param seg.obj A seg obj
+#'
+#' @return A list of seg objects
+.compSegs <- function(seg.obj){
+  spl.segs <- split(seg.obj$output, f=seg.obj$output$ID)
+  seg.dat <- as.data.frame(as.matrix(seg.obj$data))
+  gr.dat <- makeGRangesFromDataFrame(seg.dat, seqnames.field='chrom', 
+                                     start.field = c('maploc', 'pos'),
+                                     end.field = c('maploc', 'pos'), 
+                                     keep.extra.columns = TRUE)
+  dat.m <- as.matrix(mcols(gr.dat))
+  storage.mode(dat.m) <- 'numeric'
+  mcols(gr.dat) <- dat.m
+  seqlevelsStyle(gr.dat) <- 'UCSC'
+  
+  
+  diff.segs <- lapply(spl.segs, function(seg0){
+    ## Take one segment
+    gr.seg0 <- makeGRangesFromDataFrame(seg0, keep.extra.columns = TRUE)
+    seg0.id <- unique(gr.seg0$ID)
+    
+    diff.seg1 <- lapply(spl.segs, function(seg1){
+      ## Take a second segment to compare against
+      gr.seg1 <- makeGRangesFromDataFrame(seg1, keep.extra.columns = TRUE)
+      seg1.id <- unique(gr.seg1$ID)
+      if(seg0.id == seg1.id) return(NULL)
+      #print(paste0(seg0.id, " - ", seg1.id))
+      
+      ## Find all overlap/intersects between segments
+      ov.segs <- findOverlapPairs(gr.seg0, gr.seg1)
+      seg <- pintersect(ov.segs)
+      mcols(seg) <- NULL
+      
+      ## Find the raw SNP probes that populate those intersect segments
+      dat.seg.ov <- findOverlaps(gr.dat, seg)
+      s0.idx <- grep(seg0.id, colnames(mcols(gr.dat)), fixed = TRUE)
+      s1.idx <- grep(seg1.id, colnames(mcols(gr.dat)), fixed = TRUE)
+      
+      ## Test the difference between the raw probe data
+      test.diff <- sapply(split(dat.seg.ov, subjectHits(dat.seg.ov)), function(ov.i){
+        dat <- mcols(gr.dat[queryHits(ov.i),])[, c(s0.idx, s1.idx)]
+        dat.t <- t.test(dat[,1], dat[,2])
+        return(round(c(dat.t$statistic, dat.t$p.value),3))
+      })
+      
+      ## Append new metadata to the intersect/overlap between the segments
+      new.meta <- cbind(mcols(ov.segs@first)[,c("ID", "seg.mean"),drop=FALSE],
+                        mcols(ov.segs@second)[,c("ID", "seg.mean")],
+                        t(test.diff))
+      colnames(new.meta) <- c("refID", "seg.a", "ID", "seg.b", "seg.mean", "p")
+      new.meta$t <- floor(abs(new.meta$seg.mean))
+      mcols(seg) <- new.meta
+      names(seg) <- NULL
+      return(seg)
+    })
+    
+    return(unlist(as(diff.seg1[-which(sapply(diff.seg1, is.null))], "GRangesList")))
+  })
+
+  return(diff.segs)
+}
+
 
 #' .estimateDrift
 #' @description Estimates genetic drift given an SD adjusted DNAcopy::segment()
@@ -162,13 +267,13 @@ bafDrift <- function(sample.mat, debug=FALSE, ...){
   seg.gr <- makeGRangesFromDataFrame(seg.obj$output, keep.extra.columns = TRUE)
   drift.dat <- lapply(split(seg.gr, seg.gr$ID), function(seg, z.cutoff=c(1:4)){
     ##Calculate Z-score of each seg.mean
-    seg.sd <- mean(rep(seg$seg.sd, (width(seg) / 1000000)), na.rm=TRUE)
-    seg.z <- round((seg$seg.mean) / (seg.sd / sqrt(seg$num.mark)), 3) ## t
-    #seg.z <- round((seg$seg.mean / seg.sd), 3) ## z
-    seg.z2 <- round((seg$seg.mean / seg$seg.sd), 3) ## z
-    seg.z4 <- round((seg$seg.mean) / (seg$seg.sd / sqrt(seg$num.mark)), 3) ## t
-    seg$seg.z <- seg.z 
-    
+    if('t' %in% colnames(mcols(seg))){
+      seg$seg.z <- seg.z <- seg$t
+    } else {
+      seg.sd <- mean(rep(seg$seg.sd, (width(seg) / 1000000)), na.rm=TRUE)
+      seg.z <- round((seg$seg.mean / seg$seg.sd), 3) ## z
+      seg$seg.z <- seg.z
+    }
     frac.cnv <- round(width(seg) / sum(width(seg)),3)
     ## Create filter criteria
     diff.idx <- sapply(setNames(z.cutoff, z.cutoff), function(z){which(seg.z > z | seg.z < -z)})

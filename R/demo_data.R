@@ -218,9 +218,6 @@ combineSamples <- function(data.type, sample.mat, prop){
   
 }
 
-#' demoRna function
-#'
-#' @export
 .demoRna <- function(){
   library(CCLid)
   require(VariantAnnotation)

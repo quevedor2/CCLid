@@ -153,7 +153,14 @@ driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
 #'
 #' @examples
 plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01, 
-                        hi.sig.alpha=0.2, add.chr.sep=TRUE) {
+                        hi.sig.alpha=0.2, add.chr.sep=TRUE, 
+                        atype='sd', add.points=TRUE) {
+  # low.sig.alpha=0.01
+  # hi.sig.alpha=0.2
+  # add.chr.sep=TRUE
+  # sample.size=50
+  # add.points=TRUE
+  # atype='comp'
   require(scales)
   chroms <- paste0("chr", c(1:22, "X", "Y"))
   if(any(grepl("(23)|(24)$", obj$data$chrom))){
@@ -175,9 +182,9 @@ plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01,
   seg.col <- 'orange'
   sig.col <- 'red'
   
-  uylim <- max(abs(obj$data[, -(1:2)]), na.rm = TRUE)
-  uylim <- 1
-  ylim <- c(-uylim, uylim)
+  ylim <- switch(atype,
+                 "comp"=c(0,0.5),
+                 c(-1,1))
   pos.col <- colnames(obj$data)[2]
   
   ## Segment yb chromosome
@@ -194,11 +201,18 @@ plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01,
       size <- min(nrow(sample.dat), sample.size)
       sample.idx <- sample(1:nrow(sample.dat), size=size, replace=FALSE)
       sample.dat <- sample.dat[sample.idx,,drop=FALSE]
+      if(atype=='comp') {
+        r <- unique(obj$output$refID)
+        ref.dat <- as.data.frame(chr.data[[chr]][sample.idx,c(pos.col, r), drop=FALSE])
+      }
       
-      plot(sample.dat, ylim=ylim, col=chr.col, pch=16, 
-           xlim=c(1, max(sample.dat[,pos.col])), xlab='', 
+      plot(0, type='n', ylim=ylim, xlim=c(1, max(sample.dat[,pos.col])), xlab='', 
            yaxt='n', xaxt='n', axes=FALSE, cex=0.6)
-      abline(v = 1, lwd=0.5, col='grey')
+      if(add.points){
+        points(sample.dat[,pos.col], sample.dat[,s], col=chr.col, pch=16)
+        if(atype=='comp') points(ref.dat[,pos.col], ref.dat[,r], col='#377eb8', pch=16)
+      }
+      if(add.chr.sep) abline(v = 1, lwd=0.5, col='grey')
       axis(side=1, at=median(sample.dat[,pos.col], na.rm=TRUE), 
            labels=gsub("chr", "", chr),
            tick=FALSE, line=(match(chr, chroms) %% 2))
@@ -206,8 +220,13 @@ plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01,
       s.chr.seg <- chr.seg[[chr]]
       
       if(match(chr, chroms) == 1){
-        par(xpd=TRUE)
+        par(xpd=NA)
         axis(side = 2, at=seq(-0.5, 0.5, by=0.5), labels=seq(-0.5, 0.5, by=0.5), las=1)
+        if(atype=='comp') {
+          title(ylab = paste0(r, ":", s))
+        } else {
+          title(ylab = s)
+        }
         par(xpd=FALSE)
       }
       
@@ -228,9 +247,18 @@ plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01,
                            xright = loc.end, ytop = seg.mean + seg.sd,
                            border=NA, col = scales::alpha(seg.col, 0.4)))
       ## Adds the seg.mean line
-      with(s.chr.seg, segments(x0 = loc.start, y0 = seg.mean, 
-                               x1 = loc.end, y1 = seg.mean, 
-                               lwd=3, col=seg.col))
+      if(atype=='comp'){
+        apply(s.chr.seg, 1, function(i){
+          suppressWarnings(storage.mode(i) <- 'numeric')
+          polygon(x = c(i['loc.start'], i['loc.end'], i['loc.end'], i['loc.start']), 
+                  y = c(i['seg.a'], i['seg.a'], i['seg.b'], i['seg.b']),
+                  col=seg.col, border = NA)
+        })
+      } else {
+        with(s.chr.seg, segments(x0 = loc.start, y0 = seg.mean, 
+                                 x1 = loc.end, y1 = seg.mean, 
+                                 lwd=3, col=seg.col))
+      }
     }
   }
 }
