@@ -61,7 +61,7 @@ geneticDrift <- function(){
   cl.idx <- grep(names(vcf.file), colnames(x.mat))
   em2.idx <- grep('_EM-2$', colnames(x.mat))
   x.drift <- bafDrift(sample.mat=x.mat[,c(cl.idx, 1, em2.idx)], 
-                      segmenter='PCF', centering='mean')
+                      segmenter='PCF', centering='mean', winsorize.data=TRUE)
   
   dir.create(path = file.path(PDIR, "benchmark"), showWarnings = FALSE)
   pdf(file.path(PDIR, "benchmark", paste0("drift_", names(vcf.file), ".pdf")), 

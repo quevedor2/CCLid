@@ -167,9 +167,10 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', ...){
     
     ov.idx <- findOverlaps(gr.dat, gr.seg)
     s.idx <- grep(unique(gr.seg$ID), colnames(mcols(gr.dat)), fixed = TRUE)
-    sd.per.seg <- sapply(split(ov.idx, subjectHits(ov.idx)), function(ov.i, winsorize.data){
+    sd.per.seg <- sapply(split(ov.idx, subjectHits(ov.idx)), function(ov.i, winsorize.data=FALSE){
       dat <- mcols(gr.dat[queryHits(ov.i),])[, s.idx]
       if(winsorize.data){
+        print("Winsorizing data...")
         lim <- quantile(dat, probs=c(winsor, 1-winsor), na.rm=TRUE) ##winsorization
         dat[dat < min(lim) ] <- min(lim)
         dat[dat > max(lim) ] <- max(lim)
