@@ -12,7 +12,8 @@ plot.CCLid(
   hi.sig.alpha = 0.2,
   add.chr.sep = TRUE,
   atype = "sd",
-  add.points = TRUE
+  add.points = TRUE,
+  min.z = 3
 )
 }
 \arguments{

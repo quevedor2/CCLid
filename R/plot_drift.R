@@ -154,7 +154,7 @@ driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
 #' @examples
 plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01, 
                         hi.sig.alpha=0.2, add.chr.sep=TRUE, 
-                        atype='sd', add.points=TRUE) {
+                        atype='sd', add.points=TRUE, min.z=3) {
   # low.sig.alpha=0.01
   # hi.sig.alpha=0.2
   # add.chr.sep=TRUE
@@ -235,8 +235,8 @@ plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01,
       if(any(na.omit(s.chr.seg$t) > 0)){
         sig.chr.seg <- s.chr.seg[which(s.chr.seg$t > 0),]
         sig.chr.seg$alpha <- 0
-        sig.chr.seg$alpha[sig.chr.seg$t < 3] <- low.sig.alpha
-        sig.chr.seg$alpha[sig.chr.seg$t >= 3] <- hi.sig.alpha
+        sig.chr.seg$alpha[sig.chr.seg$t < min.z] <- low.sig.alpha
+        sig.chr.seg$alpha[sig.chr.seg$t >= min.z] <- hi.sig.alpha
         with(sig.chr.seg, rect(xleft = loc.start, ybottom = ylim[1], 
                                xright = loc.end, ytop = ylim[2],
                                border=NA, col = scales::alpha(sig.col, alpha)))

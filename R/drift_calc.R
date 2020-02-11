@@ -128,9 +128,9 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', ...){
   cna.drift <- lapply(D.l, function(D, ...){
     seg.CNAo <- CCLid::segmentDrift(fdat = as.data.frame(g.loci), D=D[,-1], 
                              rm.homo=FALSE, ...)
-    seg.CNAo$output <- CCLid:::.addSegSd(seg.CNAo, ...)
+    seg.CNAo$output <- .addSegSd(seg.CNAo, ...)
     
-    seg.drift <- CCLid:::.estimateDrift(seg.CNAo, z.cutoff=1:3)
+    seg.drift <- CCLid:::.estimateDrift(seg.CNAo, z.cutoff=1:4)
     seg.CNAo$output <- seg.drift$seg
     class(seg.CNAo) <- 'CCLid'
     # pdf("~/test3.pdf")
@@ -170,7 +170,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', ...){
     sd.per.seg <- sapply(split(ov.idx, subjectHits(ov.idx)), function(ov.i, winsorize.data=FALSE){
       dat <- mcols(gr.dat[queryHits(ov.i),])[, s.idx]
       if(winsorize.data){
-        print("Winsorizing data...")
+        print("Winsorizing")
         lim <- quantile(dat, probs=c(winsor, 1-winsor), na.rm=TRUE) ##winsorization
         dat[dat < min(lim) ] <- min(lim)
         dat[dat > max(lim) ] <- max(lim)
@@ -179,10 +179,10 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', ...){
       t.dat <- tryCatch({
         t.test(na.omit(dat))
       }, error=function(e){
-        data.frame("statistic"=NA, "p.value"=NA)
+        data.frame("statistic"=NA, "p.value"=NA, "stderr"=NA)
       })
-      setNames(round(c(t.dat$statistic, t.dat$p.value),5),
-               c("t", "p"))
+      setNames(round(c(t.dat$statistic, t.dat$p.value, t.dat$stderr),5),
+               c("t", "p", "seg.sd"))
     }, ...)
     # seg$seg.sd <- sd.per.seg
     seg <- cbind(seg, abs(t(sd.per.seg)))

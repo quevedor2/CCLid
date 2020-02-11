@@ -78,7 +78,7 @@ driftConcordance <- function(){
   
   ## Get drift distance between CL pairs using BAF
   baf.drifts <- lapply(m.cls.idx, getBafDrifts, x.mat=ref.mat.var, 
-                       ref.ds=dataset, alt.ds=alt.ds)
+                       ref.ds=dataset, alt.ds=alt.ds, segmenter='PCF', centering='none')
   save(baf.drifts, file=file.path(PDIR, "drift_it", 
                              paste0(dataset, "-", alt.ds, "_baf_drift.rda")))
   
@@ -116,7 +116,7 @@ driftConcordance <- function(){
   
   
   ## Plot the saturation-sensitvity curve
-  pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf")),
+  pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift2.pdf")),
       width=5, height=5)
   with(drift.dat$sens, plot(x=x, y=y, pch=16, las=1, col=scales::alpha("grey", 0.8),
                             main="Agreement between inference of CN and BAF drift", xaxt='n',
@@ -124,7 +124,7 @@ driftConcordance <- function(){
   axis(side = 1, at = seq(0,1, by=0.2), labels = rev(seq(0,1, by=0.2)), las=1)
   lines(drift.dat$sens$x, predict(drift.dat$model),lty=2,col="black",lwd=2)
   ## add saturation points
-  sat.points <- as.character(c(0.9, 0.95, 0.99))
+  sat.points <- as.character(c(0.7, 0.8, 0.9))
   sat.cols <- c("#feb24c", "#fd8d3c", "#f03b20")
   abline(v=drift.dat$saturation[sat.points,], col=sat.cols)
   text(x =drift.dat$saturation[sat.points,], y=rep(1, length(sat.points)), 
@@ -133,7 +133,7 @@ driftConcordance <- function(){
   # 0.90    0.95    0.99 
   # 0.781   0.714   0.558
   dev.off()
-  cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf .\n"))))
+  cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift2.pdf .\n"))))
   
   ## Plot the drift CN-BAF examples
   pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf")),
@@ -144,6 +144,8 @@ driftConcordance <- function(){
   CNAo$output <- split(CNAo$output, CNAo$output$ID)[[ccl.id]]
   CNAo$data <- CNAo$data[,c(1,2,grep(paste0("^", ccl.id, "$"), colnames(CNAo$data)))]
   CCLid:::plot.CCLid(CNAo)
+  CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]])
+  
   CCLid:::plot.CCLid(cn.drifts$cna.obj[['42-MG-BA']]$cna.obj)
   CCLid:::plot.CCLid(bdf$cna.obj[[1]])
   dev.off()
@@ -169,7 +171,7 @@ driftTech <- function(){
   ## Compare every VCF to the entire ref matrix to calculate BAF drift
   vcf.drift <- mclapply(all.vcfs, function(vcf){
     getVcfDrifts(file.path(vcf.dir, vcf), ref.dat, rna.meta.df)
-  }, mc.cores = 8)
+  }, mc.cores = 3)
   save(vcf.drift, file=file.path(PDIR, "drift_it", 
                                  paste0(dataset, "-", alt.ds, "_vcf_drift.rda")))
 

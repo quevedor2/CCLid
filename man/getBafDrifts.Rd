@@ -4,7 +4,7 @@
 \alias{getBafDrifts}
 \title{getBafDrifts}
 \usage{
-getBafDrifts(cl.pairs, x.mat, ref.ds = NULL, alt.ds = NULL)
+getBafDrifts(cl.pairs, x.mat, ref.ds = NULL, alt.ds = NULL, ...)
 }
 \arguments{
 \item{cl.pairs}{Vector of indices for cell line pairs in x.mat}

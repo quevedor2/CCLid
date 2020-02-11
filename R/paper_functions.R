@@ -33,16 +33,16 @@ addSegDat <- function(ids, CNAo){
 #'
 #' @return Drift object
 #' @export
-getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL){
+getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
   ref.idx <- grep(paste0(ref.ds, "_"), colnames(x.mat)[cl.pairs])
   alt.idx <- grep(paste0(alt.ds, "_"), colnames(x.mat)[cl.pairs])
   all.idx <- c(ref.idx, alt.idx)
   
   if(length(all.idx) == 2){
-    bdf <- bafDrift(x.mat[,cl.pairs[all.idx]])
+    bdf <- bafDrift(x.mat[,cl.pairs[all.idx]], ...)
     #CCLid:::plot.CCLid(bdf$cna.obj[[1]])
     drift.score <- list("sig.gr"=bdf$cna.obj, #CCLid::sigDiffBaf(bdf$cna.obj[[1]]),
-                        "frac"=bdf$frac[[1]][3,])
+                        "frac"=bdf$frac[[1]][4,])
   } else {
     drift.score <- list("sig.gr"=NULL, "frac"=NULL)
   }
@@ -217,7 +217,7 @@ getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df){
   ## Calculate drift of Cell line with RNAseq with external control
   match.idx <- grep(paste0("_", rna.meta.df[rna.idx,]$ID, "$"), colnames(vcf.mat))
   if(length(match.idx) > 0){
-    x.drift <- bafDrift(sample.mat=vcf.mat[,match.idx])
+    x.drift <- bafDrift(sample.mat=vcf.mat[,match.idx], centering='mean', segmenter='PCF')
     
     ## Isolate siginificant different regions
     sig.diff.gr <- lapply(x.drift$cna.obj, sigDiffBaf)
