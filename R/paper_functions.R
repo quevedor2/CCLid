@@ -18,7 +18,7 @@ getSegSD <- function(id, CNAo){
 addSegDat <- function(ids, CNAo){
   sds <- sapply(ids, getSegSD, CNAo=CNAo)
   CNAo$output$seg.sd <- rep(sds, table(CNAo$output$ID))
-  seg.drift <- CCLid:::.estimateDrift(CNAo, z.cutoff=1:3)
+  seg.drift <- CCLid:::.estimateDrift(CNAo, z.cutoff=1:4)
   CNAo$output <- seg.drift$seg
   return(CNAo)
 }
@@ -40,7 +40,7 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
   
   if(length(all.idx) == 2){
     bdf <- bafDrift(x.mat[,cl.pairs[all.idx]], ...)
-    #CCLid:::plot.CCLid(bdf$cna.obj[[1]])
+    #CCLid:::plot.CCLid(bdf$cna.obj[[1]], min.z=4)
     drift.score <- list("sig.gr"=bdf$cna.obj, #CCLid::sigDiffBaf(bdf$cna.obj[[1]]),
                         "frac"=bdf$frac[[1]][4,])
   } else {
@@ -62,8 +62,8 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
 #' @export
 getCNDrifts <- function(ref.l2r, alt.l2r,fdat, cell.ids, segmenter='PCF'){
   ## Index matching cell line pairs for the CN PSets
-  alt.bin.ids <- assignGrpIDs(ref.l2r, meta.df)
-  ref.bin.ids <- assignGrpIDs(alt.l2r, meta.df)
+  ref.bin.ids <- assignGrpIDs(ref.l2r, meta.df)
+  alt.bin.ids <- assignGrpIDs(alt.l2r, meta.df)
   alt.ref.idx <- data.frame("id"=as.character(cell.ids),
                             "ref"=as.integer(sapply(paste0("_", cell.ids, "$"), 
                                                     grep, x=ref.bin.ids)),
@@ -74,9 +74,11 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, cell.ids, segmenter='PCF'){
   alt.ref.idx$id <- as.character(alt.ref.idx$id)
   
   ## Create a distance betweeen L2R matrix:
+  #[83,,drop=FALSE]
   cn.drift <- apply(alt.ref.idx, 1, function(ar.i){
-    ref.id = ref.bin.ids[ar.i['ref']]
-    alt.id = alt.bin.ids[ar.i['alt']]
+    # ar.i <- unlist(alt.ref.idx[which(alt.ref.idx$id %in% ccl.id),])
+    ref.id = ref.bin.ids[as.integer(ar.i['ref'])]
+    alt.id = alt.bin.ids[as.integer(ar.i['alt'])]
     
     ra.i <- as.data.frame(cbind(ref.l2r[,as.integer(ar.i['ref']), drop=FALSE],
                                 alt.l2r[,as.integer(ar.i['alt']), drop=FALSE]))
@@ -86,44 +88,18 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, cell.ids, segmenter='PCF'){
   rm(ref.l2r, alt.l2r); gc()
   
   ## Segment and find discordant regions
-  CNAo <- switch(segmenter,
-                 "PCF"={
-                   CNdata <- with(fdat, cbind(as.factor(seg.seqnames), 
-                                              seg.start, cn.drift))
-                   colnames(CNdata) <- c("chrom", "pos", alt.ref.idx$id)
-                   CNdata <- as.data.frame(CNdata)
-                   pcf.dat <- copynumber::pcf(CNdata, pos.unit = "bp", kmin = 100, 
-                                              gamma = 20, normalize = FALSE, 
-                                              fast = TRUE, assembly = "hg19", 
-                                              digits = 2, verbose = TRUE)
-                   f <- factor(pcf.dat$sampleID, levels=alt.ref.idx$id)
-                   pcf.dat <- pcf.dat[,c("sampleID", "chrom", "start.pos",
-                                         "end.pos", "n.probes", "mean", "arm")]
-                   colnames(pcf.dat) <- c("ID", "chrom", "loc.start", "loc.end", 
-                                          "num.mark", "seg.mean", "arm")
-                   
-                   pcf.CNAo <- list("data"=CNdata,
-                                    "output"=pcf.dat[order(f),],
-                                    "segRows"=NULL,
-                                    "call"=NULL)
-                   pcf.CNAo
-                 },
-                 "CBS"={
-                   CNAo <- with(fdat, #[names(ra.lm$residuals),],
-                                CNA(genomdat=cn.drift,
-                                    chrom=as.factor(seg.seqnames),
-                                    maploc=seg.start,
-                                    data.type="logratio",
-                                    sampleid=alt.ref.idx$id))
-                   smoothed.CNAo <- smooth.CNA(CNAo)
-                   seg.CNAo <- segment(smoothed.CNAo,alpha = 0.001, eta=0.05, verbose=1, min.width=5)
-                   seg.CNAo
-                 })
+  # CNAo <- CCLid::segmentDrift(fdat = fdat, D=D, 
+  #                             rm.homo=FALSE, segmenter=segmenter)
+  # sd.CNAo <- CCLid:::addSegDat(ids=ar.i['id'], CNAo=CNAo)
+  CNAo <- CCLid::segmentDrift(fdat = fdat, D=cn.drift, 
+                              rm.homo=FALSE, ...)
   sd.CNAo <- CCLid:::addSegDat(ids=alt.ref.idx$id, CNAo=CNAo)
   seg.drift <- CCLid:::.estimateDrift(sd.CNAo, z.cutoff=1:4)
   sd.CNAo$output <- seg.drift$seg
   class(sd.CNAo) <- 'CCLid'
-  # CCLid:::plot.CCLid(sd.CNAo)
+  # pdf("~/temp.pdf")
+  # CCLid:::plot.CCLid(sd.CNAo, min.z=2)
+  # dev.off()
   cn.drift <- list("frac"=seg.drift$frac,
                    "cna.obj"=sd.CNAo)
   return(cn.drift)
@@ -144,7 +120,9 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, cell.ids, segmenter='PCF'){
 #' "sens"=Matrix of sensitivity value for each concordance cutoff
 #' "dat"=Matrix of concordance cutoff by cell lines
 #' @export
-driftOverlapMetric <- function(gr.baf, gr.cn, cell.ids, ov.frac=seq(0, 1, by=0.01)){
+driftOverlapMetric <- function(gr.baf, gr.cn, cell.ids, ov.frac=seq(0, 1, by=0.01),
+                               baf.z=4, cn.z=2){
+  require(GenomicRanges)
   ## calculate genomic overlap metric with different concordance-thresholds
   ov.dat <- sapply(cell.ids, function(cid){
     if(! is.null(gr.cn[[cid]])){
@@ -153,8 +131,8 @@ driftOverlapMetric <- function(gr.baf, gr.cn, cell.ids, ov.frac=seq(0, 1, by=0.0
         baf.cn <- pintersect(ov.baf.cn)
         mcols(baf.cn) <- NULL
         
-        baf.cn$baf <- ov.baf.cn@first$t > 2
-        baf.cn$cn <- ov.baf.cn@second$t > 2
+        baf.cn$baf <- ov.baf.cn@first$t > baf.z
+        baf.cn$cn <- ov.baf.cn@second$t > cn.z
         m.idx <- with(baf.cn, baf==cn)
         conc.drift <- sum(width(baf.cn[which(m.idx),])) / sum(width(baf.cn))
         

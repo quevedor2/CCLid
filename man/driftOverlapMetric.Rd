@@ -4,7 +4,14 @@
 \alias{driftOverlapMetric}
 \title{driftOverlapMetric}
 \usage{
-driftOverlapMetric(gr.baf, gr.cn, cell.ids, ov.frac = seq(0, 1, by = 0.01))
+driftOverlapMetric(
+  gr.baf,
+  gr.cn,
+  cell.ids,
+  ov.frac = seq(0, 1, by = 0.01),
+  baf.z = 4,
+  cn.z = 2
+)
 }
 \arguments{
 \item{gr.baf}{GRangesList of cell lines an their BAF-drifted regions}

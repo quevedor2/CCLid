@@ -46,7 +46,7 @@ isolateL2Rpsets <- function(){
 #### Preliminary steps ####
 ###########################
 ## Run before executing any of the following 3 analyses
-loadInData <- function(bench){
+loadInData <- function(){
   library(VariantAnnotation)
   library(CCLid)
   require(DNAcopy)
@@ -112,11 +112,12 @@ driftConcordance <- function(){
   gr.baf <- split(gr.baf, gr.baf$ID)
   
   drift.dat <- driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.cn, 
-                                  cell.ids = names(baf.drifts))
+                                  cell.ids = names(baf.drifts),
+                                  baf.z=4, cn.z=3)
   
   
   ## Plot the saturation-sensitvity curve
-  pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift2.pdf")),
+  pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf")),
       width=5, height=5)
   with(drift.dat$sens, plot(x=x, y=y, pch=16, las=1, col=scales::alpha("grey", 0.8),
                             main="Agreement between inference of CN and BAF drift", xaxt='n',
@@ -133,22 +134,21 @@ driftConcordance <- function(){
   # 0.90    0.95    0.99 
   # 0.781   0.714   0.558
   dev.off()
-  cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift2.pdf .\n"))))
+  cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf .\n"))))
   
   ## Plot the drift CN-BAF examples
-  pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf")),
+  ccl.id <-'CL-40'  #786-0, HT-29, CL-40
+  pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift_", ccl.id, ".pdf")),
       width=5, height=5)
-  
-  ccl.id <-'786-0'
   CNAo <- cn.drifts$cna.obj
   CNAo$output <- split(CNAo$output, CNAo$output$ID)[[ccl.id]]
   CNAo$data <- CNAo$data[,c(1,2,grep(paste0("^", ccl.id, "$"), colnames(CNAo$data)))]
-  CCLid:::plot.CCLid(CNAo)
-  CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]])
-  
-  CCLid:::plot.CCLid(cn.drifts$cna.obj[['42-MG-BA']]$cna.obj)
-  CCLid:::plot.CCLid(bdf$cna.obj[[1]])
+  CCLid:::plot.CCLid(CNAo, min.z=3)
+  CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=4)
   dev.off()
+  cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", 
+                                                     paste0(dataset, "-", alt.ds, "_baf-cn-drift_", ccl.id, ".pdf .\n"))))
+  
 }
 
 ###################################
