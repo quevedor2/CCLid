@@ -67,7 +67,7 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
 #'
 #' @return CN drift object
 #' @export
-getCNDrifts <- function(ref.l2r, alt.l2r,fdat, cell.ids, segmenter='PCF'){
+getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, segmenter='PCF'){
   ## Index matching cell line pairs for the CN PSets
   ref.bin.ids <- assignGrpIDs(ref.l2r[[seg.id]], meta.df)
   alt.bin.ids <- assignGrpIDs(alt.l2r[[seg.id]], meta.df)
