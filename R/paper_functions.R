@@ -2,24 +2,31 @@
 #### drift_it.R Support ####
 ############################
 ### Functions for CN - BAF drift overlap
-getSegSD <- function(id, CNAo){
-  idx <- grep(paste0("^X?", id, "$"), colnames(CNAo$data))
-  D <- CNAo$data[,idx]
+getSegSD <- function(gr.D, gr.Draw, winsorize.data=FALSE, winsor=0.95, n.scale=1){
+  idx <- grep(paste0("^X?", unique(gr.D$ID), "$"), colnames(mcols(gr.Draw)))
+  ov <- findOverlaps(gr.D, gr.Draw)
   
-  number_of_chunks = ceiling(length(D) / 100)
-  number_of_chunks=100
-  sd.D <- sapply(split(seq_len(length(D)), 
-                       cut(seq_len(length(D)), pretty(seq_len(length(D)), number_of_chunks))),
-                 function(x) sd(D[x], na.rm=TRUE))
-  sd.D <- mean(sd.D, na.rm=TRUE)
-  return(sd.D)
+  std.err <- sapply(split(gr.Draw[subjectHits(ov),], queryHits(ov)), function(raw){
+    dat <- mcols(raw)[,idx]
+    if(winsorize.data){
+      lim <- quantile(dat, c(winsor, 1-winsor), na.rm=TRUE)
+      dat[dat > max(lim)] <- max(lim)
+      dat[dat < min(lim)] <- min(lim)
+    }
+    sigma=sd(dat, na.rm=TRUE)
+    n= sum(!is.na(dat))
+    n=if(n.scale==0) n else n/(n * n.scale)
+    return(sigma / sqrt(n))
+  })
+  return(round(std.err, 3))
 }
 
-addSegDat <- function(ids, CNAo){
-  sds <- sapply(ids, getSegSD, CNAo=CNAo)
-  CNAo$output$seg.sd <- rep(sds, table(CNAo$output$ID))
-  seg.drift <- CCLid:::.estimateDrift(CNAo, z.cutoff=1:4)
-  CNAo$output <- seg.drift$seg
+addSegDat <- function(ids, CNAo, ...){
+  gr.Draw <- makeGRangesFromDataFrame(CNAo$data, start.field = "pos", end.field="pos", keep.extra.columns = TRUE)
+  gr.seg <- makeGRangesFromDataFrame(CNAo$output, keep.extra.columns = TRUE)
+  std.errs <- sapply(split(gr.seg, gr.seg$ID)[ids], getSegSD, gr.Draw=gr.Draw, ...)
+  
+  CNAo$output$seg.sd <- as.numeric(unlist(std.errs[ids]))
   return(CNAo)
 }
 
@@ -62,8 +69,8 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
 #' @export
 getCNDrifts <- function(ref.l2r, alt.l2r,fdat, cell.ids, segmenter='PCF'){
   ## Index matching cell line pairs for the CN PSets
-  ref.bin.ids <- assignGrpIDs(ref.l2r, meta.df)
-  alt.bin.ids <- assignGrpIDs(alt.l2r, meta.df)
+  ref.bin.ids <- assignGrpIDs(ref.l2r[[seg.id]], meta.df)
+  alt.bin.ids <- assignGrpIDs(alt.l2r[[seg.id]], meta.df)
   alt.ref.idx <- data.frame("id"=as.character(cell.ids),
                             "ref"=as.integer(sapply(paste0("_", cell.ids, "$"), 
                                                     grep, x=ref.bin.ids)),
@@ -72,33 +79,35 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, cell.ids, segmenter='PCF'){
   na.idx <- apply(alt.ref.idx, 1, function(i)  any(is.na(i)))
   if(any(na.idx)) alt.ref.idx <- alt.ref.idx[-which(na.idx),]
   alt.ref.idx$id <- as.character(alt.ref.idx$id)
+  rownames(alt.ref.idx) <- alt.ref.idx$id
   
   ## Create a distance betweeen L2R matrix:
-  #[83,,drop=FALSE]
+  # idx <- c(grep("CL-40", alt.ref.idx$id), grep("786-0", alt.ref.idx$id)) #83, 8
+  # [idx,,drop=FALSE]
   cn.drift <- apply(alt.ref.idx, 1, function(ar.i){
-    # ar.i <- unlist(alt.ref.idx[which(alt.ref.idx$id %in% ccl.id),])
-    ref.id = ref.bin.ids[as.integer(ar.i['ref'])]
-    alt.id = alt.bin.ids[as.integer(ar.i['alt'])]
+    ref.idx = as.integer(ar.i['ref'])
+    alt.idx = as.integer(ar.i['alt'])
     
-    ra.i <- as.data.frame(cbind(ref.l2r[,as.integer(ar.i['ref']), drop=FALSE],
-                                alt.l2r[,as.integer(ar.i['alt']), drop=FALSE]))
-    D = (ra.i[,1] - ra.i[,2])
-    return(D)
+    D = ref.l2r[[seg.id]][,ref.idx,drop=FALSE] - alt.l2r[[seg.id]][,alt.idx,drop=FALSE]
+    Draw = ref.l2r[[raw.id]][,ref.idx,drop=FALSE] - alt.l2r[[raw.id]][,alt.idx,drop=FALSE]
+    return(list("seg"=D, "raw"=Draw))
   })
-  rm(ref.l2r, alt.l2r); gc()
+  D = do.call(cbind, lapply(cn.drift, function(i) i$seg))
+  Draw = do.call(cbind, lapply(cn.drift, function(i) i$raw))
   
   ## Segment and find discordant regions
-  # CNAo <- CCLid::segmentDrift(fdat = fdat, D=D, 
-  #                             rm.homo=FALSE, segmenter=segmenter)
-  # sd.CNAo <- CCLid:::addSegDat(ids=ar.i['id'], CNAo=CNAo)
+  # CNAo <- CCLid::segmentDrift(fdat = fdat, D=D, segmenter=segmenter)
+  # CNAo$data <- cbind(CNAo$data[,1:2], Draw)
+  # sd.CNAo <- addSegDat(ids=alt.ref.idx$id[idx], CNAo=CNAo, winsorize.data=TRUE, n.scale=0.01)
   CNAo <- CCLid::segmentDrift(fdat = fdat, D=cn.drift, 
                               rm.homo=FALSE, ...)
-  sd.CNAo <- CCLid:::addSegDat(ids=alt.ref.idx$id, CNAo=CNAo)
+  sd.CNAo <- CCLid:::addSegDat(ids=alt.ref.idx$id, CNAo=CNAo, winsorize.data=TRUE, n.scale=0.01 )
   seg.drift <- CCLid:::.estimateDrift(sd.CNAo, z.cutoff=1:4)
   sd.CNAo$output <- seg.drift$seg
+  
   class(sd.CNAo) <- 'CCLid'
   # pdf("~/temp.pdf")
-  # CCLid:::plot.CCLid(sd.CNAo, min.z=2)
+  # CCLid:::plot.CCLid(sd.CNAo, min.z=3)
   # dev.off()
   cn.drift <- list("frac"=seg.drift$frac,
                    "cna.obj"=sd.CNAo)

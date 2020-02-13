@@ -81,17 +81,19 @@ driftConcordance <- function(){
                        ref.ds=dataset, alt.ds=alt.ds, segmenter='PCF', centering='none')
   save(baf.drifts, file=file.path(PDIR, "drift_it", 
                              paste0(dataset, "-", alt.ds, "_baf_drift.rda")))
-  
+  load(file=file.path(PDIR, "drift_it", 
+                      paste0(dataset, "-", alt.ds, "_baf_drift.rda")))
   ## Load in CN bins
   cn.dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/cnv_predictions/input/cn/50kb_bins'
   cn.dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/cnv_predictions/input/cn'
   cn.dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/cnv_predictions/input/cn/log2r_bins'
-  bins.file <- list.files(cn.dir, pattern="bins", include.dirs = FALSE)
+  bins.file <- list.files(cn.dir, pattern="\\.bins\\.", include.dirs = FALSE)
   bins <- lapply(bins.file, function(b) readRDS(file.path(cn.dir, b)))
   names(bins) <- gsub("_.*", "",  bins.file)
   
-  cn.drifts=CCLid::getCNDrifts(ref.l2r=assayData(bins[[dataset]])$exprs,
-                               alt.l2r=assayData(bins[[alt.ds]])$exprs,
+  cn.drifts=CCLid::getCNDrifts(ref.l2r=assayData(bins[[dataset]]),
+                               alt.l2r=assayData(bins[[alt.ds]]),
+                               seg.id='exprs', raw.id='L2Rraw',
                                fdat=featureData(bins[[alt.ds]])@data,
                                cell.ids=names(baf.drifts), segmenter='PCF')
   save(cn.drifts, file=file.path(PDIR, "drift_it", 

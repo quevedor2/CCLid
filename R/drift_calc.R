@@ -18,8 +18,8 @@ segmentDrift <- function(segmenter='PCF', fdat, D, kmin=5, rm.homo=FALSE){
   if(rm.homo){
     med.val <- apply(D, 1, median, na.rm=TRUE)
     rm.idx <- which(med.val < 0.02) 
-    fdat <- fdat[-rm.idx,]
-    D <- D[-rm.idx,]
+    fdat <- fdat[-rm.idx,,drop=FALSE]
+    D <- D[-rm.idx,,drop=FALSE]
   }
   CNAo <- switch(segmenter,
                  "PCF"={
@@ -279,7 +279,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', ...){
     if('t' %in% colnames(mcols(seg))){
       seg$seg.z <- seg.z <- seg$t
     } else {
-      seg.sd <- mean(rep(seg$seg.sd, (width(seg) / 1000000)), na.rm=TRUE)
+      # seg.sd <- mean(rep(seg$seg.sd, (width(seg) / 1000000)), na.rm=TRUE)
       seg.z <- round((seg$seg.mean / seg$seg.sd), 3) ## z
       seg$seg.z <- seg.z
     }
