@@ -56,6 +56,7 @@ loadRef <- function(pdir=NULL, analysis='baf', rm.gne=FALSE, ...){
 #'   vcf.mat <- compareVcf(vcfFile, var.dat=ref.dat$var, ref.mat=ref.dat$ref)
 compareVcf <- function(vcfFile, var.dat, ref.mat){
   vcf.map <- CCLid::mapVcf2Affy(vcfFile)
+  vcf.map <- CCLid:::.filt(vcf.map, ...) 
   
   ## Combine matrices and reduce features
   ## Find the overlap between the COMParator and the REFerence

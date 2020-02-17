@@ -169,7 +169,8 @@ driftTech <- function(){
   
   ## Compare every VCF to the entire ref matrix to calculate BAF drift
   vcf.drift <- list()
-  # vcf <- all.vcfs['SW48']
+  # ccl.id <- 'OVCAR-5'
+  # vcf <- all.vcfs[ccl.id]
   # vcfFile=file.path(vcf.dir, vcf)
   for(vcf in all.vcfs){
     vcf.drift[[vcf]] <- getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), ref.dat, rna.meta.df)

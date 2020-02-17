@@ -111,25 +111,41 @@ mapVcf2Affy <- function(vcfFile){
   vcf.affy.gr <- vcf.gr[queryHits(ov.idx)]
   mcols(vcf.affy.gr) <- cbind(mcols(vcf.affy.gr), 
                               mcols(CCLid::snp6.dat$SNP[subjectHits(ov.idx),]))
+  vcf.affy.gr$tdepth <- (refDepth(vcf.affy.gr) + altDepth(vcf.affy.gr))
   
   ## Add the Affymetrix Genotype Scores (0, 1, 2 from 0/0, 1/0, 0/1, and 1/1)
-  affy.genotype <- .vcf2AffyGT(vcf.affy.gr)  ## e.g., Convert 0/0 -> 0
-  vcf.affy.gr <- .revComp(vcf.affy.gr) ## Reverse complement negative strand alleles
-  vcf.affy.gr$affyGT <- .fixGT(vcf.affy.gr, affy.genotype) ## Fix genotypes for negative strand
+  affy.genotype <- CCLid:::.vcf2AffyGT(vcf.affy.gr)  ## e.g., Convert 0/0 -> 0
+  vcf.affy.gr <- CCLid:::.revComp(vcf.affy.gr) ## Reverse complement negative strand alleles
+  vcf.affy.gr$affyGT <- CCLid:::.fixGT(vcf.affy.gr, affy.genotype) ## Fix genotypes for negative strand
   if(any(vcf.affy.gr$affyGT == -1)) vcf.affy.gr <- vcf.affy.gr[which(vcf.affy.gr$affyGT != -1),]
   
   ## Calculate BAF
-  vcf.affy.gr$BAF <- round(altDepth(vcf.affy.gr) / (refDepth(vcf.affy.gr) + altDepth(vcf.affy.gr)),2)
-  flip.idx <- .fixGT(vcf.affy.gr, affy.genotype, ret.idx=T)
+  vcf.affy.gr$BAF <- round(altDepth(vcf.affy.gr) / (vcf.affy.gr$tdepth),2)
+  flip.idx <- CCLid:::.fixGT(vcf.affy.gr, affy.genotype, ret.idx=T)
   vcf.affy.gr[flip.idx,]$BAF <- (1-vcf.affy.gr[flip.idx,]$BAF)
   #vcf.affy.gr$BAF <- round(altDepth(vcf.affy.gr) / totalDepth(vcf.affy.gr),2)
-  vcf.affy.gr$nBAF <- .normBAF(vcf.affy.gr$BAF)
+  vcf.affy.gr$nBAF <- CCLid:::.normBAF(vcf.affy.gr$BAF)
   
-  vcf.baf.df <- mcols(vcf.affy.gr)[,c('Probe_Set_ID', 'BAF', 'nBAF')]
-  vcf.gt.df <- mcols(vcf.affy.gr)[,c('Probe_Set_ID', 'GT', 'affyGT')]
+  
+  vcf.baf.df <- mcols(vcf.affy.gr)[,c('Probe_Set_ID', 'BAF', 'nBAF', 'tdepth')]
+  vcf.gt.df <- mcols(vcf.affy.gr)[,c('Probe_Set_ID', 'GT', 'affyGT', 'tdepth')]
   
   return(list("BAF"=vcf.baf.df,
               "GT"=vcf.gt.df))
+}
+
+#' .filt
+#' @description Removes probesets under a certain depth, especially useful
+#' for RNAsequencing vcfs
+#' @param vcf list from mapVcf2Affy
+#' @param min.depth Default=5
+#'
+#' @return A filtered list from mapVcf2Affy
+.filt <- function(vcf, min.depth=5){
+  rm.idx <- which(vcf[[1]]$tdepth <= min.depth)
+  vcf[[1]] <- vcf[[1]][-rm.idx,,drop=FALSE]
+  vcf[[2]] <- vcf[[2]][-rm.idx,,drop=FALSE]
+  return(vcf)
 }
 
 #' mapVariantFeat
