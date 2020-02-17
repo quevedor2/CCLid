@@ -69,11 +69,11 @@ segmentDrift <- function(segmenter='PCF', fdat, D, kmin=5, rm.homo=FALSE){
 #' @param debug should be set to FALSE and only changed when debugging
 #' @return
 #' @export
-bafDrift <- function(sample.mat, debug=FALSE, centering='none', ...){
+bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, ...){
   require(DNAcopy)
   data(snp6.dat)
   ## Get pairwise distance between loci
-  M <- CCLid:::.normBAF(sample.mat)
+  M <- if(norm.baf) CCLid:::.normBAF(sample.mat) else sample.mat
   D.l <- list()
   
   ## Order based on genomic position
@@ -115,7 +115,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', ...){
     D <- switch(centering,
                 "median"={
                   colmed <- apply(D, 2, median, na.rm=TRUE)
-                  summary(D - colmed)
+                  D - colmed
                 },
                 "mean"=scale(D, scale=FALSE),
                 D)
@@ -127,15 +127,26 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', ...){
   ## Segment (CBS/PCF) the difference
   cna.drift <- lapply(D.l, function(D, ...){
     seg.CNAo <- CCLid::segmentDrift(fdat = as.data.frame(g.loci), D=D[,-1], 
+                                    rm.homo=FALSE, segmenter=segmenter)
+    seg.CNAo$output <- .addSegSd(seg.CNAo, winsorize.data=TRUE)
+    
+    seg.CNAo <- CCLid::segmentDrift(fdat = as.data.frame(g.loci), D=D[,-1], 
                              rm.homo=FALSE, ...)
     seg.CNAo$output <- .addSegSd(seg.CNAo, ...)
     
     seg.drift <- CCLid:::.estimateDrift(seg.CNAo, z.cutoff=1:4)
     seg.CNAo$output <- seg.drift$seg
     class(seg.CNAo) <- 'CCLid'
-    # pdf("~/test3.pdf")
-    # if(debug) CCLid:::plot.CCLid(seg.CNAo) #
-    # dev.off()
+    
+    pdf("~/test3.pdf")
+    ccl.id <- 'SW48'
+    meta.cclid <- meta.df[grep(paste0("^", ccl.id, "$"), meta.df$ID),]
+    scp.path <- "scp quever@192.168.198.99:"
+    path.tmp <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines'
+    cat(paste0(scp.path, file.path(path.tmp, "CCLE", "eacon", meta.cclid$CCLE, "ASCAT", "L2R", "*png "), paste0("CCLE_", meta.cclid$ID, ".png\n")))
+    cat(paste0(scp.path, file.path(path.tmp, "GDSC", "eacon", gsub(".cel", "", meta.cclid$GDSC, ignore.case=TRUE), "ASCAT", "L2R", "*png "), paste0("GDSC_", meta.cclid$ID, ".png\n")))
+    if(debug) CCLid:::plot.CCLid(seg.CNAo) #
+    dev.off()
     return(list("frac"=seg.drift$frac,
                 "cna.obj"=seg.CNAo))
   })

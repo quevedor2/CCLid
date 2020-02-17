@@ -4,7 +4,7 @@
 \alias{bafDrift}
 \title{bafDrift}
 \usage{
-bafDrift(sample.mat, debug = FALSE, centering = "none", ...)
+bafDrift(sample.mat, debug = FALSE, centering = "none", norm.baf = TRUE, ...)
 }
 \arguments{
 \item{sample.mat}{}

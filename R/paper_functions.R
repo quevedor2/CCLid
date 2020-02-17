@@ -24,7 +24,8 @@ getSegSD <- function(gr.D, gr.Draw, winsorize.data=FALSE, winsor=0.95, n.scale=1
 addSegDat <- function(ids, CNAo, ...){
   gr.Draw <- makeGRangesFromDataFrame(CNAo$data, start.field = "pos", end.field="pos", keep.extra.columns = TRUE)
   gr.seg <- makeGRangesFromDataFrame(CNAo$output, keep.extra.columns = TRUE)
-  std.errs <- sapply(split(gr.seg, gr.seg$ID)[ids], getSegSD, gr.Draw=gr.Draw, ...)
+  ids <- colnames(mcols(gr.Draw))
+  std.errs <- sapply(split(gr.seg, gr.seg$ID)[ids], CCLid:::getSegSD, gr.Draw=gr.Draw, ...)
   
   CNAo$output$seg.sd <- as.numeric(unlist(std.errs[ids]))
   return(CNAo)
@@ -67,7 +68,7 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
 #'
 #' @return CN drift object
 #' @export
-getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, segmenter='PCF'){
+getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, ...){
   ## Index matching cell line pairs for the CN PSets
   ref.bin.ids <- assignGrpIDs(ref.l2r[[seg.id]], meta.df)
   alt.bin.ids <- assignGrpIDs(alt.l2r[[seg.id]], meta.df)
@@ -90,18 +91,22 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, segment
     
     D = ref.l2r[[seg.id]][,ref.idx,drop=FALSE] - alt.l2r[[seg.id]][,alt.idx,drop=FALSE]
     Draw = ref.l2r[[raw.id]][,ref.idx,drop=FALSE] - alt.l2r[[raw.id]][,alt.idx,drop=FALSE]
-    return(list("seg"=D, "raw"=Draw))
+    return(list("seg"=scale(D, center=TRUE, scale=FALSE), 
+                "raw"=scale(Draw, center=TRUE, scale=FALSE)))
   })
   D = do.call(cbind, lapply(cn.drift, function(i) i$seg))
   Draw = do.call(cbind, lapply(cn.drift, function(i) i$raw))
+  colnames(D) <- colnames(Draw) <- alt.ref.idx$id
+  rm(ref.l2r, alt.l2r); gc()
   
   ## Segment and find discordant regions
   # CNAo <- CCLid::segmentDrift(fdat = fdat, D=D, segmenter=segmenter)
   # CNAo$data <- cbind(CNAo$data[,1:2], Draw)
   # sd.CNAo <- addSegDat(ids=alt.ref.idx$id[idx], CNAo=CNAo, winsorize.data=TRUE, n.scale=0.01)
-  CNAo <- CCLid::segmentDrift(fdat = fdat, D=cn.drift, 
-                              rm.homo=FALSE, ...)
-  sd.CNAo <- CCLid:::addSegDat(ids=alt.ref.idx$id, CNAo=CNAo, winsorize.data=TRUE, n.scale=0.01 )
+  CNAo <- CCLid::segmentDrift(fdat = fdat, D=D, ...)
+  CNAo$data <- cbind(CNAo$data[,1:2], Draw)
+  sd.CNAo <- CCLid:::addSegDat(ids=alt.ref.idx$id, CNAo=CNAo, 
+                               winsorize.data=TRUE, n.scale=0.01)
   seg.drift <- CCLid:::.estimateDrift(sd.CNAo, z.cutoff=1:4)
   sd.CNAo$output <- seg.drift$seg
   
@@ -202,21 +207,63 @@ getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df){
   
   ## Identify matching cell line data to RNAseq
   ## Calculate drift of Cell line with RNAseq with external control
-  match.idx <- grep(paste0("_", rna.meta.df[rna.idx,]$ID, "$"), colnames(vcf.mat))
-  if(length(match.idx) > 0){
-    x.drift <- bafDrift(sample.mat=vcf.mat[,match.idx], centering='mean', segmenter='PCF')
-    
-    ## Isolate siginificant different regions
-    sig.diff.gr <- lapply(x.drift$cna.obj, sigDiffBaf)
-    frac.cnt <- x.drift$frac
-    
-    summ <- list("frac"=frac.cnt,
-                 "sig"=sig.diff.gr)
+  match.idx <- grep(paste0("_", gsub("NCI-", ".*", rna.meta.df[rna.idx,]$ID), "$"), colnames(vcf.mat))
+  if(length(match.idx) > 1){
+    x.drift <- bafDrift(sample.mat=vcf.mat[,match.idx, drop=FALSE], 
+                        norm.baf=FALSE, centering='median', segmenter='PCF')
+    summ=x.drift
+    # ## Isolate siginificant different regions
+    # sig.diff.gr <- lapply(x.drift$cna.obj, sigDiffBaf)
+    # frac.cnt <- x.drift$frac
+    # 
+    # summ <- list("frac"=frac.cnt,
+    #              "sig"=sig.diff.gr)
   } else {
     summ=NULL
   }
   return(summ)
 }
+
+
+#' readinRnaFileMapping
+#' @description Map the RNA files to the SNP files
+#' using hardcoded metadata
+#' @return
+#' @export
+readinRnaFileMapping <- function(){
+  meta <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/data/GDSC/fileList1357.txt'
+  meta.gdsc <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/data/GDSC/E-MTAB-3983.sdrf.txt'
+  meta.ccle <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/data/CCLE/CCLE_meta.txt'
+  pattern="[-\\(\\)\\.\\,\\_\\/ ]"
+  
+  meta <- read.table(meta, sep="\t", header=F, fill=TRUE)
+  meta.gdsc <- read.table(meta.gdsc, sep="\t", header=T, fill=TRUE)
+  meta.ccle <- read.table(meta.ccle, sep=",", header=T, fill=TRUE)
+  
+  meta.gdsc$simpleid = toupper(gsub(pattern, "", meta.gdsc$Source.Name))
+  meta.ccle$simpleid = toupper(gsub(pattern, "", meta.ccle$Cell_Line))
+  
+  meta.gdsc$simpleid[grep("^H[0-9]*$", meta.gdsc$simpleid)]
+  meta.ccle$simpleid[grep("H[0-9]*$", meta.ccle$simpleid)]
+  meta.gdsc$simpleid[grep("H[0-9]*$", meta.gdsc$simpleid)] <- paste0("NCI", meta.gdsc$simpleid[grep("^H[0-9]*$", meta.gdsc$simpleid)])
+  ov = sort(intersect(meta.gdsc$simpleid, meta.ccle$simpleid))  ## 61 from non simple.id, 79 simple
+  gdsc.o = sort(setdiff(meta.gdsc$simpleid, meta.ccle$simpleid))
+  ccle.o = sort(setdiff(meta.ccle$simpleid, meta.gdsc$simpleid))
+  
+  # Merge by EGAF(meta) to EGAR (meta.gdsc) and cell-name by EGAN id
+  all.meta <- merge(meta, meta.gdsc, by.x='V2', by.y='Comment.EGA_SAMPLE.', all=TRUE)
+  all.meta <- merge(all.meta, meta.ccle, by='simpleid', all=TRUE)
+  all.meta <- all.meta[,c('V1','Source.Name', 'V4', 'Comment.EGA_RUN.', 'Run', 
+                          'Cell_Line', 'simpleid')]
+  
+  meta.df$simpleid <- gsub(pattern, "", meta.df$ID)
+  meta.df[grep("^T-T$", meta.df$ID),]$simpleid <- 'T-T'
+  all.meta.df <- merge(all.meta, meta.df, by="simpleid", all.x=TRUE)
+  
+  colnames(all.meta.df)[1:8] <- c("tmp", "V1", "GDSC_ID", "EGAF", "EGAR", "SRR", "CCLE_ID", "ID")
+  return(all.meta.df)
+}
+
 
 ############################
 #### match_it.R Support ####
