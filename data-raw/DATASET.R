@@ -278,3 +278,11 @@ metaData <- data.frame(labelDescription=c(
   "Omni2.5 order of alleles in reference to Affy6"))
 affy.omni <- AnnotatedDataFrame(data=affy.omni.full, varMetadata=metaData)
 usethis::use_data(affy.omni, overwrite = T)
+
+######################
+#### rna.meta.dat ####
+pdir <- "~/git/CCL_authenticator/data-raw/"
+rna.meta.df <- read.csv(file.path(pdir, "rna_meta_df.csv"), sep=",", header=TRUE,
+                        check.names=FALSE, stringsAsFactors = FALSE)
+rna.meta.df[rna.meta.df=='#N/A'] <- NA
+usethis::use_data(rna.meta.df, overwrite = T)
