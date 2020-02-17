@@ -224,43 +224,17 @@ getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df, ...){
   return(summ)
 }
 
-
 #' readinRnaFileMapping
 #' @description Map the RNA files to the SNP files
 #' using hardcoded metadata
 #' @return
 #' @export
 readinRnaFileMapping <- function(){
-  meta <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/data/GDSC/fileList1357.txt'
-  meta.gdsc <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/data/GDSC/E-MTAB-3983.sdrf.txt'
-  meta.ccle <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/data/CCLE/CCLE_meta.txt'
-  pattern="[-\\(\\)\\.\\,\\_\\/ ]"
+  require(CCLid)
+  data(rna.meta.df)
+  data(meta.df)
   
-  meta <- read.table(meta, sep="\t", header=F, fill=TRUE)
-  meta.gdsc <- read.table(meta.gdsc, sep="\t", header=T, fill=TRUE)
-  meta.ccle <- read.table(meta.ccle, sep=",", header=T, fill=TRUE)
-  
-  meta.gdsc$simpleid = toupper(gsub(pattern, "", meta.gdsc$Source.Name))
-  meta.ccle$simpleid = toupper(gsub(pattern, "", meta.ccle$Cell_Line))
-  
-  meta.gdsc$simpleid[grep("^H[0-9]*$", meta.gdsc$simpleid)]
-  meta.ccle$simpleid[grep("H[0-9]*$", meta.ccle$simpleid)]
-  meta.gdsc$simpleid[grep("H[0-9]*$", meta.gdsc$simpleid)] <- paste0("NCI", meta.gdsc$simpleid[grep("^H[0-9]*$", meta.gdsc$simpleid)])
-  ov = sort(intersect(meta.gdsc$simpleid, meta.ccle$simpleid))  ## 61 from non simple.id, 79 simple
-  gdsc.o = sort(setdiff(meta.gdsc$simpleid, meta.ccle$simpleid))
-  ccle.o = sort(setdiff(meta.ccle$simpleid, meta.gdsc$simpleid))
-  
-  # Merge by EGAF(meta) to EGAR (meta.gdsc) and cell-name by EGAN id
-  all.meta <- merge(meta, meta.gdsc, by.x='V2', by.y='Comment.EGA_SAMPLE.', all=TRUE)
-  all.meta <- merge(all.meta, meta.ccle, by='simpleid', all=TRUE)
-  all.meta <- all.meta[,c('V1','Source.Name', 'V4', 'Comment.EGA_RUN.', 'Run', 
-                          'Cell_Line', 'simpleid')]
-  
-  meta.df$simpleid <- gsub(pattern, "", meta.df$ID)
-  meta.df[grep("^T-T$", meta.df$ID),]$simpleid <- 'T-T'
-  all.meta.df <- merge(all.meta, meta.df, by="simpleid", all.x=TRUE)
-  
-  colnames(all.meta.df)[1:8] <- c("tmp", "V1", "GDSC_ID", "EGAF", "EGAR", "SRR", "CCLE_ID", "ID")
+  all.meta.df <- merge(rna.meta.df, meta.df, by="ID", all.x=TRUE)
   return(all.meta.df)
 }
 
