@@ -4,7 +4,7 @@
 \alias{getVcfDrifts}
 \title{getVcfDrifts}
 \usage{
-getVcfDrifts(vcfFile, ref.dat, rna.meta.df)
+getVcfDrifts(vcfFile, ref.dat, rna.meta.df, ...)
 }
 \arguments{
 \item{vcfFile}{path to vcf file}

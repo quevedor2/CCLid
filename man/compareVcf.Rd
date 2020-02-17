@@ -4,7 +4,7 @@
 \alias{compareVcf}
 \title{compareVcf}
 \usage{
-compareVcf(vcfFile, var.dat, ref.mat)
+compareVcf(vcfFile, var.dat, ref.mat, ...)
 }
 \arguments{
 \item{vcfFile}{Path to VCF file to check against reference datasets}

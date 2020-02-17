@@ -173,7 +173,8 @@ driftTech <- function(){
   # vcf <- all.vcfs[ccl.id]
   # vcfFile=file.path(vcf.dir, vcf)
   for(vcf in all.vcfs){
-    vcf.drift[[vcf]] <- getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), ref.dat, rna.meta.df)
+    vcf.drift[[vcf]] <- getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), 
+                                     ref.dat, rna.meta.df, min.depth=6)
   }
   # vcf.drift <- mclapply(all.vcfs[1:4], function(vcf){
   #   getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), ref.dat, rna.meta.df)

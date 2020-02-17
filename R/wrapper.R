@@ -54,7 +54,7 @@ loadRef <- function(pdir=NULL, analysis='baf', rm.gne=FALSE, ...){
 #'   var.dat <- ref.dat$var
 #'   vcfFile <- '/mnt/work1/users/home2/quever/xfer/A549.sample_id.vcf' ## A549 WES
 #'   vcf.mat <- compareVcf(vcfFile, var.dat=ref.dat$var, ref.mat=ref.dat$ref)
-compareVcf <- function(vcfFile, var.dat, ref.mat){
+compareVcf <- function(vcfFile, var.dat, ref.mat, ...){
   vcf.map <- CCLid::mapVcf2Affy(vcfFile)
   vcf.map <- CCLid:::.filt(vcf.map, ...) 
   

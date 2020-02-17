@@ -194,12 +194,12 @@ driftOverlapMetric <- function(gr.baf, gr.cn, cell.ids, ov.frac=seq(0, 1, by=0.0
 #' @return A list containing the fraction of genome drifted,
 #' as well the significantly drifted regions CNAo
 #' @export
-getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df){
+getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df, ...){
   vcf <- basename(vcfFile)
   cat(basename(vcf), "...\n")
   ## Load in VCF data and leftjoin to existing ref.mat
   vcf.mat <- compareVcf(vcfFile, var.dat=ref.dat$var, 
-                        ref.mat=ref.dat$ref)
+                        ref.mat=ref.dat$ref, ...)
   rna.idx <- switch(dataset,
                     "GDSC"=grep(gsub(".snpOut.*", "", vcf), rna.meta.df$EGAF),
                     "CCLE"=grep(gsub(".snpOut.*", "", vcf), rna.meta.df$SRR))  ## ADJUST THE GREP
