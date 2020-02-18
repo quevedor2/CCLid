@@ -139,7 +139,7 @@ driftOverlapMetric <- function(gr.baf, gr.cn, cell.ids, ov.frac=seq(0, 1, by=0.0
   require(GenomicRanges)
   ## calculate genomic overlap metric with different concordance-thresholds
   ov.dat <- sapply(cell.ids, function(cid){
-    if(! is.null(gr.cn[[cid]])){
+    if(!is.null(gr.cn[[cid]])){
       if(!is.null(gr.baf[[cid]])){
         ov.baf.cn <- findOverlapPairs(gr.baf[[cid]], gr.cn[[cid]])
         baf.cn <- pintersect(ov.baf.cn)
@@ -157,9 +157,9 @@ driftOverlapMetric <- function(gr.baf, gr.cn, cell.ids, ov.frac=seq(0, 1, by=0.0
     } else {
       setNames(rep(NA, length(ov.frac)), ov.frac)
     }
-    
-    
   })
+  rm.idx <- which(is.na(colSums(ov.dat)))
+  if(length(rm.idx) > 0) ov.dat <- ov.dat[,-rm.idx]
   
   ## Organize sensitivity and assign a non-linear least-squares model
   ov.df <- data.frame("y"=rev(rowSums(ov.dat, na.rm=TRUE) / ncol(ov.dat)),
@@ -210,7 +210,7 @@ getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df, ...){
   match.idx <- grep(paste0("_", gsub("NCI-", ".*", rna.meta.df[rna.idx,]$ID), "$"), colnames(vcf.mat))
   if(length(match.idx) > 1){
     x.drift <- bafDrift(sample.mat=vcf.mat[,match.idx, drop=FALSE], 
-                        norm.baf=FALSE, centering='median', segmenter='PCF')
+                        norm.baf=TRUE, centering='median', segmenter='PCF')
     summ=x.drift
     # ## Isolate siginificant different regions
     # sig.diff.gr <- lapply(x.drift$cna.obj, sigDiffBaf)

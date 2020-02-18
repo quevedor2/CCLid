@@ -169,7 +169,7 @@ driftTech <- function(){
   
   ## Compare every VCF to the entire ref matrix to calculate BAF drift
   vcf.drift <- list()
-  # ccl.id <- 'OVCAR-5'
+  # ccl.id <- 'VM-CUB-1'
   # vcf <- all.vcfs[ccl.id]
   # vcfFile=file.path(vcf.dir, vcf)
   for(vcf in all.vcfs){
@@ -218,7 +218,7 @@ driftTech <- function(){
   gr.baf <- makeGRangesFromDataFrame(do.call(rbind, df.baf), keep.extra.columns = TRUE)
   gr.baf <- split(gr.baf, gr.baf$ID)
   
-  drift.dat <- driftOverlapMetric(gr.baf = gr.rna$CCLE, gr.cn = gr.rna$GDSC, 
+  drift.dat <- driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.rna$GDSC, 
                                   cell.ids = names(baf.drifts),
                                   baf.z=4, cn.z=4)
   
@@ -242,10 +242,18 @@ driftTech <- function(){
   dev.off()
   cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-rna-drift.pdf .\n"))))
   
-  ccl.id <- 'CL-40'
-  CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=4)
-  CCLid:::plot.CCLid(vcf.drift[[ccl.id]]$sig.gr[[1]], min.z=4)
+  # as.matrix(head(sort(colSums(drift.dat$dat)), 10))
+  # tail(sort(colSums(drift.dat$dat)))
   
+  pdf("~/test3.pdf")
+  ccl.id <- 'EB2'
+  sapply(c('VM-CUB-1', 'TE-4', 'KU812', 'SK-MEL-2'), function(ccl.id){
+    print(length(baf.drifts[[ccl.id]]))
+    print(length(vcf.drift[[ccl.id]]))
+    CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=4)
+    CCLid:::plot.CCLid(vcf.drift[[ccl.id]]$cna.obj[[1]], min.z=3)
+  })
+  dev.off()
   
   
   ## Drift overlaps between a given sample

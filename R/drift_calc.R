@@ -123,7 +123,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
     seg.CNAo$output <- seg.drift$seg
     class(seg.CNAo) <- 'CCLid'
     # pdf("~/test3.pdf")
-    # ccl.id <- 'OVCAR-5'
+    # ccl.id <- ccl.id # 'OVCAR-5'
     # meta.cclid <- meta.df[grep(paste0("^", ccl.id, "$"), meta.df$ID),]
     # scp.path <- "scp quever@192.168.198.99:"
     # path.tmp <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines'
