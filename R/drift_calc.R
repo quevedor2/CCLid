@@ -74,8 +74,8 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
   data(snp6.dat)
   ## Get pairwise distance between loci
   M <- if(norm.baf) CCLid:::.normBAF(sample.mat) else sample.mat
-  # M <- M[-which(as.character(M[,1]) %in% c(0, 0.25, 0.33, 0.40, 0.5)),]
-  M <- M[-which(apply(M, 1, median, na.rm=TRUE) == 0),]
+  M <- M[-which(rowSums(M) < (0.07 * ncol(M))),]
+  #M <- M[-which(apply(M, 1, median, na.rm=TRUE) == 0),]
   D.l <- list()
   
   ## Order based on genomic position
@@ -91,8 +91,13 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
   ## calculate distance
   if(ncol(M) > 10) stop(paste0("Too many samples being compared for drift: n=", ncol(M)))
   while(ncol(M) > 1){
-    # plot(M[,1], col=scales::alpha("red", 0.3), pch=16)
-    # points(M[,2], col=scales::alpha("blue", 0.3), pch=16)
+    # Mx <- data.frame("index"=c(1:nrow(M)), "val1"=M[,1], "val2"=M[,3])
+    # loessMod1 <- loess(val1 ~ index, data=Mx, span=0.10) # 10% smoothing span
+    # loessMod2 <- loess(val2 ~ index, data=Mx, span=0.10) # 10% smoothing span
+    # plot(M[,1], col=scales::alpha("blue", 0.3), pch=16)
+    # points(M[,3], col=scales::alpha("red", 0.3), pch=16)
+    # lines(predict(loessMod1, Mx[,'index', drop=FALSE]), col="blue")
+    # lines(predict(loessMod2, Mx[,'index', drop=FALSE]), col="red")
     # plot(M[,1], M[,2])
     D <- apply(M, 2, function(m){
       M[,1] - m
@@ -114,15 +119,14 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
     # seg.CNAo <- CCLid::segmentDrift(fdat = as.data.frame(g.loci), D=D[,-1],
     #                                 rm.homo=FALSE, segmenter=segmenter)
     # seg.CNAo$output <- CCLid:::.addSegSd(seg.CNAo, winsorize.data=TRUE)
-    
     seg.CNAo <- CCLid::segmentDrift(fdat = as.data.frame(g.loci), D=D[,-1], 
                              rm.homo=FALSE, ...)
     seg.CNAo$output <- .addSegSd(seg.CNAo, ...)
     
-    seg.drift <- CCLid:::.estimateDrift(seg.CNAo, z.cutoff=1:4)
+    seg.drift <- CCLid:::.estimateDrift(seg.CNAo, z.cutoff=1:5)
     seg.CNAo$output <- seg.drift$seg
     class(seg.CNAo) <- 'CCLid'
-    # pdf("~/test3.pdf")
+    # pdf("~/test4.pdf")
     # ccl.id <- ccl.id # 'OVCAR-5'
     # meta.cclid <- meta.df[grep(paste0("^", ccl.id, "$"), meta.df$ID),]
     # scp.path <- "scp quever@192.168.198.99:"

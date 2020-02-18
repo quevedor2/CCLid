@@ -48,6 +48,8 @@ driftConcordance <- function(){
   m.cls.idx <- cl.idx[sapply(cl.idx, function(i) length(i) >= 2)]
   
   ## Get drift distance between CL pairs using BAF
+  # ccl.id <- 'HuH-6'
+  # cl.pairs <- m.cls.idx[[ccl.id]]
   baf.drifts <- lapply(m.cls.idx, getBafDrifts, x.mat=ref.mat.var, 
                        ref.ds=dataset, alt.ds=alt.ds, segmenter='PCF', centering='median')
   # cl.pairs = m.cls.idx[[1]]; x.mat=ref.mat.var; centering='median'
@@ -169,7 +171,7 @@ driftTech <- function(){
   
   ## Compare every VCF to the entire ref matrix to calculate BAF drift
   vcf.drift <- list()
-  # ccl.id <- 'VM-CUB-1'
+  # ccl.id <- 'HuH-6'
   # vcf <- all.vcfs[ccl.id]
   # vcfFile=file.path(vcf.dir, vcf)
   for(vcf in all.vcfs){
@@ -246,8 +248,7 @@ driftTech <- function(){
   # tail(sort(colSums(drift.dat$dat)))
   
   pdf("~/test3.pdf")
-  ccl.id <- 'EB2'
-  sapply(c('VM-CUB-1', 'TE-4', 'KU812', 'SK-MEL-2'), function(ccl.id){
+  sapply(c('VM-CUB-1', 'HuH-6', 'SW1116'), function(ccl.id){
     print(length(baf.drifts[[ccl.id]]))
     print(length(vcf.drift[[ccl.id]]))
     CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=4)
