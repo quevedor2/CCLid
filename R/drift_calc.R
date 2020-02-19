@@ -74,7 +74,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
   data(snp6.dat)
   ## Get pairwise distance between loci
   M <- if(norm.baf) CCLid:::.normBAF(sample.mat) else sample.mat
-  M <- M[-which(rowSums(M) < (0.07 * ncol(M))),]
+  M <- M[-which(rowSums(M) < (0.05 * ncol(M))),]
   #M <- M[-which(apply(M, 1, median, na.rm=TRUE) == 0),]
   D.l <- list()
   
@@ -91,14 +91,15 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
   ## calculate distance
   if(ncol(M) > 10) stop(paste0("Too many samples being compared for drift: n=", ncol(M)))
   while(ncol(M) > 1){
-    # Mx <- data.frame("index"=c(1:nrow(M)), "val1"=M[,1], "val2"=M[,3])
+    # Mx <- data.frame("index"=c(1:nrow(M)), "val1"=M[,1], "val2"=M[,2])
     # loessMod1 <- loess(val1 ~ index, data=Mx, span=0.10) # 10% smoothing span
     # loessMod2 <- loess(val2 ~ index, data=Mx, span=0.10) # 10% smoothing span
+    # par(mfrow=c(1,1))
     # plot(M[,1], col=scales::alpha("blue", 0.3), pch=16)
-    # points(M[,3], col=scales::alpha("red", 0.3), pch=16)
+    # points(M[,2], col=scales::alpha("red", 0.3), pch=16)
     # lines(predict(loessMod1, Mx[,'index', drop=FALSE]), col="blue")
     # lines(predict(loessMod2, Mx[,'index', drop=FALSE]), col="red")
-    # plot(M[,1], M[,2])
+    
     D <- apply(M, 2, function(m){
       M[,1] - m
     })
@@ -123,9 +124,10 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
                              rm.homo=FALSE, ...)
     seg.CNAo$output <- .addSegSd(seg.CNAo, ...)
     
-    seg.drift <- CCLid:::.estimateDrift(seg.CNAo, z.cutoff=1:5)
+    seg.drift <- CCLid:::.estimateDrift(seg.CNAo, ...) #z.cutoff=c(0:5) [I suggest NULL]
     seg.CNAo$output <- seg.drift$seg
     class(seg.CNAo) <- 'CCLid'
+    
     # pdf("~/test4.pdf")
     # ccl.id <- ccl.id # 'OVCAR-5'
     # meta.cclid <- meta.df[grep(paste0("^", ccl.id, "$"), meta.df$ID),]
@@ -133,7 +135,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
     # path.tmp <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines'
     # cat(paste0(scp.path, file.path(path.tmp, "CCLE", "eacon", meta.cclid$CCLE, "ASCAT", "L2R", "*png "), paste0("CCLE_", meta.cclid$ID, ".png\n")))
     # cat(paste0(scp.path, file.path(path.tmp, "GDSC", "eacon", gsub(".cel", "", meta.cclid$GDSC, ignore.case=TRUE), "ASCAT", "L2R", "*png "), paste0("GDSC_", meta.cclid$ID, ".png\n")))
-    # if(debug) CCLid:::plot.CCLid(seg.CNAo, min.z = 4) #
+    # if(debug) CCLid:::plot.CCLid(seg.CNAo, min.z = 1) #
     # dev.off()
     return(list("frac"=seg.drift$frac,
                 "cna.obj"=seg.CNAo))
@@ -174,18 +176,19 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
         dat[dat < min(lim) ] <- min(lim)
         dat[dat > max(lim) ] <- max(lim)
       }
-      # round(sd(dat, na.rm = TRUE),3)
-      t.dat <- tryCatch({
-        t.test(na.omit(dat))
-      }, error=function(e){
-        data.frame("statistic"=NA, "p.value"=NA, "stderr"=NA)
-      })
-      setNames(round(c(t.dat$statistic, t.dat$p.value, t.dat$stderr),5),
-               c("t", "p", "seg.sd"))
+      
+      return(round(sd(dat, na.rm = TRUE),3))
+      # t.dat <- tryCatch({
+      #   t.test(na.omit(dat))
+      # }, error=function(e){
+      #   data.frame("statistic"=NA, "p.value"=NA, "stderr"=NA)
+      # })
+      # setNames(round(c(t.dat$statistic, t.dat$p.value, t.dat$stderr),5),
+      #          c("t", "p", "seg.sd"))
     }, ...)
-    # seg$seg.sd <- sd.per.seg
-    seg <- cbind(seg, abs(t(sd.per.seg)))
-    seg$'seg.sd' <- 0
+    seg$seg.sd <- sd.per.seg
+    # seg <- cbind(seg, abs(t(sd.per.seg)))
+    # seg$'seg.sd' <- 0
     
     return(seg)
   })
@@ -273,7 +276,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
 #' .estimateDrift(seg.CNAo, z.cutoff=1:3)
 .estimateDrift <- function(seg.obj, ...){
   seg.gr <- makeGRangesFromDataFrame(seg.obj$output, keep.extra.columns = TRUE)
-  drift.dat <- lapply(split(seg.gr, seg.gr$ID), function(seg, z.cutoff=c(1:4)){
+  drift.dat <- lapply(split(seg.gr, seg.gr$ID), function(seg, z.cutoff=NULL){
     ##Calculate Z-score of each seg.mean
     if('t' %in% colnames(mcols(seg))){
       seg$seg.z <- seg.z <- seg$t
@@ -284,9 +287,16 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
     }
     frac.cnv <- round(width(seg) / sum(width(seg)),3)
     ## Create filter criteria
-    diff.idx <- sapply(setNames(z.cutoff, z.cutoff), function(z){which(seg.z > z | seg.z < -z)})
-    diff.sum <- sapply(setNames(diff.idx, z.cutoff), function(idx) {sum(frac.cnv[idx])})
-    seg$t <- floor(abs(seg$seg.z))
+    if(is.null(z.cutoff)){
+      seg <- .estimateZcutoff(seg)
+      diff.sum <- sapply(split(seg, seg$t), function(tseg) round(sum(width(tseg)) / sum(width(seg)),3))
+    } else {
+      diff.idx <- sapply(setNames(z.cutoff, z.cutoff), function(z){which(seg.z > z | seg.z < -z)})
+      diff.sum <- sapply(setNames(diff.idx, z.cutoff), function(idx) {sum(frac.cnv[idx])})
+      seg$seg.diff <- NA
+      seg$t <- as.integer(cut(abs(seg$seg.z), breaks = z.cutoff, right = FALSE)) - 1
+    }
+    # seg$t <- floor(abs(seg$seg.z))
     
     return(list("seg"=seg, "sum"=diff.sum))
   }, ...)
@@ -296,10 +306,41 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
   names(seg.out) <- NULL
   seg.out <- as.data.frame(seg.out)[,-c(4,5)]
   colnames(seg.out)[c(1:3)] <- c("chrom", "loc.start", "loc.end")
-  seg.out <- seg.out[,c(colnames(seg.obj$output), "seg.z", "t")]
+  seg.out <- seg.out[,c(colnames(seg.obj$output), "seg.z", "t", "seg.diff")]
   
   return(list("frac"=sapply(drift.dat, function(i){ i$sum }),
               "seg"=seg.out))
+}
+
+
+#' .estimateZcutoff
+#' @description Creates a theoreticla framework for difference
+#' between BAFs, and then compares the observed z-differences
+#' against the theoretical diff to look for differences
+#' @param seg an output dataframe from a CNA object
+#'
+#' @return Returned seg with $t and $seg.diff
+.estimateZcutoff <- function(seg){
+  print("Estimating BAF diff significance from theoretical framework")
+  ref.frac <- sapply(c(1:5), function(tcn){
+    sapply(c(0:4), function(alt){
+      if(alt <= tcn) alt/tcn else 0
+    })
+  })
+  ref.frac <- round(unique(as.numeric(ref.frac)), 3)
+  ref.frac <- ref.frac[ref.frac <= 0.5]
+  
+  ## Find all theoretical differences between BAFs in 100% purity state
+  delta.frac <- unique(abs(as.numeric(sapply(ref.frac, function(i) i -ref.frac))))
+  delta.frac <- sort(delta.frac)
+  
+  ## Find which z-scores are greater than the theoretical SD-adjusted seg.mean difference
+  theor.cutoff <- t(sapply(seg$seg.sd, function(s) round((delta.frac / s), 3)))
+  t.mat <- (sweep(theor.cutoff, 1, as.matrix(abs(seg$seg.z))) <= 0)
+  seg$t <-  rowSums(t.mat) - 1
+  seg$seg.diff <- delta.frac[seg$t+1]
+    
+  return(seg)
 }
 
 #' sigDiffBaf

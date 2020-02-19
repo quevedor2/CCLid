@@ -48,8 +48,8 @@ driftConcordance <- function(){
   m.cls.idx <- cl.idx[sapply(cl.idx, function(i) length(i) >= 2)]
   
   ## Get drift distance between CL pairs using BAF
-  # ccl.id <- 'HuH-6'
-  # cl.pairs <- m.cls.idx[[ccl.id]]
+  # ccl.id <- 'SW403';  x.mat=ref.mat.var; centering='median'
+  # cl.pairs <- m.cls.idx[[ccl.id]]; ref.ds=dataset; segmenter='PCF'
   baf.drifts <- lapply(m.cls.idx, getBafDrifts, x.mat=ref.mat.var, 
                        ref.ds=dataset, alt.ds=alt.ds, segmenter='PCF', centering='median')
   # cl.pairs = m.cls.idx[[1]]; x.mat=ref.mat.var; centering='median'
@@ -124,9 +124,9 @@ driftConcordance <- function(){
   # tail(sort(colSums(drift.dat$dat)))
   
   ## Plot the drift CN-BAF examples
-  ccl.id <-'IGR-37'  #'786-0', 'HT-29', 'CL-40', 'SW1463', 'A172', 'MCAS', 'HCC1937', 'Namalwa', 'PC-3'
-  sapply(names(head(sort(colSums(drift.dat$dat)), 10)), function(ccl.id){
-    
+  # ccl.id <-'IGR-37'  #'786-0', 'HT-29', 'CL-40', 'SW1463', 'A172', 'MCAS', 'HCC1937', 'Namalwa', 'PC-3'
+  # sapply(names(head(sort(colSums(drift.dat$dat)), 10)), function(ccl.id){
+  sapply(c("SW403", "VM-CUB-1", "HuH-6"), function(ccl.id){
     pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift_", ccl.id, ".pdf")),
         width=5, height=5)
     CNAo <- cn.drifts$cna.obj
@@ -176,9 +176,10 @@ driftTech <- function(){
   # vcfFile=file.path(vcf.dir, vcf)
   for(vcf in all.vcfs){
     vcf.drift[[vcf]] <- getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), 
-                                     ref.dat, rna.meta.df, min.depth=6)
+                                     ref.dat, rna.meta.df, min.depth=5)
   }
-  # vcf.drift <- mclapply(all.vcfs[1:4], function(vcf){
+  ## Very weird bugs happens when I use lapply
+  # vcf.drift <- mclapply(all.vcfs[1:4], function(vcf){  
   #   getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), ref.dat, rna.meta.df)
   # }, mc.cores = 3)
   names(vcf.drift) <- sapply(names(vcf.drift), function(i){
@@ -244,11 +245,11 @@ driftTech <- function(){
   dev.off()
   cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-rna-drift.pdf .\n"))))
   
-  # as.matrix(head(sort(colSums(drift.dat$dat)), 10))
-  # tail(sort(colSums(drift.dat$dat)))
+  as.matrix(head(sort(colSums(drift.dat$dat)), 10))
+  tail(sort(colSums(drift.dat$dat)))
   
   pdf("~/test3.pdf")
-  sapply(c('VM-CUB-1', 'HuH-6', 'SW1116'), function(ccl.id){
+  sapply(c('VM-CUB-1', 'HuH-6', 'SW403', 'DU-145', 'EB2', 'SW1116'), function(ccl.id){
     print(length(baf.drifts[[ccl.id]]))
     print(length(vcf.drift[[ccl.id]]))
     CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=4)
