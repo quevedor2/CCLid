@@ -4,7 +4,7 @@
 \alias{.estimateZcutoff}
 \title{.estimateZcutoff}
 \usage{
-.estimateZcutoff(seg)
+.estimateZcutoff(seg, data.type = "baf")
 }
 \arguments{
 \item{seg}{an output dataframe from a CNA object}

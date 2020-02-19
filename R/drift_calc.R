@@ -120,11 +120,12 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
     # seg.CNAo <- CCLid::segmentDrift(fdat = as.data.frame(g.loci), D=D[,-1],
     #                                 rm.homo=FALSE, segmenter=segmenter)
     # seg.CNAo$output <- CCLid:::.addSegSd(seg.CNAo, winsorize.data=TRUE)
+    # seg.drift <- CCLid:::.estimateDrift(seg.CNAo, z.cutoff=NULL)
     seg.CNAo <- CCLid::segmentDrift(fdat = as.data.frame(g.loci), D=D[,-1], 
                              rm.homo=FALSE, ...)
     seg.CNAo$output <- .addSegSd(seg.CNAo, ...)
-    
     seg.drift <- CCLid:::.estimateDrift(seg.CNAo, ...) #z.cutoff=c(0:5) [I suggest NULL]
+    
     seg.CNAo$output <- seg.drift$seg
     class(seg.CNAo) <- 'CCLid'
     
@@ -276,7 +277,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
 #' .estimateDrift(seg.CNAo, z.cutoff=1:3)
 .estimateDrift <- function(seg.obj, ...){
   seg.gr <- makeGRangesFromDataFrame(seg.obj$output, keep.extra.columns = TRUE)
-  drift.dat <- lapply(split(seg.gr, seg.gr$ID), function(seg, z.cutoff=NULL){
+  drift.dat <- lapply(split(seg.gr, seg.gr$ID), function(seg, z.cutoff=NULL, ...){
     ##Calculate Z-score of each seg.mean
     if('t' %in% colnames(mcols(seg))){
       seg$seg.z <- seg.z <- seg$t
@@ -288,7 +289,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
     frac.cnv <- round(width(seg) / sum(width(seg)),3)
     ## Create filter criteria
     if(is.null(z.cutoff)){
-      seg <- .estimateZcutoff(seg)
+      seg <- .estimateZcutoff(seg, ...)
       diff.sum <- sapply(split(seg, seg$t), function(tseg) round(sum(width(tseg)) / sum(width(seg)),3))
     } else {
       diff.idx <- sapply(setNames(z.cutoff, z.cutoff), function(z){which(seg.z > z | seg.z < -z)})
@@ -320,26 +321,35 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
 #' @param seg an output dataframe from a CNA object
 #'
 #' @return Returned seg with $t and $seg.diff
-.estimateZcutoff <- function(seg){
-  print("Estimating BAF diff significance from theoretical framework")
-  ref.frac <- sapply(c(1:5), function(tcn){
-    sapply(c(0:4), function(alt){
-      if(alt <= tcn) alt/tcn else 0
-    })
-  })
-  ref.frac <- round(unique(as.numeric(ref.frac)), 3)
-  ref.frac <- ref.frac[ref.frac <= 0.5]
-  
+.estimateZcutoff <- function(seg, data.type='baf'){
+  ref.frac <- switch(data.type,
+                     "baf"={
+                       print("Estimating BAF diff significance from theoretical framework")
+                       ref.frac <- sapply(c(1:5), function(tcn){
+                         sapply(c(0:4), function(alt){
+                           if(alt <= tcn) alt/tcn else 0
+                         })
+                       })
+                       ref.frac <- round(unique(as.numeric(ref.frac)), 3)
+                       ref.frac <- ref.frac[ref.frac <= 0.5]
+                       (ref.frac)
+                      },
+                     "lrr"={
+                       ref.frac <- seq(0, 1, by=0.1)
+                       (ref.frac)
+                     },
+                     stop("data.type must be either baf or lrr"))
+
   ## Find all theoretical differences between BAFs in 100% purity state
-  delta.frac <- unique(abs(as.numeric(sapply(ref.frac, function(i) i -ref.frac))))
-  delta.frac <- sort(delta.frac)
+  delta.frac <- abs(as.numeric(sapply(ref.frac, function(i) i -ref.frac)))
+  delta.frac <- as.numeric(unique(as.character(round(sort(delta.frac),3))))
   
   ## Find which z-scores are greater than the theoretical SD-adjusted seg.mean difference
   theor.cutoff <- t(sapply(seg$seg.sd, function(s) round((delta.frac / s), 3)))
   t.mat <- (sweep(theor.cutoff, 1, as.matrix(abs(seg$seg.z))) <= 0)
   seg$t <-  rowSums(t.mat) - 1
   seg$seg.diff <- delta.frac[seg$t+1]
-    
+  head(as.data.frame(seg), 30)
   return(seg)
 }
 

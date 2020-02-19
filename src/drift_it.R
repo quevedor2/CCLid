@@ -48,15 +48,15 @@ driftConcordance <- function(){
   m.cls.idx <- cl.idx[sapply(cl.idx, function(i) length(i) >= 2)]
   
   ## Get drift distance between CL pairs using BAF
-  # ccl.id <- 'SW403';  x.mat=ref.mat.var; centering='median'
+  # ccl.id <- 'NB-1';  x.mat=ref.mat.var; centering='median'
   # cl.pairs <- m.cls.idx[[ccl.id]]; ref.ds=dataset; segmenter='PCF'
   baf.drifts <- mclapply(m.cls.idx, getBafDrifts, x.mat=ref.mat.var, 
                        ref.ds=dataset, alt.ds=alt.ds, segmenter='PCF', 
-                       centering='median', mc.cores = 4)
+                       centering='none', mc.cores = 8)
   save(baf.drifts, file=file.path(PDIR, "drift_it", 
-                             paste0(dataset, "-", alt.ds, "_baf_drift2.rda")))
+                             paste0(dataset, "-", alt.ds, "_baf_drift.rda")))
   load(file=file.path(PDIR, "drift_it", 
-                      paste0(dataset, "-", alt.ds, "_baf_drift2.rda")))
+                      paste0(dataset, "-", alt.ds, "_baf_drift.rda")))
   
   ## Load in CN bins
   cn.dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/cnv_predictions/input/cn/50kb_bins'
@@ -70,7 +70,8 @@ driftConcordance <- function(){
                                alt.l2r=assayData(bins[[alt.ds]]),
                                seg.id='exprs', raw.id='L2Rraw',
                                fdat=featureData(bins[[alt.ds]])@data,
-                               cell.ids=names(baf.drifts), segmenter='PCF')
+                               cell.ids=names(baf.drifts), segmenter='PCF',
+                               centering='none')
   # ref.l2r=assayData(bins[[dataset]]);
   # alt.l2r=assayData(bins[[alt.ds]]);
   # seg.id='exprs'; raw.id='L2Rraw';
@@ -94,9 +95,6 @@ driftConcordance <- function(){
   gr.baf <- makeGRangesFromDataFrame(do.call(rbind, df.baf), keep.extra.columns = TRUE)
   gr.baf <- split(gr.baf, gr.baf$ID)
   
-  drift.dat <- driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.cn, 
-                                  cell.ids = names(baf.drifts),
-                                  baf.z=4, cn.z=4)
   baf.drift.dat <- mclapply(c(0:9), function(baf.z){
     print(baf.z)
     driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.cn, 

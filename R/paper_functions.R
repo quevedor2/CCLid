@@ -87,17 +87,30 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, ...){
   rownames(alt.ref.idx) <- alt.ref.idx$id
   
   ## Create a distance betweeen L2R matrix:
-  # idx <- c(grep("CL-40", alt.ref.idx$id), grep("786-0", alt.ref.idx$id)) #83, 8
+  # idx <- c(grep("^NB-1$", alt.ref.idx$id), grep("786-0", alt.ref.idx$id)) #83, 8
   # [idx,,drop=FALSE]
-  cn.drift <- apply(alt.ref.idx, 1, function(ar.i){
+  cn.drift <- apply(alt.ref.idx, 1, function(ar.i, centering='none'){
     ref.idx = as.integer(ar.i['ref'])
     alt.idx = as.integer(ar.i['alt'])
     
     D = ref.l2r[[seg.id]][,ref.idx,drop=FALSE] - alt.l2r[[seg.id]][,alt.idx,drop=FALSE]
     Draw = ref.l2r[[raw.id]][,ref.idx,drop=FALSE] - alt.l2r[[raw.id]][,alt.idx,drop=FALSE]
-    return(list("seg"=scale(D, center=TRUE, scale=FALSE), 
-                "raw"=scale(Draw, center=TRUE, scale=FALSE)))
-  })
+    
+    D.l <- switch(centering,
+                "median"={
+                  D.med <- apply(D, 2, median, na.rm=TRUE)
+                  Draw.med <- apply(Draw, 2, median, na.rm=TRUE)
+                  list("seg"= D - matrix(rep(D.med, nrow(D)), byrow=TRUE, nrow=nrow(D)), 
+                       "raw"= Draw - matrix(rep(Draw.med, nrow(Draw)), byrow=TRUE, nrow=nrow(Draw)))
+                },
+                "mean"={
+                  list("seg"=scale(D, center=TRUE, scale=FALSE), 
+                       "raw"=scale(Draw, center=TRUE, scale=FALSE))
+                },
+                list("seg"=D, "raw"=Draw))
+    
+    return(D.l)
+  }, ...)
   D = do.call(cbind, lapply(cn.drift, function(i) i$seg))
   Draw = do.call(cbind, lapply(cn.drift, function(i) i$raw))
   colnames(D) <- colnames(Draw) <- alt.ref.idx$id
@@ -108,15 +121,15 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, ...){
   # CNAo$data <- cbind(CNAo$data[,1:2], Draw)
   # sd.CNAo <- addSegDat(ids=alt.ref.idx$id[idx], CNAo=CNAo, winsorize.data=TRUE, n.scale=0.01)
   CNAo <- CCLid::segmentDrift(fdat = fdat, D=D, ...)
-  CNAo$data <- cbind(CNAo$data[,1:2], Draw)
-  sd.CNAo <- CCLid:::addSegDat(ids=alt.ref.idx$id, CNAo=CNAo, 
-                               winsorize.data=TRUE, n.scale=0.01)
-  seg.drift <- CCLid:::.estimateDrift(sd.CNAo, z.cutoff=1:4)
+  sd.CNAo <- CNAo
+  sd.CNAo$data <- cbind(sd.CNAo$data[,1:2], Draw)
+  sd.CNAo$output <- CCLid:::.addSegSd(sd.CNAo, winsorize.data=TRUE)
+  seg.drift <- .estimateDrift(sd.CNAo, data.type='lrr')
   sd.CNAo$output <- seg.drift$seg
-  
   class(sd.CNAo) <- 'CCLid'
+  
   # pdf("~/temp.pdf")
-  # CCLid:::plot.CCLid(sd.CNAo, min.z=3)
+  # CCLid:::plot.CCLid(sd.CNAo, min.z=1)
   # dev.off()
   cn.drift <- list("frac"=seg.drift$frac,
                    "cna.obj"=sd.CNAo)
