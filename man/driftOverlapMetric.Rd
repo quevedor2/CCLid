@@ -10,7 +10,8 @@ driftOverlapMetric(
   cell.ids,
   ov.frac = seq(0, 1, by = 0.01),
   baf.z = 4,
-  cn.z = 2
+  cn.z = 2,
+  cn.gtruth = FALSE
 )
 }
 \arguments{

@@ -50,10 +50,9 @@ driftConcordance <- function(){
   ## Get drift distance between CL pairs using BAF
   # ccl.id <- 'SW403';  x.mat=ref.mat.var; centering='median'
   # cl.pairs <- m.cls.idx[[ccl.id]]; ref.ds=dataset; segmenter='PCF'
-  baf.drifts <- lapply(m.cls.idx, getBafDrifts, x.mat=ref.mat.var, 
-                       ref.ds=dataset, alt.ds=alt.ds, segmenter='PCF', centering='median')
-  # cl.pairs = m.cls.idx[[1]]; x.mat=ref.mat.var; centering='median'
-  # ref.ds=dataset; alt.ds=alt.ds; segmenter='PCF'
+  baf.drifts <- mclapply(m.cls.idx, getBafDrifts, x.mat=ref.mat.var, 
+                       ref.ds=dataset, alt.ds=alt.ds, segmenter='PCF', 
+                       centering='median', mc.cores = 4)
   save(baf.drifts, file=file.path(PDIR, "drift_it", 
                              paste0(dataset, "-", alt.ds, "_baf_drift2.rda")))
   load(file=file.path(PDIR, "drift_it", 
@@ -98,42 +97,69 @@ driftConcordance <- function(){
   drift.dat <- driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.cn, 
                                   cell.ids = names(baf.drifts),
                                   baf.z=4, cn.z=4)
-  
+  baf.drift.dat <- mclapply(c(0:9), function(baf.z){
+    print(baf.z)
+    driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.cn, 
+                       cell.ids = names(baf.drifts),
+                       baf.z=baf.z, cn.z=4)
+  }, mc.cores = 5)
   
   ## Plot the saturation-sensitvity curve
   pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf")),
       width=5, height=5)
-  with(drift.dat$sens, plot(x=x, y=y, pch=16, las=1, col=scales::alpha("grey", 0.8),
-                            main="Agreement between inference of CN and BAF drift", xaxt='n',
-                            ylim=c(0,1), ylab="Sensitivity", xlab="Conc. Threshold"))
-  axis(side = 1, at = seq(0,1, by=0.2), labels = rev(seq(0,1, by=0.2)), las=1)
-  lines(drift.dat$sens$x, predict(drift.dat$model),lty=2,col="black",lwd=2)
-  ## add saturation points
-  sat.points <- as.character(c(0.7, 0.8, 0.9))
-  sat.cols <- c("#feb24c", "#fd8d3c", "#f03b20")
-  abline(v=drift.dat$saturation[sat.points,], col=sat.cols)
-  text(x =drift.dat$saturation[sat.points,], y=rep(1, length(sat.points)), 
-       labels = sat.points, cex=0.8, adj=0 )
-  print(1-drift.dat$saturation[sat.points,])
-  # 0.7     0.8     0.9 
-  # 0.838   0.784   0.690 
+  lapply(baf.drift.dat, function(drift.dat){
+    with(drift.dat$sens, plot(x=x, y=y, pch=16, las=1, col=scales::alpha("grey", 0.8),
+                              main="Agreement between inference of CN and BAF drift", xaxt='n',
+                              ylim=c(0,1), ylab="Sensitivity", xlab="Conc. Threshold"))
+    axis(side = 1, at = seq(0,1, by=0.2), labels = rev(seq(0,1, by=0.2)), las=1)
+    
+    ## add saturation points
+    sat.points <- as.character(c(0.7, 0.8, 0.9))
+    sat.cols <- c("#feb24c", "#fd8d3c", "#f03b20")
+    
+    tryCatch({
+      lines(drift.dat$sens$x, predict(drift.dat$model),lty=2,col="black",lwd=2)
+      abline(v=drift.dat$saturation[sat.points,], col=sat.cols)
+      text(x =drift.dat$saturation[sat.points,], y=rep(1, length(sat.points)), 
+           labels = sat.points, cex=0.8, adj=0 )
+      print(1-drift.dat$saturation[sat.points,])
+    }, error=function(e){ NA })
+    # 0.7     0.8     0.9 
+    # 0.838   0.784   0.690 
+    
+  })
+  
+  conc.mat <- sapply(baf.drift.dat, function(i) i$dat[1,])
+  conc.melt <- reshape2::melt(conc.mat)
+  ggplot(conc.melt, aes(Var2, value)) +
+    geom_jitter(width=0.2) +
+    geom_smooth(span = 0.1, level=0.99999)
+  
+  parms <- apply(conc.mat, 2, MASS::fitdistr, densfun="poisson")
+  parms <- sapply(parms, function(i) c('lambda'=i$estimate, 'sd'=i$sd))
+  lambda.d <- diff(parms[1,])  / max(diff(parms[1,]))
+  sd.d <- diff(parms[2,]) / max(diff(parms[2,]))
+  ls.ratio <- round(lambda.d/sd.d, 3)
+  plot(ls.ratio, pch=16, ylab="Lambda/SD ratio")
+  points(which.max(ls.ratio), ls.ratio[which.max(ls.ratio)], col="red", pch=16)
   dev.off()
   cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf .\n"))))
   
-  # as.matrix(head(sort(colSums(drift.dat$dat)), 10))
-  # tail(sort(colSums(drift.dat$dat)))
+  # as.matrix(head(sort(colSums(baf.drift.dat[[5]]$dat)), 30))
+  # tail(sort(colSums(baf.drift.dat[[5]]$dat)), 30)
   
   ## Plot the drift CN-BAF examples
   # ccl.id <-'IGR-37'  #'786-0', 'HT-29', 'CL-40', 'SW1463', 'A172', 'MCAS', 'HCC1937', 'Namalwa', 'PC-3'
   # sapply(names(head(sort(colSums(drift.dat$dat)), 10)), function(ccl.id){
-  sapply(c("SW403", "VM-CUB-1", "HuH-6"), function(ccl.id){
+  sapply(c('JHOS-2', 'NB-1', 'NCI-H23', 'PC-3', 
+           "SW403", "VM-CUB-1", "HuH-6"), function(ccl.id){
     pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift_", ccl.id, ".pdf")),
         width=5, height=5)
     CNAo <- cn.drifts$cna.obj
     CNAo$output <- split(CNAo$output, CNAo$output$ID)[[ccl.id]]
     CNAo$data <- CNAo$data[,c(1,2,grep(paste0("^", ccl.id, "$"), colnames(CNAo$data)))]
     CCLid:::plot.CCLid(CNAo, min.z=4)
-    CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=4)
+    CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=2)
     dev.off()
     
     meta.cclid <- meta.df[grep(paste0("^", ccl.id, "$"), meta.df$ID),]

@@ -74,7 +74,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
   data(snp6.dat)
   ## Get pairwise distance between loci
   M <- if(norm.baf) CCLid:::.normBAF(sample.mat) else sample.mat
-  M <- M[-which(rowSums(M) < (0.05 * ncol(M))),]
+  M <- M[-which(rowSums(M) < (0.07 * ncol(M))),]
   #M <- M[-which(apply(M, 1, median, na.rm=TRUE) == 0),]
   D.l <- list()
   

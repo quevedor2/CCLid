@@ -51,10 +51,10 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
     # centering = centering; norm.baf = TRUE; segmenter='PCF'
     # bafDrift(sample.mat = x.mat[,cl.pairs[all.idx]], debug = TRUE, 
     #          centering = centering, norm.baf = TRUE)
-    bdf <- bafDrift(x.mat[,cl.pairs[all.idx]], ...)
+    bdf <- bafDrift(sample.mat = x.mat[,cl.pairs[all.idx]], ...)
     #CCLid:::plot.CCLid(bdf$cna.obj[[1]], min.z=4)
     drift.score <- list("sig.gr"=bdf$cna.obj, #CCLid::sigDiffBaf(bdf$cna.obj[[1]]),
-                        "frac"=bdf$frac[[1]][4,])
+                        "frac"=bdf$frac[[1]])
   } else {
     drift.score <- list("sig.gr"=NULL, "frac"=NULL)
   }
@@ -139,7 +139,7 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, ...){
 #' "dat"=Matrix of concordance cutoff by cell lines
 #' @export
 driftOverlapMetric <- function(gr.baf, gr.cn, cell.ids, ov.frac=seq(0, 1, by=0.01),
-                               baf.z=4, cn.z=2){
+                               baf.z=4, cn.z=2, cn.gtruth=FALSE){
   require(GenomicRanges)
   ## calculate genomic overlap metric with different concordance-thresholds
   ov.dat <- sapply(cell.ids, function(cid){
@@ -151,41 +151,53 @@ driftOverlapMetric <- function(gr.baf, gr.cn, cell.ids, ov.frac=seq(0, 1, by=0.0
         
         baf.cn$baf <- ov.baf.cn@first$t > baf.z
         baf.cn$cn <- ov.baf.cn@second$t > cn.z
+        
+        if(cn.gtruth){
+          ## Isolate for only CN drifted regions
+          baf.cn <- baf.cn[which(baf.cn$cn),,drop=FALSE]
+        }
         m.idx <- with(baf.cn, baf==cn)
         conc.drift <- sum(width(baf.cn[which(m.idx),])) / sum(width(baf.cn))
+        setNames(c(conc.drift, conc.drift > ov.frac), c("conc", ov.frac))
         
-        setNames(conc.drift > ov.frac, ov.frac)
       } else {
-        setNames(rep(0, length(ov.frac)), ov.frac)
+        setNames(rep(0, length(ov.frac)+1), c("conc", ov.frac))
       }
     } else {
-      setNames(rep(NA, length(ov.frac)), ov.frac)
+      setNames(rep(0, length(ov.frac)+1), c("conc", ov.frac))
     }
   })
   rm.idx <- which(is.na(colSums(ov.dat)))
   if(length(rm.idx) > 0) ov.dat <- ov.dat[,-rm.idx]
   
   ## Organize sensitivity and assign a non-linear least-squares model
-  ov.df <- data.frame("y"=rev(rowSums(ov.dat, na.rm=TRUE) / ncol(ov.dat)),
-                      "x"=as.numeric(rownames(ov.dat)))
-  m<-with(ov.df, nls(y~ SSasymp(x, Asym, R0, lrc)))
+  ov.df <- data.frame("y"=rev(rowSums(ov.dat[-1,], na.rm=TRUE) / ncol(ov.dat)),
+                      "x"=as.numeric(rownames(ov.dat[-1,])))
   
-  ## Calculate saturation points
-  Asym_coef <- summary(m)$coefficients[1] ## horizontal asymptote
-  R0_coef <- summary(m)$coefficients[2] ## response when x == 0
-  lrc_coef <- summary(m)$coefficients[3] ## rate constant
-  sat.values <- seq(0, 1, by=0.01)
-  conc.sat <- sapply(setNames(sat.values, sat.values), function(saturation){
-    satX <- Asym_coef * saturation
-    -(log((satX-Asym_coef)/(R0_coef-Asym_coef))/exp(lrc_coef)) # Conc. threshold to reach X% sensitvity saturation
+  fit <- tryCatch({
+    m<-with(ov.df, nls(y~ SSasymp(x, Asym, R0, lrc)))
+    
+    ## Calculate saturation points
+    Asym_coef <- summary(m)$coefficients[1] ## horizontal asymptote
+    R0_coef <- summary(m)$coefficients[2] ## response when x == 0
+    lrc_coef <- summary(m)$coefficients[3] ## rate constant
+    sat.values <- seq(0, 1, by=0.01)
+    conc.sat <- sapply(setNames(sat.values, sat.values), function(saturation){
+      satX <- Asym_coef * saturation
+      -(log((satX-Asym_coef)/(R0_coef-Asym_coef))/exp(lrc_coef)) # Conc. threshold to reach X% sensitvity saturation
+    })
+    conc.sat <- as.matrix(round(conc.sat, 3))
+    
+    list("model"=m,
+         "saturation"=conc.sat)
+  }, error=function(e){
+    list("model"=NA,
+         "saturation"=NA)
   })
-  conc.sat <- as.matrix(round(conc.sat, 3))
-  # rownames(conc.sat) <- rev(rownames(conc.sat))
   
-  return(list("model"=m,
-              "saturation"=conc.sat,
-              "sens"=ov.df,
-              "dat"=ov.dat))
+  
+  return(append(fit, list("sens"=ov.df,
+                          "dat"=ov.dat)))
 }
 
 ### Functions for RNA (BAF) - SNP (BAF) drift overlap
