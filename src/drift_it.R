@@ -50,7 +50,7 @@ driftConcordance <- function(){
   ## Get drift distance between CL pairs using BAF
   # ccl.id <- 'NB-1';  x.mat=ref.mat.var; centering='median'
   # cl.pairs <- m.cls.idx[[ccl.id]]; ref.ds=dataset; segmenter='PCF'
-  baf.drifts <- mclapply(m.cls.idx, getBafDrifts, x.mat=ref.mat.var, 
+  baf.drifts <- mclapply(m.cls.idx, CCLid::getBafDrifts, x.mat=ref.mat.var, 
                        ref.ds=dataset, alt.ds=alt.ds, segmenter='PCF', 
                        centering='none', mc.cores = 8)
   save(baf.drifts, file=file.path(PDIR, "drift_it", 

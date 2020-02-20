@@ -49,8 +49,8 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
   if(length(all.idx) == 2){
     # sample.mat = x.mat[,cl.pairs[all.idx]]; debug = TRUE;
     # centering = centering; norm.baf = TRUE; segmenter='PCF'
-    # bafDrift(sample.mat = x.mat[,cl.pairs[all.idx]], debug = TRUE, 
-    #          centering = centering, norm.baf = TRUE)
+    # bafDrift(sample.mat = x.mat[,cl.pairs[all.idx]], debug = FALSE, segmenter='PCF',
+    #          centering = centering, norm.baf = TRUE, hom.filt.val=0)
     bdf <- bafDrift(sample.mat = x.mat[,cl.pairs[all.idx]], hom.filt.val=0, ...)
     #CCLid:::plot.CCLid(bdf$cna.obj[[1]], min.z=4)
     drift.score <- list("sig.gr"=bdf$cna.obj, #CCLid::sigDiffBaf(bdf$cna.obj[[1]]),

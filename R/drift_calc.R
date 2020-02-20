@@ -76,7 +76,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
   ## Get pairwise distance between loci
   M <- if(norm.baf) CCLid:::.normBAF(sample.mat) else sample.mat
   hom.filt.idx <- (rowSums(M) < (hom.filt.val * ncol(M)))
-  if(any(hom.filt.idx)) M <- M[-which(hom.filt.idx),]
+  if(any(na.omit(hom.filt.idx))) M <- M[-which(hom.filt.idx),]
   #M <- M[-which(apply(M, 1, median, na.rm=TRUE) == 0),]
   D.l <- list()
   
