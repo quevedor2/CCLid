@@ -87,9 +87,9 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, ...){
   rownames(alt.ref.idx) <- alt.ref.idx$id
   
   ## Create a distance betweeen L2R matrix:
-  # idx <- c(grep("^NB-1$", alt.ref.idx$id), grep("786-0", alt.ref.idx$id)) #83, 8
+  # idx <- c(grep("^NCI-H522$", alt.ref.idx$id), grep("^NB-1$", alt.ref.idx$id)) #83, 8
   # [idx,,drop=FALSE]
-  cn.drift <- apply(alt.ref.idx, 1, function(ar.i, centering='none'){
+  cn.drift <- apply(alt.ref.idx, 1, function(ar.i, centering='none', max.med=0.1){
     ref.idx = as.integer(ar.i['ref'])
     alt.idx = as.integer(ar.i['alt'])
     
@@ -106,6 +106,17 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, ...){
                 "mean"={
                   list("seg"=scale(D, center=TRUE, scale=FALSE), 
                        "raw"=scale(Draw, center=TRUE, scale=FALSE))
+                },
+                "extreme"={
+                  D.med <- apply(D, 2, median, na.rm=TRUE)
+                  Draw.med <- apply(Draw, 2, median, na.rm=TRUE)
+                  if(abs(D.med) >= max.med & abs(Draw.med) >= max.med){
+                    print(paste0("Extreme difference in ", colnames(D)))
+                    list("seg"= D - matrix(rep(D.med, nrow(D)), byrow=TRUE, nrow=nrow(D)), 
+                         "raw"= Draw - matrix(rep(Draw.med, nrow(Draw)), byrow=TRUE, nrow=nrow(Draw)))
+                  } else {
+                    list("seg"=D, "raw"=Draw)
+                  }
                 },
                 list("seg"=D, "raw"=Draw))
     
@@ -134,9 +145,9 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, ...){
   # pdf("~/temp.pdf")
   # CCLid:::plot.CCLid(sd.CNAo, min.z=1)
   # dev.off()
-  cn.drift <- list("frac"=seg.drift$frac,
-                   "cna.obj"=sd.CNAo)
-  return(cn.drift)
+  cn.drifts <- list("frac"=seg.drift$frac,
+                    "cna.obj"=sd.CNAo)
+  return(cn.drifts)
 }
 
 #' driftOverlapMetric
@@ -172,15 +183,15 @@ driftOverlapMetric <- function(gr.baf, gr.cn, cell.ids, ov.frac=seq(0, 1, by=0.0
           ## Isolate for only CN drifted regions
           baf.cn <- baf.cn[which(baf.cn$cn),,drop=FALSE]
         }
-        m.idx <- with(baf.cn, baf==cn)
+        m.idx <- baf.cn$baf == baf.cn$cn
         conc.drift <- sum(width(baf.cn[which(m.idx),])) / sum(width(baf.cn))
         setNames(c(conc.drift, conc.drift > ov.frac), c("conc", ov.frac))
         
       } else {
-        setNames(rep(0, length(ov.frac)+1), c("conc", ov.frac))
+        setNames(rep(NA, length(ov.frac)+1), c("conc", ov.frac))
       }
     } else {
-      setNames(rep(0, length(ov.frac)+1), c("conc", ov.frac))
+      setNames(rep(NA, length(ov.frac)+1), c("conc", ov.frac))
     }
   })
   rm.idx <- which(is.na(colSums(ov.dat)))
@@ -241,7 +252,7 @@ getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df, ...){
   ## Calculate drift of Cell line with RNAseq with external control
   match.idx <- grep(paste0("_", gsub("NCI-", ".*", rna.meta.df[rna.idx,]$ID), "$"), colnames(vcf.mat))
   if(length(match.idx) > 1){
-    x.drift <- bafDrift(sample.mat=vcf.mat[,match.idx, drop=FALSE], 
+    x.drift <- bafDrift(sample.mat=vcf.mat[,match.idx, drop=FALSE], hom.filt.val=0,
                         norm.baf=TRUE, centering='median', segmenter='PCF')
     # head(x.drift$cna.obj[[1]]$output, 40)
     # CCLid:::plot.CCLid(x.drift$cna.obj[[1]], min.z=2)

@@ -48,7 +48,7 @@ driftConcordance <- function(){
   m.cls.idx <- cl.idx[sapply(cl.idx, function(i) length(i) >= 2)]
   
   ## Get drift distance between CL pairs using BAF
-  # ccl.id <- 'NB-1';  x.mat=ref.mat.var; centering='median'
+  # ccl.id <- 'Capan-1';  x.mat=ref.mat.var; centering='median'
   # cl.pairs <- m.cls.idx[[ccl.id]]; ref.ds=dataset; segmenter='PCF'
   baf.drifts <- mclapply(m.cls.idx, CCLid::getBafDrifts, x.mat=ref.mat.var, 
                        ref.ds=dataset, alt.ds=alt.ds, segmenter='PCF', 
@@ -76,10 +76,14 @@ driftConcordance <- function(){
   # alt.l2r=assayData(bins[[alt.ds]]);
   # seg.id='exprs'; raw.id='L2Rraw';
   # fdat=featureData(bins[[alt.ds]])@data;
-  # cell.ids=names(baf.drifts); segmenter='PCF';centering='none'
+  # cell.ids=names(baf.drifts); segmenter='PCF';centering='extreme'
   save(cn.drifts, file=file.path(PDIR, "drift_it", 
                                 paste0(dataset, "-", alt.ds, "_cn_drift2.rda")))
-  load(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_cn_drift2.rda")))
+  
+  load(file=file.path(PDIR, "drift_it", 
+                      paste0(dataset, "-", alt.ds, "_cn_drift2.rda")))
+  load(file=file.path(PDIR, "drift_it", 
+                      paste0(dataset, "-", alt.ds, "_baf_drift.rda")))
   
   ## Find overlap between GRanges of BAF to CN drift
   df.cn <- cn.drifts$cna.obj$output
@@ -149,8 +153,10 @@ driftConcordance <- function(){
   ## Plot the drift CN-BAF examples
   # ccl.id <-'IGR-37'  #'786-0', 'HT-29', 'CL-40', 'SW1463', 'A172', 'MCAS', 'HCC1937', 'Namalwa', 'PC-3'
   # sapply(names(head(sort(colSums(drift.dat$dat)), 10)), function(ccl.id){
-  sapply(c('AsPC-1', 'A172', 'Capan-1', 
-           'JHOS-2', 'NB-1', 'NCI-H23', 'PC-3', 
+  sapply(c('SW620', 'HOS',
+           'KNS-62', 'NCI-H522', 'CAS-1',
+           'AsPC-1', 'A172', 'Capan-1', 
+#           'JHOS-2', 'NB-1', 'NCI-H23', 'PC-3', 
            "SW403", "VM-CUB-1", "HuH-6"), function(ccl.id){
     pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift_", ccl.id, ".pdf")),
         width=5, height=5)
@@ -158,7 +164,7 @@ driftConcordance <- function(){
     CNAo$output <- split(CNAo$output, CNAo$output$ID)[[ccl.id]]
     CNAo$data <- CNAo$data[,c(1,2,grep(paste0("^", ccl.id, "$"), colnames(CNAo$data)))]
     CCLid:::plot.CCLid(CNAo, min.z=1)
-    CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=4)
+    CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=3)
     dev.off()
     
     meta.cclid <- meta.df[grep(paste0("^", ccl.id, "$"), meta.df$ID),]
@@ -271,15 +277,15 @@ driftTech <- function(){
   dev.off()
   cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-rna-drift.pdf .\n"))))
   
-  as.matrix(head(sort(colSums(drift.dat$dat)), 100))
+  as.matrix(head(sort(colSums(drift.dat$dat)), 50))
   tail(sort(colSums(drift.dat$dat)), 50)
   
   pdf("~/test2.pdf")
-  sapply(c('VM-CUB-1', 'HuH-6', 'SW403', 'DU-145', 'EB2', 'SW1116'), function(ccl.id){
+  sapply(c('VM-CUB-1', 'KM-H2', 'TE-4', 'HOS', 'SW620', 'CL-40'), function(ccl.id){
     print(length(baf.drifts[[ccl.id]]))
     print(length(vcf.drift[[ccl.id]]))
-    CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=4)
-    CCLid:::plot.CCLid(vcf.drift[[ccl.id]]$cna.obj[[1]], min.z=1)
+    CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=3)
+    CCLid:::plot.CCLid(vcf.drift[[ccl.id]]$cna.obj[[1]], min.z=2)
   })
   dev.off()
   
