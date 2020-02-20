@@ -4,7 +4,14 @@
 \alias{bafDrift}
 \title{bafDrift}
 \usage{
-bafDrift(sample.mat, debug = FALSE, centering = "none", norm.baf = TRUE, ...)
+bafDrift(
+  sample.mat,
+  debug = FALSE,
+  centering = "none",
+  norm.baf = TRUE,
+  hom.filt.val = 0.07,
+  ...
+)
 }
 \arguments{
 \item{sample.mat}{}

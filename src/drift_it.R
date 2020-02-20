@@ -76,10 +76,10 @@ driftConcordance <- function(){
   # alt.l2r=assayData(bins[[alt.ds]]);
   # seg.id='exprs'; raw.id='L2Rraw';
   # fdat=featureData(bins[[alt.ds]])@data;
-  # cell.ids=names(baf.drifts); segmenter='PCF'
+  # cell.ids=names(baf.drifts); segmenter='PCF';centering='none'
   save(cn.drifts, file=file.path(PDIR, "drift_it", 
-                                paste0(dataset, "-", alt.ds, "_cn_drift.rda")))
-  load(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_cn_drift.rda")))
+                                paste0(dataset, "-", alt.ds, "_cn_drift2.rda")))
+  load(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_cn_drift2.rda")))
   
   ## Find overlap between GRanges of BAF to CN drift
   df.cn <- cn.drifts$cna.obj$output
@@ -99,7 +99,7 @@ driftConcordance <- function(){
     print(baf.z)
     driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.cn, 
                        cell.ids = names(baf.drifts),
-                       baf.z=baf.z, cn.z=4)
+                       baf.z=baf.z, cn.z=1)
   }, mc.cores = 5)
   
   ## Plot the saturation-sensitvity curve
@@ -149,15 +149,16 @@ driftConcordance <- function(){
   ## Plot the drift CN-BAF examples
   # ccl.id <-'IGR-37'  #'786-0', 'HT-29', 'CL-40', 'SW1463', 'A172', 'MCAS', 'HCC1937', 'Namalwa', 'PC-3'
   # sapply(names(head(sort(colSums(drift.dat$dat)), 10)), function(ccl.id){
-  sapply(c('JHOS-2', 'NB-1', 'NCI-H23', 'PC-3', 
+  sapply(c('AsPC-1', 'A172', 'Capan-1', 
+           'JHOS-2', 'NB-1', 'NCI-H23', 'PC-3', 
            "SW403", "VM-CUB-1", "HuH-6"), function(ccl.id){
     pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift_", ccl.id, ".pdf")),
         width=5, height=5)
     CNAo <- cn.drifts$cna.obj
     CNAo$output <- split(CNAo$output, CNAo$output$ID)[[ccl.id]]
     CNAo$data <- CNAo$data[,c(1,2,grep(paste0("^", ccl.id, "$"), colnames(CNAo$data)))]
-    CCLid:::plot.CCLid(CNAo, min.z=4)
-    CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=2)
+    CCLid:::plot.CCLid(CNAo, min.z=1)
+    CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=4)
     dev.off()
     
     meta.cclid <- meta.df[grep(paste0("^", ccl.id, "$"), meta.df$ID),]
@@ -201,6 +202,7 @@ driftTech <- function(){
   for(vcf in all.vcfs){
     vcf.drift[[vcf]] <- getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), 
                                      ref.dat, rna.meta.df, min.depth=5)
+    gc()
   }
   ## Very weird bugs happens when I use lapply
   # vcf.drift <- mclapply(all.vcfs[1:4], function(vcf){  
@@ -221,7 +223,7 @@ driftTech <- function(){
   load(file=file.path(PDIR, "drift_it", 
                       paste0(dataset, "-", alt.ds, "_vcf_drift.rda")))
   load(file=file.path(PDIR, "drift_it", 
-                      paste0(dataset, "-", alt.ds, "_baf_drift2.rda")))
+                      paste0(dataset, "-", alt.ds, "_baf_drift.rda")))
   
   ##################################################################################################
   gr.rna <- lapply(setNames(c("GDSC", "CCLE"),c("GDSC", "CCLE")), function(ds){
@@ -245,9 +247,9 @@ driftTech <- function(){
   gr.baf <- makeGRangesFromDataFrame(do.call(rbind, df.baf), keep.extra.columns = TRUE)
   gr.baf <- split(gr.baf, gr.baf$ID)
   
-  drift.dat <- driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.rna$GDSC, 
+  drift.dat <- driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.rna$CCLE, 
                                   cell.ids = names(baf.drifts),
-                                  baf.z=4, cn.z=4)
+                                  baf.z=4, cn.z=1)
   
   
   pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-rna-drift.pdf")),
@@ -269,15 +271,15 @@ driftTech <- function(){
   dev.off()
   cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-rna-drift.pdf .\n"))))
   
-  as.matrix(head(sort(colSums(drift.dat$dat)), 10))
-  tail(sort(colSums(drift.dat$dat)))
+  as.matrix(head(sort(colSums(drift.dat$dat)), 100))
+  tail(sort(colSums(drift.dat$dat)), 50)
   
-  pdf("~/test3.pdf")
+  pdf("~/test2.pdf")
   sapply(c('VM-CUB-1', 'HuH-6', 'SW403', 'DU-145', 'EB2', 'SW1116'), function(ccl.id){
     print(length(baf.drifts[[ccl.id]]))
     print(length(vcf.drift[[ccl.id]]))
     CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=4)
-    CCLid:::plot.CCLid(vcf.drift[[ccl.id]]$cna.obj[[1]], min.z=3)
+    CCLid:::plot.CCLid(vcf.drift[[ccl.id]]$cna.obj[[1]], min.z=1)
   })
   dev.off()
   

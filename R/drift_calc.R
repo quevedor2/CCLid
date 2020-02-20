@@ -69,12 +69,14 @@ segmentDrift <- function(segmenter='PCF', fdat, D, kmin=5, rm.homo=FALSE){
 #' @param debug should be set to FALSE and only changed when debugging
 #' @return
 #' @export
-bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, ...){
+bafDrift <- function(sample.mat, debug=FALSE, centering='none', 
+                     norm.baf=TRUE, hom.filt.val=0.07, ...){
   require(DNAcopy)
   data(snp6.dat)
   ## Get pairwise distance between loci
   M <- if(norm.baf) CCLid:::.normBAF(sample.mat) else sample.mat
-  M <- M[-which(rowSums(M) < (0.07 * ncol(M))),]
+  hom.filt.idx <- (rowSums(M) < (hom.filt.val * ncol(M)))
+  if(any(hom.filt.idx)) M <- M[-which(hom.filt.idx),]
   #M <- M[-which(apply(M, 1, median, na.rm=TRUE) == 0),]
   D.l <- list()
   
@@ -156,6 +158,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
 #' @return
 .addSegSd <- function(seg.obj, winsor=0.95, ...){
   adj.segs <- lapply(split(seg.obj$output, f=seg.obj$output$ID), function(seg){
+    print(paste0(unique(seg$ID), "..."))
     seg.dat <- as.data.frame(seg.obj$data)
     seg.dat$chrom <- as.character(seg.dat$chrom)
     
@@ -168,11 +171,11 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none', norm.baf=TRUE, .
     seqlevelsStyle(gr.seg) <- seqlevelsStyle(gr.dat) <- 'UCSC'
     
     ov.idx <- findOverlaps(gr.dat, gr.seg)
-    s.idx <- grep(unique(gr.seg$ID), colnames(mcols(gr.dat)), fixed = TRUE)
+    s.idx <- grep(paste0("^", unique(gr.seg$ID), "$"), colnames(mcols(gr.dat)))
     sd.per.seg <- sapply(split(ov.idx, subjectHits(ov.idx)), function(ov.i, winsorize.data=FALSE){
       dat <- mcols(gr.dat[queryHits(ov.i),])[, s.idx]
       if(winsorize.data){
-        print("Winsorizing")
+        # print("Winsorizing")
         lim <- quantile(dat, probs=c(winsor, 1-winsor), na.rm=TRUE) ##winsorization
         dat[dat < min(lim) ] <- min(lim)
         dat[dat > max(lim) ] <- max(lim)

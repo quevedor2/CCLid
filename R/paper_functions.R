@@ -51,7 +51,7 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
     # centering = centering; norm.baf = TRUE; segmenter='PCF'
     # bafDrift(sample.mat = x.mat[,cl.pairs[all.idx]], debug = TRUE, 
     #          centering = centering, norm.baf = TRUE)
-    bdf <- bafDrift(sample.mat = x.mat[,cl.pairs[all.idx]], ...)
+    bdf <- bafDrift(sample.mat = x.mat[,cl.pairs[all.idx]], hom.filt.val=0, ...)
     #CCLid:::plot.CCLid(bdf$cna.obj[[1]], min.z=4)
     drift.score <- list("sig.gr"=bdf$cna.obj, #CCLid::sigDiffBaf(bdf$cna.obj[[1]]),
                         "frac"=bdf$frac[[1]])
@@ -114,6 +114,7 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, ...){
   D = do.call(cbind, lapply(cn.drift, function(i) i$seg))
   Draw = do.call(cbind, lapply(cn.drift, function(i) i$raw))
   colnames(D) <- colnames(Draw) <- alt.ref.idx$id
+  # save(D, Draw, alt.ref.idx, fdat, file="~/D.rda")
   rm(ref.l2r, alt.l2r); gc()
   
   ## Segment and find discordant regions
@@ -123,8 +124,10 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, ...){
   CNAo <- CCLid::segmentDrift(fdat = fdat, D=D, ...)
   sd.CNAo <- CNAo
   sd.CNAo$data <- cbind(sd.CNAo$data[,1:2], Draw)
+  
+  rm(D, Draw); gc()
   sd.CNAo$output <- CCLid:::.addSegSd(sd.CNAo, winsorize.data=TRUE)
-  seg.drift <- .estimateDrift(sd.CNAo, data.type='lrr')
+  seg.drift <- CCLid:::.estimateDrift(sd.CNAo, data.type='lrr')
   sd.CNAo$output <- seg.drift$seg
   class(sd.CNAo) <- 'CCLid'
   
@@ -240,6 +243,8 @@ getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df, ...){
   if(length(match.idx) > 1){
     x.drift <- bafDrift(sample.mat=vcf.mat[,match.idx, drop=FALSE], 
                         norm.baf=TRUE, centering='median', segmenter='PCF')
+    # head(x.drift$cna.obj[[1]]$output, 40)
+    # CCLid:::plot.CCLid(x.drift$cna.obj[[1]], min.z=2)
     summ=x.drift
     # ## Isolate siginificant different regions
     # sig.diff.gr <- lapply(x.drift$cna.obj, sigDiffBaf)
