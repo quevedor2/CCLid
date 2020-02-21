@@ -48,7 +48,7 @@ driftConcordance <- function(){
   m.cls.idx <- cl.idx[sapply(cl.idx, function(i) length(i) >= 2)]
   
   ## Get drift distance between CL pairs using BAF
-  # ccl.id <- 'Capan-1';  x.mat=ref.mat.var; centering='median'
+  # ccl.id <- 'COR-L23';  x.mat=ref.mat.var; centering='median'
   # cl.pairs <- m.cls.idx[[ccl.id]]; ref.ds=dataset; segmenter='PCF'
   baf.drifts <- mclapply(m.cls.idx, CCLid::getBafDrifts, x.mat=ref.mat.var, 
                        ref.ds=dataset, alt.ds=alt.ds, segmenter='PCF', 
@@ -104,7 +104,8 @@ driftConcordance <- function(){
     driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.cn, 
                        cell.ids = names(baf.drifts),
                        baf.z=baf.z, cn.z=1)
-  }, mc.cores = 5)
+  }, mc.cores = 10)
+  
   
   ## Plot the saturation-sensitvity curve
   pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf")),
@@ -147,24 +148,28 @@ driftConcordance <- function(){
   dev.off()
   cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf .\n"))))
   
-  # as.matrix(head(sort(colSums(baf.drift.dat[[5]]$dat)), 30))
-  # tail(sort(colSums(baf.drift.dat[[5]]$dat)), 30)
+  # baf.idx <- 5
+  # as.matrix(head(sort(colSums(baf.drift.dat[[baf.idx]]$dat)), 30))
+  # tail(sort(colSums(baf.drift.dat[[baf.idx]]$dat)), 30)
   
   ## Plot the drift CN-BAF examples
   # ccl.id <-'IGR-37'  #'786-0', 'HT-29', 'CL-40', 'SW1463', 'A172', 'MCAS', 'HCC1937', 'Namalwa', 'PC-3'
   # sapply(names(head(sort(colSums(drift.dat$dat)), 10)), function(ccl.id){
-  sapply(c('SW620', 'HOS',
-           'KNS-62', 'NCI-H522', 'CAS-1',
-           'AsPC-1', 'A172', 'Capan-1', 
+  sapply(c('KE-37', '639-V',
+           'NCI-H2029', 'HLE', 'HCC-366',
+#           'HCC1937', 'HuP-T4', 'COR-L23',
+#           'KNS-62', 'NCI-H522', 'CAS-1',
+#           "SW403", "VM-CUB-1", "HuH-6"
 #           'JHOS-2', 'NB-1', 'NCI-H23', 'PC-3', 
-           "SW403", "VM-CUB-1", "HuH-6"), function(ccl.id){
+#           'AsPC-1', 'A172', 
+           'Capan-1'), function(ccl.id){
     pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift_", ccl.id, ".pdf")),
         width=5, height=5)
     CNAo <- cn.drifts$cna.obj
     CNAo$output <- split(CNAo$output, CNAo$output$ID)[[ccl.id]]
     CNAo$data <- CNAo$data[,c(1,2,grep(paste0("^", ccl.id, "$"), colnames(CNAo$data)))]
     CCLid:::plot.CCLid(CNAo, min.z=1)
-    CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=3)
+    CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=5)
     dev.off()
     
     meta.cclid <- meta.df[grep(paste0("^", ccl.id, "$"), meta.df$ID),]

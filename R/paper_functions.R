@@ -48,7 +48,7 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
   
   if(length(all.idx) == 2){
     # sample.mat = x.mat[,cl.pairs[all.idx]]; debug = TRUE;
-    # centering = centering; norm.baf = TRUE; segmenter='PCF'
+    # centering = centering; norm.baf = TRUE; segmenter='PCF', hom.filt.val=0
     # bafDrift(sample.mat = x.mat[,cl.pairs[all.idx]], debug = FALSE, segmenter='PCF',
     #          centering = centering, norm.baf = TRUE, hom.filt.val=0)
     bdf <- bafDrift(sample.mat = x.mat[,cl.pairs[all.idx]], hom.filt.val=0, ...)
@@ -89,7 +89,7 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, ...){
   ## Create a distance betweeen L2R matrix:
   # idx <- c(grep("^NCI-H522$", alt.ref.idx$id), grep("^NB-1$", alt.ref.idx$id)) #83, 8
   # [idx,,drop=FALSE]
-  cn.drift <- apply(alt.ref.idx, 1, function(ar.i, centering='none', max.med=0.1){
+  cn.drift <- apply(alt.ref.idx, 1, function(ar.i, centering='none', max.med=0.05){
     ref.idx = as.integer(ar.i['ref'])
     alt.idx = as.integer(ar.i['alt'])
     
@@ -125,7 +125,7 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, ...){
   D = do.call(cbind, lapply(cn.drift, function(i) i$seg))
   Draw = do.call(cbind, lapply(cn.drift, function(i) i$raw))
   colnames(D) <- colnames(Draw) <- alt.ref.idx$id
-  # save(D, Draw, alt.ref.idx, fdat, file="~/D.rda")
+  # save(D, Draw, alt.ref.idx, fdat, file="~/D2.rda")
   rm(ref.l2r, alt.l2r); gc()
   
   ## Segment and find discordant regions
@@ -176,8 +176,17 @@ driftOverlapMetric <- function(gr.baf, gr.cn, cell.ids, ov.frac=seq(0, 1, by=0.0
         baf.cn <- pintersect(ov.baf.cn)
         mcols(baf.cn) <- NULL
         
-        baf.cn$baf <- ov.baf.cn@first$t > baf.z
-        baf.cn$cn <- ov.baf.cn@second$t > cn.z
+        # x <- sapply(0:9, function(baf.z){
+        #   ov.baf.cn@first$t >= baf.z
+        # })
+        # z <- apply(x, 2, function(i) (ov.baf.cn@second$t >= cn.z) == i)
+        # apply(z, 2, table)
+        # apply(z, 2, function(i){
+        #   sum(width(baf.cn[which(i),])) / sum(width(baf.cn))
+        # })
+        
+        baf.cn$baf <- ov.baf.cn@first$t >= baf.z
+        baf.cn$cn <- ov.baf.cn@second$t >= cn.z
         
         if(cn.gtruth){
           ## Isolate for only CN drifted regions

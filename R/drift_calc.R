@@ -101,7 +101,6 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
     # points(M[,2], col=scales::alpha("red", 0.3), pch=16)
     # lines(predict(loessMod1, Mx[,'index', drop=FALSE]), col="blue")
     # lines(predict(loessMod2, Mx[,'index', drop=FALSE]), col="red")
-    
     D <- apply(M, 2, function(m){
       M[,1] - m
     })
