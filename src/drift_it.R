@@ -72,23 +72,34 @@ driftConcordance <- function(){
                                fdat=featureData(bins[[alt.ds]])@data,
                                cell.ids=names(baf.drifts), segmenter='PCF',
                                centering='none')
-  # ref.l2r=assayData(bins[[dataset]]);
-  # alt.l2r=assayData(bins[[alt.ds]]);
-  # seg.id='exprs'; raw.id='L2Rraw';
-  # fdat=featureData(bins[[alt.ds]])@data;
+  # ref.l2r=assayData(bins[[dataset]]); alt.l2r=assayData(bins[[alt.ds]]);
+  # seg.id='exprs'; raw.id='L2Rraw'; fdat=featureData(bins[[alt.ds]])@data;
   # cell.ids=names(baf.drifts); segmenter='PCF';centering='extreme'
   save(cn.drifts, file=file.path(PDIR, "drift_it", 
-                                paste0(dataset, "-", alt.ds, "_cn_drift2.rda")))
+                                paste0(dataset, "-", alt.ds, "_cn_drift.rda")))
   
+
+  ## Load in data
   load(file=file.path(PDIR, "drift_it", 
-                      paste0(dataset, "-", alt.ds, "_cn_drift2.rda")))
+                      paste0(dataset, "-", alt.ds, "_cn_drift.rda")))
   load(file=file.path(PDIR, "drift_it", 
                       paste0(dataset, "-", alt.ds, "_baf_drift.rda")))
   
+  cn.z <- 1; b.z <- 5
+  summ.frac <- summarizeFracDrift(cn.drifts=cn.drifts, cn.z=cn.z,
+                                  baf.drifts=baf.drifts, baf.z=b.z,
+                                  include.id=TRUE)
+  pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-frac.pdf")),
+      width=5, height=5)
+  plotFracDrift(summ.frac)
+  dev.off()
+  cat(paste0("scp quever@192.168.198.99:", 
+             file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-frac.pdf .\n"))))
+  
+  
+  
   ## Find overlap between GRanges of BAF to CN drift
   df.cn <- cn.drifts$cna.obj$output
-  # df.cn$chrom <- gsub("23", "X", df.cn$chrom) %>% 
-  #   gsub("24", "Y", .) %>% paste0("chr", .)
   gr.cn <- makeGRangesFromDataFrame(df.cn, keep.extra.columns = TRUE)
   gr.cn <- split(gr.cn, gr.cn$ID)
   df.baf <- lapply(baf.drifts, function(i) {
@@ -99,17 +110,19 @@ driftConcordance <- function(){
   gr.baf <- makeGRangesFromDataFrame(do.call(rbind, df.baf), keep.extra.columns = TRUE)
   gr.baf <- split(gr.baf, gr.baf$ID)
   
+  
+  ## Calculate concordance between SNP and CN drifted regions
   baf.drift.dat <- mclapply(c(0:9), function(baf.z){
     print(baf.z)
     driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.cn, 
                        cell.ids = names(baf.drifts),
-                       baf.z=baf.z, cn.z=1)
+                       baf.z=baf.z, cn.z=cn.z, cn.gtruth=FALSE)
   }, mc.cores = 10)
   
   
   ## Plot the saturation-sensitvity curve
   pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf")),
-      width=5, height=5)
+      width=4, height=4)
   lapply(baf.drift.dat, function(drift.dat){
     with(drift.dat$sens, plot(x=x, y=y, pch=16, las=1, col=scales::alpha("grey", 0.8),
                               main="Agreement between inference of CN and BAF drift", xaxt='n',
@@ -131,32 +144,19 @@ driftConcordance <- function(){
     # 0.838   0.784   0.690 
     
   })
-  
-  conc.mat <- sapply(baf.drift.dat, function(i) i$dat[1,])
-  conc.melt <- reshape2::melt(conc.mat)
-  ggplot(conc.melt, aes(Var2, value)) +
-    geom_jitter(width=0.2) +
-    geom_smooth(span = 0.1, level=0.99999)
-  
-  parms <- apply(conc.mat, 2, MASS::fitdistr, densfun="poisson")
-  parms <- sapply(parms, function(i) c('lambda'=i$estimate, 'sd'=i$sd))
-  lambda.d <- diff(parms[1,])  / max(diff(parms[1,]))
-  sd.d <- diff(parms[2,]) / max(diff(parms[2,]))
-  ls.ratio <- round(lambda.d/sd.d, 3)
-  plot(ls.ratio, pch=16, ylab="Lambda/SD ratio")
-  points(which.max(ls.ratio), ls.ratio[which.max(ls.ratio)], col="red", pch=16)
   dev.off()
   cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf .\n"))))
   
-  # baf.idx <- 5
+  # baf.idx <- 4
   # as.matrix(head(sort(colSums(baf.drift.dat[[baf.idx]]$dat)), 30))
   # tail(sort(colSums(baf.drift.dat[[baf.idx]]$dat)), 30)
   
   ## Plot the drift CN-BAF examples
   # ccl.id <-'IGR-37'  #'786-0', 'HT-29', 'CL-40', 'SW1463', 'A172', 'MCAS', 'HCC1937', 'Namalwa', 'PC-3'
   # sapply(names(head(sort(colSums(drift.dat$dat)), 10)), function(ccl.id){
-  sapply(c('KE-37', '639-V',
-           'NCI-H2029', 'HLE', 'HCC-366',
+  sapply(c('KE-37',
+           'MHH-CALL-2', 'JHOS-2', 'HCC1937',
+#           'NCI-H2029', 'HLE', 'HCC-366',
 #           'HCC1937', 'HuP-T4', 'COR-L23',
 #           'KNS-62', 'NCI-H522', 'CAS-1',
 #           "SW403", "VM-CUB-1", "HuH-6"
@@ -189,31 +189,35 @@ driftConcordance <- function(){
 ## data.  As well as calculate the overlap of
 ## segments between the two
 driftTech <- function(){
-  dataset <- 'GDSC'
-  alt.ds <- 'CCLE'
+  # dataset <- 'GDSC'
+  # alt.ds <- 'CCLE'
+  dataset <- 'CCLE'
+  alt.ds <- 'GDSC'
   
   vcf.dir <- file.path('/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs',
                        dataset)
   all.vcfs <- list.files(vcf.dir, pattern="vcf.gz$")
   rna.meta.df <- readinRnaFileMapping()
   names(all.vcfs) <-  sapply(gsub(".snpOut.*", "", all.vcfs), function(i){
-    idx <- grep(gsub(".snpOut.vcf.gz$", "$", i), rna.meta.df$EGAF)
+    idx <- switch(dataset,
+                  "GDSC"=grep(paste0("^", i, "$"), rna.meta.df$EGAF),
+                  "CCLE"=grep(paste0("^", i, "$"), rna.meta.df$SRR))
     if(length(idx) >= 1){
       rna.meta.df[idx,]$ID[1]
     } else {
       gsub(".snpOut.vcf.gz$", "", i)
     }
   })
+  vcf.ids <- setNames(names(all.vcfs), all.vcfs)
   
   ## Compare every VCF to the entire ref matrix to calculate BAF drift
   vcf.drift <- list()
-  # ccl.id <- 'HuH-6'
+  # ccl.id <- 'HLE'
   # vcf <- all.vcfs[ccl.id]
   # vcfFile=file.path(vcf.dir, vcf)
   for(vcf in all.vcfs){
     vcf.drift[[vcf]] <- getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), 
                                      ref.dat, rna.meta.df, min.depth=5)
-    gc()
   }
   ## Very weird bugs happens when I use lapply
   # vcf.drift <- mclapply(all.vcfs[1:4], function(vcf){  
@@ -258,39 +262,46 @@ driftTech <- function(){
   gr.baf <- makeGRangesFromDataFrame(do.call(rbind, df.baf), keep.extra.columns = TRUE)
   gr.baf <- split(gr.baf, gr.baf$ID)
   
-  drift.dat <- driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.rna$CCLE, 
-                                  cell.ids = names(baf.drifts),
-                                  baf.z=4, cn.z=1)
   
   
+  
+  rna.drift.dat <- mclapply(c(1:5), function(baf.z){
+    print(baf.z)
+    driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.rna$CCLE, 
+                       cell.ids = names(baf.drifts),
+                       baf.z=5, cn.z=baf.z)
+  }, mc.cores = 5)
+
   pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-rna-drift.pdf")),
       width=5, height=5)
-  with(drift.dat$sens, plot(x=x, y=y, pch=16, las=1, col=scales::alpha("grey", 0.8),
-                            main="Agreement between inference of CN and BAF drift", xaxt='n',
-                            ylim=c(0,1), ylab="Sensitivity", xlab="Conc. Threshold"))
-  axis(side = 1, at = seq(0,1, by=0.2), labels = rev(seq(0,1, by=0.2)), las=1)
-  lines(drift.dat$sens$x, predict(drift.dat$model),lty=2,col="black",lwd=2)
-  ## add saturation points
-  sat.points <- as.character(c(0.7, 0.8, 0.9))
-  sat.cols <- c("#feb24c", "#fd8d3c", "#f03b20")
-  abline(v=drift.dat$saturation[sat.points,], col=sat.cols)
-  text(x =drift.dat$saturation[sat.points,], y=rep(1, length(sat.points)), 
-       labels = sat.points, cex=0.8, adj=0 )
-  print(1-drift.dat$saturation[sat.points,])
-  # 0.7     0.8     0.9 
-  # 0.838   0.784   0.690 
+  lapply(rna.drift.dat, function(drift.dat){
+    with(drift.dat$sens, plot(x=x, y=y, pch=16, las=1, col=scales::alpha("grey", 0.8),
+                              main="Agreement between inference of CN and BAF drift", xaxt='n',
+                              ylim=c(0,1), ylab="Sensitivity", xlab="Conc. Threshold"))
+    axis(side = 1, at = seq(0,1, by=0.2), labels = rev(seq(0,1, by=0.2)), las=1)
+    lines(drift.dat$sens$x, predict(drift.dat$model),lty=2,col="black",lwd=2)
+    ## add saturation points
+    sat.points <- as.character(c(0.7, 0.8, 0.9))
+    sat.cols <- c("#feb24c", "#fd8d3c", "#f03b20")
+    abline(v=drift.dat$saturation[sat.points,], col=sat.cols)
+    text(x =drift.dat$saturation[sat.points,], y=rep(1, length(sat.points)), 
+         labels = sat.points, cex=0.8, adj=0 )
+    print(1-drift.dat$saturation[sat.points,])
+    # 0.7     0.8     0.9 
+    # 0.838   0.784   0.690 
+  })
   dev.off()
   cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-rna-drift.pdf .\n"))))
   
-  as.matrix(head(sort(colSums(drift.dat$dat)), 50))
-  tail(sort(colSums(drift.dat$dat)), 50)
+  head(sort(colSums(rna.drift.dat[[3]]$dat)), 50)
+  tail(sort(colSums(rna.drift.dat[[3]]$dat)), 50)
   
   pdf("~/test2.pdf")
-  sapply(c('VM-CUB-1', 'KM-H2', 'TE-4', 'HOS', 'SW620', 'CL-40'), function(ccl.id){
+  sapply(c('VM-CUB-1', 'KM-H2', 'CL-40', 'HLE'), function(ccl.id){
     print(length(baf.drifts[[ccl.id]]))
     print(length(vcf.drift[[ccl.id]]))
-    CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=3)
-    CCLid:::plot.CCLid(vcf.drift[[ccl.id]]$cna.obj[[1]], min.z=2)
+    CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=5)
+    CCLid:::plot.CCLid(vcf.drift[[ccl.id]]$cna.obj[[1]], min.z=3)
   })
   dev.off()
   

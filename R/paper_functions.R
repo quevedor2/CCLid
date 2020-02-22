@@ -292,7 +292,88 @@ readinRnaFileMapping <- function(){
   return(all.meta.df)
 }
 
+#' summarizeFracDrift
+#' @description Summarizes the $frac from the baf.drifts and cn.drifts
+#' given a cutoff for cn or baf
+#' @param cn.drifts 
+#' @param cn.z 
+#' @param baf.drifts 
+#' @param baf.z 
+#'
+#' @return list of BAF and CN summary frac
+#' @export
+summarizeFracDrift <- function(cn.drifts, cn.z, baf.drifts, 
+                               baf.z, include.id=FALSE){
+  ## Reduce CN fraction of the genome drifted to a matrix
+  cn.frac <- plyr::rbind.fill(lapply(cn.drifts$frac, function(i) as.data.frame(t(i))))
+  cn.ids <- names(cn.drifts$frac)
+  cn.frac <- cn.frac[,order(as.integer(colnames(cn.frac)))]
+  cn.frac[is.na(cn.frac)] <- 0
+  rownames(cn.frac) <- cn.ids
 
+  ## Reduce BAF fraction of the genome drifted to a matrix
+  baf.frac <- lapply(baf.drifts, function(i) i$frac)
+  baf.frac <- baf.frac[-which(sapply(baf.frac, is.null))]
+  baf.ids <- names(baf.frac)
+  baf.frac <- plyr::rbind.fill(lapply(baf.frac, function(i) {
+    df.i <- as.data.frame(t(i))
+    colnames(df.i) <- gsub("^D.", "", colnames(df.i))
+    df.i
+  }))
+  baf.frac <- baf.frac[,order(as.integer(colnames(baf.frac)))]
+  baf.frac[is.na(baf.frac)] <- 0
+  rownames(baf.frac) <- baf.ids
+  
+  ## Create rowSums based on the cn.z and baf.z cutoffs
+  cn.cols <- as.integer(colnames(cn.frac)) >= cn.z
+  baf.cols <- as.integer(colnames(baf.frac)) >= baf.z
+  cn.summ <- data.frame("nodrift"=rowSums(cn.frac[,which(!cn.cols),drop=FALSE]),
+                        "drift"=rowSums(cn.frac[,which(cn.cols),drop=FALSE]))
+  baf.summ <- data.frame("nodrift"=rowSums(baf.frac[,which(!baf.cols),drop=FALSE]),
+                         "drift"=rowSums(baf.frac[,which(baf.cols),drop=FALSE]))
+  if(include.id){ 
+    cn.summ$ID <- baf.ids
+    baf.summ$ID <- baf.ids
+  }
+  return(list("cn"=cn.summ,
+              "baf"=baf.summ))
+}
+
+#' plotFracDrift
+#'
+#' @param summ.frac 
+#' @export
+plotFracDrift <- function(summ.frac){
+  cn.baf.frac <- merge(summ.frac$baf, summ.frac$cn, by="ID", all=TRUE)
+  
+  cn.baf.d <- with(cn.baf.frac, drift.x - drift.y)
+  min.val <- max(head(sort(cn.baf.d), 3))
+  max.val <- min(tail(sort(cn.baf.d), 3))
+  cn.baf.frac$max <- cn.baf.d >= max.val | cn.baf.d <= min.val
+  
+  par(mar=c(5.1, 4.1, 8, 8), xpd=FALSE)
+  with(cn.baf.frac, plot(drift.x, drift.y, pch=16, col=scales::alpha("black", 0.6),
+                         axes=FALSE,
+                         xlab="Fraction drift (BAF)", ylab="Fraction drift(L2R)", 
+                         xlim=c(0,1), ylim=c(0,1)))
+  abline(coef=c(0,1), col="grey", lty=2)
+  axis(side = 1, at = seq(0, 1, by=0.2))
+  axis(side = 2, at = seq(0, 1, by=0.2))
+  
+  par(xpd=NA)
+  dx <- density(cn.baf.frac$drift.x)
+  polygon(x = c(min(dx$x), dx$x, 1), 
+          y=c(1, scales::rescale(dx$y, to=c(1,1.1)), 1), col="black")
+  
+  dy <- density(cn.baf.frac$drift.y)
+  polygon(y = c(min(dy$x), dy$x, 1), 
+          x = c(1, scales::rescale(dy$y, to=c(1,1.1)), 1), col="black")
+  
+  with(cn.baf.frac[which(cn.baf.frac$max),],
+       points(drift.x, drift.y, pch=16, col="red"))
+  with(cn.baf.frac[which(cn.baf.frac$max),],
+       text(drift.x + 0.01, drift.y, labels=ID, adj=0, cex=0.6))
+}
 ############################
 #### match_it.R Support ####
 ############################

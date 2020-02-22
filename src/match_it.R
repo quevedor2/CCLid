@@ -36,26 +36,19 @@ readinRnaFileMapping <- function(){
 benchmarkCCLid <- function(bench){
   library(VariantAnnotation)
   library(CCLid)
-  library(Rcellosaurus)
-  require(dplyr)
+  require(DNAcopy)
   
   ## Set dataset colors
   dataset.cols <- setNames(RColorBrewer::brewer.pal(6, "Dark2"),
                            c("GDSC", "CCLE", "gCSI", "CGP", "Pfizer"))
   
-  ## Load in Ref mat file
   PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
-  analysis <- 'baf'
-  ref.mat <- downloadRefCCL("BAF", saveDir = PDIR)
-  format.dat <- formatRefMat(name="BAF", ref.mat=ref.mat, saveDir=PDIR, 
-                             analysis='baf', bin.size=5e5, fill.na=FALSE)
-  ref.mat <- format.dat$mat
-  var.dat <- format.dat$var
-  rm(format.dat)
+  ref.dat <- CCLid::loadRef(PDIR, 'baf', bin.size=5e5)
   
-  new.ids <- assignGrpIDs(ref.mat, meta.df)
-  new.ids[duplicated(new.ids)] <- gsub("_", "2_",new.ids[duplicated(new.ids)])
-  colnames(ref.mat) <- new.ids
+  
+  var.dat <- format.dat$var
+  var.dat <- ref.dat$var
+  ref.mat <- ref.dat$ref
 }
 
 ######################################################
