@@ -160,7 +160,7 @@ plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01,
   # add.chr.sep=TRUE
   # sample.size=50
   # add.points=TRUE
-  # atype='comp'
+  # atype='sd'
   require(scales)
   chroms <- paste0("chr", c(1:22, "X", "Y"))
   if(any(grepl("(23)|(24)$", obj$data$chrom))){
@@ -175,8 +175,23 @@ plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01,
     obj$output$chrom <- paste0("chr", obj$output$chrom)
   }
   
-  chr.data <- split(obj$data, obj$data$chrom)
-  chr.seg <- split(obj$output, obj$output$chrom)
+  chr.size.dat <- CCLid:::.getChrLength()
+  
+  .addCumPos <- function(dat, ref, dat.type){
+    m.row.idx <- match(dat$chrom, seqnames(ref))
+    if(dat.type=='data'){
+      dat$cpos <- ref[m.row.idx,]$cum.start +  dat$pos - 1
+      dat$chr.stat
+    } else if(dat.type == 'seg'){
+      dat$cloc.start <- ref[m.row.idx,]$cum.start +  dat$loc.start - 1
+      dat$cloc.end <- ref[m.row.idx,]$cum.start +  dat$loc.end - 1
+    }
+    dat$chr.stat <- (m.row.idx %% 2) + 1
+    return(dat)
+  }
+  
+  chr.data <- .addCumPos(obj$data, chr.size.dat, dat.type='data')
+  chr.seg <- .addCumPos(obj$output, chr.size.dat, dat.type='seg')
   samples <- colnames(obj$data)[-c(1:2)]
   chr.cols <- c('black', 'green')
   seg.col <- 'orange'
@@ -189,77 +204,42 @@ plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01,
   
   ## Segment yb chromosome
   for(s in samples){
-    par(mfrow=c(1,length(chroms)+2), mar=c(5.1, 0, 4.1, 0))
-    plot(0, type='n', axes=FALSE, xlab='')
-    plot(0, type='n', axes=FALSE, xlab='')
+    size <- min(nrow(chr.data), sample.size)
+    sample.idx <- sample(1:nrow(chr.data), size=size, replace=FALSE)
+    sample.dat <- chr.data[sample.idx, , drop=FALSE]
+    plot(x = sample.dat$cpos, y=sample.dat[,s], col=chr.cols[sample.dat$chr.stat],
+         pch=16, ylim=ylim, xlim=c(1, max(chr.size.dat$cum.end)), xlab='', ylab=s,
+         yaxt='n', xaxt='n', axes=FALSE, cex=0.6)
+    if(add.chr.sep) abline(v = chr.size.dat$cum.end, lwd=0.5, col='grey')
     
-    for(chr in chroms){
-      chr.col <- chr.cols[(match(chr, chroms) %% 2) + 1]
-      sample.dat <- as.data.frame(chr.data[[chr]][,c(pos.col, s), drop=FALSE])
-      if(nrow(sample.dat) == 0) next
-      
-      size <- min(nrow(sample.dat), sample.size)
-      sample.idx <- sample(1:nrow(sample.dat), size=size, replace=FALSE)
-      sample.dat <- sample.dat[sample.idx,,drop=FALSE]
-      if(atype=='comp') {
-        r <- unique(obj$output$refID)
-        ref.dat <- as.data.frame(chr.data[[chr]][sample.idx,c(pos.col, r), drop=FALSE])
-      }
-      
-      plot(0, type='n', ylim=ylim, xlim=c(1, max(sample.dat[,pos.col])), xlab='', 
-           yaxt='n', xaxt='n', axes=FALSE, cex=0.6)
-      if(add.points){
-        points(sample.dat[,pos.col], sample.dat[,s], col=chr.col, pch=16)
-        if(atype=='comp') points(ref.dat[,pos.col], ref.dat[,r], col='#377eb8', pch=16)
-      }
-      if(add.chr.sep) abline(v = 1, lwd=0.5, col='grey')
-      axis(side=1, at=median(sample.dat[,pos.col], na.rm=TRUE), 
-           labels=gsub("chr", "", chr),
-           tick=FALSE, line=(match(chr, chroms) %% 2))
-      if(add.chr.sep) abline(h = 0, col="grey", lty=1, lwd=1)
-      s.chr.seg <- chr.seg[[chr]]
-      
-      if(match(chr, chroms) == 1){
-        par(xpd=NA)
-        axis(side = 2, at=seq(-0.5, 0.5, by=0.5), labels=seq(-0.5, 0.5, by=0.5), las=1)
-        if(atype=='comp') {
-          title(ylab = paste0(r, ":", s))
-        } else {
-          title(ylab = s)
-        }
-        par(xpd=FALSE)
-      }
-      
-      ## Identifies significant different regions
-      s.chr.seg <- s.chr.seg[which(s.chr.seg$ID %in% s),,drop=FALSE]
-      if(any(na.omit(s.chr.seg$t) > 0)){
-        sig.chr.seg <- s.chr.seg[which(s.chr.seg$t > 0),]
-        sig.chr.seg$alpha <- 0
-        sig.chr.seg$alpha[sig.chr.seg$t < min.z] <- low.sig.alpha
-        sig.chr.seg$alpha[sig.chr.seg$t >= min.z] <- hi.sig.alpha
-        with(sig.chr.seg, rect(xleft = loc.start, ybottom = ylim[1], 
-                               xright = loc.end, ytop = ylim[2],
-                               border=NA, col = scales::alpha(sig.col, alpha)))
-      }
-      
-      ## Adds the SD interval
-      with(s.chr.seg, rect(xleft = loc.start, ybottom = seg.mean - seg.sd, 
-                           xright = loc.end, ytop = seg.mean + seg.sd,
-                           border=NA, col = scales::alpha(seg.col, 0.4)))
-      ## Adds the seg.mean line
-      if(atype=='comp'){
-        apply(s.chr.seg, 1, function(i){
-          suppressWarnings(storage.mode(i) <- 'numeric')
-          polygon(x = c(i['loc.start'], i['loc.end'], i['loc.end'], i['loc.start']), 
-                  y = c(i['seg.a'], i['seg.a'], i['seg.b'], i['seg.b']),
-                  col=seg.col, border = NA)
-        })
-      } else {
-        with(s.chr.seg, segments(x0 = loc.start, y0 = seg.mean, 
-                                 x1 = loc.end, y1 = seg.mean, 
-                                 lwd=3, col=seg.col))
-      }
+    ## Adds chr labels
+    axis(side=1, at = chr.size.dat$cum.mid[c(TRUE, FALSE)], 
+         labels = gsub("^chr", "", as.character(seqnames(chr.size.dat)))[c(TRUE, FALSE)], 
+         las=1,  tick=FALSE, lwd = 0, line=-1, cex.axis=0.6)
+    axis(side=1, at = chr.size.dat$cum.mid[c(FALSE, TRUE)], 
+         labels = gsub("^chr", "", as.character(seqnames(chr.size.dat)))[c(FALSE, TRUE)], 
+         las=1,  tick=FALSE, lwd = 0, line=0, cex.axis=0.6)
+    axis(side = 2, at=seq(-1, 1, by=0.5), labels=seq(-1, 1, by=0.5), 
+         las=1, cex.axis=0.8)
+    
+    ## Adds Signiifcant deviated regions
+    if(any(na.omit(chr.seg$t) > 0)){
+      sig.chr.seg <- chr.seg[which(chr.seg$t > 0),]
+      sig.chr.seg$alpha <- 0
+      sig.chr.seg$alpha[sig.chr.seg$t < min.z] <- low.sig.alpha
+      sig.chr.seg$alpha[sig.chr.seg$t >= min.z] <- hi.sig.alpha
+      with(sig.chr.seg, rect(xleft = cloc.start, ybottom = ylim[1], 
+                             xright = cloc.end, ytop = ylim[2],
+                             border=NA, col = scales::alpha(sig.col, alpha)))
     }
+    
+    ## Adds Segmean and SD intervals
+    with(chr.seg, rect(xleft = cloc.start, ybottom = seg.mean - seg.sd, 
+                       xright = cloc.end, ytop = seg.mean + seg.sd,
+                       border=NA, col = scales::alpha(seg.col, 0.3)))
+    with(chr.seg, segments(x0 = cloc.start, y0 = seg.mean, 
+                           x1 = cloc.end, y1 = seg.mean, 
+                           lwd=3, col=seg.col))
   }
 }
 
