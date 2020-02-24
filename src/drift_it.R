@@ -155,7 +155,7 @@ driftConcordance <- function(){
   # ccl.id <-'IGR-37'  #'786-0', 'HT-29', 'CL-40', 'SW1463', 'A172', 'MCAS', 'HCC1937', 'Namalwa', 'PC-3'
   # sapply(names(head(sort(colSums(drift.dat$dat)), 10)), function(ccl.id){
   sapply(c('KE-37',
-           'MHH-CALL-2', 'JHOS-2', 'HCC1937',
+           'COR-L23', 'JHOS-2', 'HCC1937', 'RS4-11',
 #           'NCI-H2029', 'HLE', 'HCC-366',
 #           'HCC1937', 'HuP-T4', 'COR-L23',
 #           'KNS-62', 'NCI-H522', 'CAS-1',
@@ -164,7 +164,7 @@ driftConcordance <- function(){
 #           'AsPC-1', 'A172', 
            'Capan-1'), function(ccl.id){
     pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift_", ccl.id, ".pdf")),
-        width=5, height=5)
+        width=7, height=3)
     CNAo <- cn.drifts$cna.obj
     CNAo$output <- split(CNAo$output, CNAo$output$ID)[[ccl.id]]
     CNAo$data <- CNAo$data[,c(1,2,grep(paste0("^", ccl.id, "$"), colnames(CNAo$data)))]
@@ -223,14 +223,7 @@ driftTech <- function(){
   # vcf.drift <- mclapply(all.vcfs[1:4], function(vcf){  
   #   getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), ref.dat, rna.meta.df)
   # }, mc.cores = 3)
-  names(vcf.drift) <- sapply(names(vcf.drift), function(i){
-    idx <- grep(gsub(".snpOut.vcf.gz$", "$", i), rna.meta.df$EGAF)
-    if(length(idx) >= 1){
-      rna.meta.df[idx,]$ID[1]
-    } else {
-      gsub(".snpOut.vcf.gz$", "", i)
-    }
-  })
+  names(vcf.drift) <- vcf.ids[names(vcf.drift)]
   save(vcf.drift, file=file.path(PDIR, "drift_it", 
                                  paste0(dataset, "-", alt.ds, "_vcf_drift.rda")))
 

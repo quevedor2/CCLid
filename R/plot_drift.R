@@ -152,7 +152,7 @@ driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
 #' @return
 #'
 #' @examples
-plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01, 
+plot.CCLid <- function (obj, sample.size=600, low.sig.alpha=0.01, 
                         hi.sig.alpha=0.2, add.chr.sep=TRUE, 
                         atype='sd', add.points=TRUE, min.z=3) {
   # low.sig.alpha=0.01
@@ -210,6 +210,7 @@ plot.CCLid <- function (obj, sample.size=50, low.sig.alpha=0.01,
     plot(x = sample.dat$cpos, y=sample.dat[,s], col=chr.cols[sample.dat$chr.stat],
          pch=16, ylim=ylim, xlim=c(1, max(chr.size.dat$cum.end)), xlab='', ylab=s,
          yaxt='n', xaxt='n', axes=FALSE, cex=0.6)
+    abline(h = 0)
     if(add.chr.sep) abline(v = chr.size.dat$cum.end, lwd=0.5, col='grey')
     
     ## Adds chr labels

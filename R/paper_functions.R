@@ -347,11 +347,15 @@ plotFracDrift <- function(summ.frac){
   cn.baf.frac <- merge(summ.frac$baf, summ.frac$cn, by="ID", all=TRUE)
   
   cn.baf.d <- with(cn.baf.frac, drift.x - drift.y)
-  min.val <- max(head(sort(cn.baf.d), 3))
-  max.val <- min(tail(sort(cn.baf.d), 3))
+  min.val <- max(head(sort(cn.baf.d), 1))
+  max.val <- min(tail(sort(cn.baf.d), 1))
   cn.baf.frac$max <- cn.baf.d >= max.val | cn.baf.d <= min.val
+  # low.diff.idx <- head(order(abs(cn.baf.d)), 300)
+  # low.ord <- cn.baf.frac[low.diff.idx,]
+  # low.ord <- low.ord[order(rowSums(low.ord[,c('drift.x', 'drift.y')])),]
+  # cn.baf.frac[match(tail(low.ord, 1)$ID, cn.baf.frac$ID),]$max <- TRUE
   
-  par(mar=c(5.1, 4.1, 8, 8), xpd=FALSE)
+  par(mar=c(5.1, 4.1, 6, 6), xpd=FALSE)
   with(cn.baf.frac, plot(drift.x, drift.y, pch=16, col=scales::alpha("black", 0.6),
                          axes=FALSE,
                          xlab="Fraction drift (BAF)", ylab="Fraction drift(L2R)", 

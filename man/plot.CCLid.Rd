@@ -7,7 +7,7 @@ plot() function for CCLid adjusted DNAcopy segment objects}
 \usage{
 plot.CCLid(
   obj,
-  sample.size = 50,
+  sample.size = 600,
   low.sig.alpha = 0.01,
   hi.sig.alpha = 0.2,
   add.chr.sep = TRUE,
