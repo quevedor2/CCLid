@@ -166,6 +166,11 @@ meta.df$CVCL <- as.character(cvcl.ids)
 meta.df <- meta.df[, -grep("^tmp$", colnames(meta.df))]
 meta.df$ID <- gsub(" ", "-", meta.df$ID)
 
+## Add manually curated pharmacoGX mappings
+pgx.map <- read.csv("pharmacogx_mapping.csv", header=TRUE, stringsAsFactors = FALSE)
+pgx.map[pgx.map=='#N/A'] <- NA
+meta.df <- merge(meta.df, pgx.map, by='ID', all=TRUE)
+
 usethis::use_data(meta.df, overwrite = T)
 
 #################
