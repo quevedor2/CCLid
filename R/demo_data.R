@@ -218,26 +218,16 @@ combineSamples <- function(data.type, sample.mat, prop){
   
 }
 
-#' denis
-#' @description Works with the webapp, passes in a vcf file and a
-#' current directory for the reference matrix
-#' @param refdir 
-#' @param vcf 
-#'
-#' @return a denis object
-#' @export
-#'
-#' @examples
-denis <- function(vcf, refdir){
+.demoRna <- function(){
   library(CCLid)
   require(VariantAnnotation)
 
   ## Load in Ref mat file
-  #PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
+  PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
   ref.dat <- CCLid::loadRef(PDIR, 'baf', bin.size=5e5)
   
   ## Load in VCF file of external data
-  #vcfFile <- '/mnt/work1/users/home2/quever/xfer/A549.sample_id.vcf' ## A549 WES
+  vcfFile <- '/mnt/work1/users/home2/quever/xfer/A549.sample_id.vcf' ## A549 WES
   vcf.mat <- compareVcf(vcfFile, var.dat=ref.dat$var, ref.mat=ref.dat$ref)
   
   ## Look for similarity
