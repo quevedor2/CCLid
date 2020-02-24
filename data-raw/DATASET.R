@@ -173,6 +173,17 @@ meta.df <- merge(meta.df, pgx.map, by='ID', all=TRUE)
 
 usethis::use_data(meta.df, overwrite = T)
 
+###############
+#### cin70 ####
+library("org.Hs.eg.db")
+
+pdir <- "~/git/CCL_authenticator/data-raw/"
+cin70 <- read.csv(file = file.path(pdir, "cin70.csv"), header=TRUE, 
+                  stringsAsFactors = FALSE, comment.char = "#", skip = 2)
+cin70$ENS <- mapIds(org.Hs.eg.db, keys = cin70$Gene, keytype = "SYMBOL", column="ENSEMBL")
+
+usethis::use_data(cin70, overwrite = T)
+
 #################
 #### ref.dat ####
 #pdir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/baf'
