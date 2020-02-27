@@ -61,7 +61,7 @@ findCclPairs <- function(meta.df, dr.nm, ds=NULL){
     id <- grep(paste0("_", i, "$"), x=colnames(dr.nm))
     id <- setNames(id, colnames(dr.nm)[id])
     if(!is.null(ds)){
-      ds <- c('CCLE', 'GDSC')
+      #ds <- c('CCLE', 'GDSC')
       id[grep(paste(ds, collapse="|"), names(id))]
     } else {
       id

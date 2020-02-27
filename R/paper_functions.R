@@ -121,7 +121,7 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, ...){
                 list("seg"=D, "raw"=Draw))
     
     return(D.l)
-  }, ...)
+  }, ...) #centering='extreme'
   D = do.call(cbind, lapply(cn.drift, function(i) i$seg))
   Draw = do.call(cbind, lapply(cn.drift, function(i) i$raw))
   colnames(D) <- colnames(Draw) <- alt.ref.idx$id
@@ -378,6 +378,7 @@ plotFracDrift <- function(summ.frac){
   with(cn.baf.frac[which(cn.baf.frac$max),],
        text(drift.x + 0.01, drift.y, labels=ID, adj=0, cex=0.6))
 }
+
 ############################
 #### match_it.R Support ####
 ############################
@@ -448,4 +449,41 @@ checkAgainst <- function(mat){
   })
   
   return(map)
+}
+
+
+###########################
+#### drug_it.R Support ####
+###########################
+#' loadInPSets
+#' @param drug.pset 
+#' @export
+loadInPSets <- function(drug.pset){
+  # drug.pset <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/PSets'
+  psets <- list("CCLE"=readRDS(file.path(drug.pset, "CCLE.rds")),
+                "GDSC"=readRDS(file.path(drug.pset, "GDSC2.rds")))
+  return(psets)
+}
+
+#' getCinScore
+#' @param psets 
+#' @param cin.metric 
+#' @return a CIN list
+#' @export
+getCinScore <- function(psets, cin.metric='sum'){
+  require(PharmacoGx)
+  data(cin70)
+  
+  rna <- lapply(psets, function(pset, mDataType='rna'){
+    mdat <- molecularProfiles(pset, mDataType)
+    colnames(mdat) <- pset@molecularProfiles$rna$cellid
+    cin.idx <- unlist(sapply(cin70$ENS, grep, x=rownames(mdat)))
+    mdat[cin.idx,]
+  })
+  
+  cin <- switch(cin.metric,
+         "sum"=lapply(rna, colSums),
+         "mean"=lapply(rna, colMeans))
+  
+  return(cin)
 }

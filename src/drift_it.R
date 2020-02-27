@@ -1,18 +1,3 @@
-
-isolateL2Rpsets <- function(){
-  setwd("/mnt/work1/users/pughlab/projects/cancer_cell_lines/cnv_predictions/input/cn/log2r_bins")
-  for(i in c("CCLE", "GDSC")){
-    require(Biobase)
-    pset=readRDS(file.path("..", paste0(i, "_CN.bins.RDS")))
-    env <- new.env()
-    env[['exprs']] <- assayData(pset)$Log2Ratio
-    assayData(pset) <- env
-    saveRDS(pset, file=paste0(i, "_CN.l2r_bins.RDS"))
-  }
-}
-
-
-
 ###########################
 #### Preliminary steps ####
 ###########################
@@ -39,12 +24,12 @@ loadInData <- function(){
 ## from the CCLid package, and the difference
 ## in ASCAT ASCN data.
 driftConcordance <- function(){
-  dataset <- 'GDSC'
+  dataset <- 'GNE' #GDSC
   alt.ds <- 'CCLE'
   
   ## Find variant features and isolate for cell lines shared in datasets
   ref.mat.var <- mapVariantFeat(ref.dat$ref, ref.dat$var)
-  cl.idx <- CCLid::findCclPairs(meta.df, ref.mat.var, ds=c('CCLE', 'GDSC'))
+  cl.idx <- CCLid::findCclPairs(meta.df, ref.mat.var, ds=c(alt.ds, dataset))
   m.cls.idx <- cl.idx[sapply(cl.idx, function(i) length(i) >= 2)]
   
   ## Get drift distance between CL pairs using BAF
@@ -63,6 +48,7 @@ driftConcordance <- function(){
   cn.dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/cnv_predictions/input/cn'
   cn.dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/cnv_predictions/input/cn/log2r_bins'
   bins.file <- list.files(cn.dir, pattern="\\.bins\\.", include.dirs = FALSE)
+  bins.file <- bins.file[grep(paste(c(dataset, alt.ds), collapse="|"), bins.file)]
   bins <- lapply(bins.file, function(b) readRDS(file.path(cn.dir, b)))
   names(bins) <- gsub("_.*", "",  bins.file)
   
