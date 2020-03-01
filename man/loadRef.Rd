@@ -4,14 +4,14 @@
 \alias{loadRef}
 \title{loadRef}
 \usage{
-loadRef(pdir = NULL, analysis = "baf", rm.gne = FALSE, ...)
+loadRef(PDIR = NULL, analysis = "baf", rm.gne = FALSE, bin.size = 1e+06, ...)
 }
 \arguments{
-\item{pdir}{Path to directory containing or to download reference data}
-
 \item{analysis}{Only support BAF at the moment}
 
 \item{...}{bin.size to group variance data}
+
+\item{pdir}{Path to directory containing or to download reference data}
 }
 \value{
 List containing "ref"=reference BAF matrix
