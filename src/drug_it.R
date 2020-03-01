@@ -21,7 +21,7 @@ loadInData <- function(){
 ## This part assumes that drift_it.R was run and the data
 ## was saved to disk to load in
 iveCinItAlready <- function(){
-  dataset <- 'GDSC'  # or GNE
+  dataset <- 'GNE'  # or GNE, GDSC
   alt.ds <- 'CCLE'
   
   ## Get CIN scores
@@ -52,7 +52,8 @@ iveCinItAlready <- function(){
   colnames(abc) <- c("pID", names(abcs))
   
   ## Compare drift to CIN70
-  cn.z <- 1; b.z <- 5
+  cn.z <- 1; b.z <- 5  # GDSC
+  cn.z <- 1; b.z <- 2  # GNE
   summ.frac <- summarizeFracDrift(cn.drifts=cn.drifts, cn.z=cn.z,
                                   baf.drifts=baf.drifts, baf.z=b.z,
                                   include.id=TRUE)
@@ -64,7 +65,7 @@ iveCinItAlready <- function(){
   cn.d <- drift.cin$cn
   baf.d <- drift.cin$baf
   
-  cn.d.abc <- do.call(rbind, apply(cn.d[,-c(1:7)], 2, function(i){
+  cn.d.abc <- do.call(rbind, apply(cn.d[,-c(1:8)], 2, function(i){
     data.frame("cinR"=cor(cn.d$tCIN, i, use="complete.obs"),
                "driftR"=cor(cn.d$drift, i, use="complete.obs"))
   }))

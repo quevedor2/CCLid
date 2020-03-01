@@ -57,7 +57,8 @@ driftConcordance <- function(){
                                seg.id='exprs', raw.id='L2Rraw',
                                fdat=featureData(bins[[alt.ds]])@data,
                                cell.ids=names(baf.drifts), segmenter='PCF',
-                               centering='none')
+                               centering='none',
+                               quantnorm=if(dataset=='GNE') TRUE else FALSE)
   # ref.l2r=assayData(bins[[dataset]]); alt.l2r=assayData(bins[[alt.ds]]);
   # seg.id='exprs'; raw.id='L2Rraw'; fdat=featureData(bins[[alt.ds]])@data;
   # cell.ids=names(baf.drifts); segmenter='PCF';centering='extreme'
@@ -90,7 +91,7 @@ driftConcordance <- function(){
   gr.cn <- split(gr.cn, gr.cn$ID)
   df.baf <- lapply(baf.drifts, function(i) {
     d <- i$sig.gr[[1]]$output
-    d$ID <- gsub("(GDSC_)|(CCLE_)", "", names(i$sig.gr)[1])
+    d$ID <- gsub("(GNE_)|(GDSC_)|(CCLE_)", "", names(i$sig.gr)[1])
     return(d)
   })
   gr.baf <- makeGRangesFromDataFrame(do.call(rbind, df.baf), keep.extra.columns = TRUE)
@@ -140,27 +141,29 @@ driftConcordance <- function(){
   ## Plot the drift CN-BAF examples
   # ccl.id <-'IGR-37'  #'786-0', 'HT-29', 'CL-40', 'SW1463', 'A172', 'MCAS', 'HCC1937', 'Namalwa', 'PC-3'
   # sapply(names(head(sort(colSums(drift.dat$dat)), 10)), function(ccl.id){
-  sapply(c('KE-37',
-           'COR-L23', 'JHOS-2', 'HCC1937', 'RS4-11',
-#           'NCI-H2029', 'HLE', 'HCC-366',
-#           'HCC1937', 'HuP-T4', 'COR-L23',
-#           'KNS-62', 'NCI-H522', 'CAS-1',
-#           "SW403", "VM-CUB-1", "HuH-6"
-#           'JHOS-2', 'NB-1', 'NCI-H23', 'PC-3', 
-#           'AsPC-1', 'A172', 
-           'Capan-1'), function(ccl.id){
+#   sapply(c('KE-37',
+#            'COR-L23', 'JHOS-2', 'HCC1937', 'RS4-11',
+# #           'NCI-H2029', 'HLE', 'HCC-366',
+# #           'HCC1937', 'HuP-T4', 'COR-L23',
+# #           'KNS-62', 'NCI-H522', 'CAS-1',
+# #           "SW403", "VM-CUB-1", "HuH-6"
+# #           'JHOS-2', 'NB-1', 'NCI-H23', 'PC-3', 
+# #           'AsPC-1', 'A172', 
+#            'Capan-1'), function(ccl.id){
+  sapply(c('NCI-H23', 'NCI-H2052', 'MCF-7', 'A3-KAW'), function(ccl.id){
     pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift_", ccl.id, ".pdf")),
         width=7, height=3)
     CNAo <- cn.drifts$cna.obj
     CNAo$output <- split(CNAo$output, CNAo$output$ID)[[ccl.id]]
     CNAo$data <- CNAo$data[,c(1,2,grep(paste0("^", ccl.id, "$"), colnames(CNAo$data)))]
-    CCLid:::plot.CCLid(CNAo, min.z=1)
-    CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=5)
+    plot.CCLid(CNAo, min.z=1)
+    plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=if(dataset=='GNE') 2 else 5)
     dev.off()
     
     meta.cclid <- meta.df[grep(paste0("^", ccl.id, "$"), meta.df$ID),]
     scp.path <- "scp quever@192.168.198.99:"
     path.tmp <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines'
+    cat(paste0(scp.path, file.path(path.tmp, "GNE", "eacon", meta.cclid$GNE, "ASCAT", "L2R", "*png "), paste0("GNE_", meta.cclid$ID, ".png\n")))
     cat(paste0(scp.path, file.path(path.tmp, "CCLE", "eacon", meta.cclid$CCLE, "ASCAT", "L2R", "*png "), paste0("CCLE_", meta.cclid$ID, ".png\n")))
     cat(paste0(scp.path, file.path(path.tmp, "GDSC", "eacon", gsub(".cel", "", meta.cclid$GDSC, ignore.case=TRUE), "ASCAT", "L2R", "*png "), paste0("GDSC_", meta.cclid$ID, ".png\n")))
     cat(paste0(scp.path, file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift_", ccl.id, ".pdf .\n"))))

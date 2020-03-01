@@ -89,12 +89,21 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, ...){
   ## Create a distance betweeen L2R matrix:
   # idx <- c(grep("^NCI-H522$", alt.ref.idx$id), grep("^NB-1$", alt.ref.idx$id)) #83, 8
   # [idx,,drop=FALSE]
-  cn.drift <- apply(alt.ref.idx, 1, function(ar.i, centering='none', max.med=0.05){
+  cn.drift <- apply(alt.ref.idx, 1, function(ar.i, centering='none', quantnorm=FALSE, max.med=0.05){
     ref.idx = as.integer(ar.i['ref'])
     alt.idx = as.integer(ar.i['alt'])
     
-    D = ref.l2r[[seg.id]][,ref.idx,drop=FALSE] - alt.l2r[[seg.id]][,alt.idx,drop=FALSE]
-    Draw = ref.l2r[[raw.id]][,ref.idx,drop=FALSE] - alt.l2r[[raw.id]][,alt.idx,drop=FALSE]
+    seg.data <- cbind(ref.l2r[[seg.id]][,ref.idx,drop=FALSE], alt.l2r[[seg.id]][,alt.idx,drop=FALSE])
+    raw.data <- cbind(ref.l2r[[raw.id]][,ref.idx,drop=FALSE], alt.l2r[[raw.id]][,alt.idx,drop=FALSE])
+    
+    if(quantnorm){
+      require(preprocessCore)
+      seg.data <- normalize.quantiles(seg.data)
+      raw.data <- normalize.quantiles(raw.data)
+    }
+    
+    D = rowDiffs(seg.data)
+    Draw = rowDiffs(raw.data)
     
     D.l <- switch(centering,
                 "median"={
@@ -126,7 +135,7 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, ...){
   Draw = do.call(cbind, lapply(cn.drift, function(i) i$raw))
   colnames(D) <- colnames(Draw) <- alt.ref.idx$id
   # save(D, Draw, alt.ref.idx, fdat, file="~/D2.rda")
-  rm(ref.l2r, alt.l2r); gc()
+  rm(ref.l2r, alt.l2r, bins); gc()
   
   ## Segment and find discordant regions
   # CNAo <- CCLid::segmentDrift(fdat = fdat, D=D, segmenter=segmenter)
@@ -332,7 +341,7 @@ summarizeFracDrift <- function(cn.drifts, cn.z, baf.drifts,
   baf.summ <- data.frame("nodrift"=rowSums(baf.frac[,which(!baf.cols),drop=FALSE]),
                          "drift"=rowSums(baf.frac[,which(baf.cols),drop=FALSE]))
   if(include.id){ 
-    cn.summ$ID <- baf.ids
+    cn.summ$ID <- cn.ids
     baf.summ$ID <- baf.ids
   }
   return(list("cn"=cn.summ,
@@ -461,7 +470,8 @@ checkAgainst <- function(mat){
 loadInPSets <- function(drug.pset){
   # drug.pset <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/PSets'
   psets <- list("CCLE"=readRDS(file.path(drug.pset, "CCLE.rds")),
-                "GDSC"=readRDS(file.path(drug.pset, "GDSC2.rds")))
+                "GDSC"=readRDS(file.path(drug.pset, "GDSC2.rds")),
+                "GNE"=readRDS(file.path(drug.pset, "gCSI2.rds")))
   return(psets)
 }
 
@@ -474,9 +484,9 @@ getCinScore <- function(psets, cin.metric='sum'){
   require(PharmacoGx)
   data(cin70)
   
-  rna <- lapply(psets, function(pset, mDataType='rna'){
+  rna <- lapply(psets, function(pset, mDataType='rnaseq'){
     mdat <- molecularProfiles(pset, mDataType)
-    colnames(mdat) <- pset@molecularProfiles$rna$cellid
+    colnames(mdat) <- pset@molecularProfiles[[mDataType]]$cellid
     cin.idx <- unlist(sapply(cin70$ENS, grep, x=rownames(mdat)))
     mdat[cin.idx,]
   })
