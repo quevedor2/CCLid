@@ -13,27 +13,27 @@
 #' PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
 #' loadRef(PDIR, 'baf', bin.size=5e5)
 loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE, bin.size=1e6, ...){
-  print("Checking for existing reference data...")
-  ref.data.exists <- any(grepl(paste0(as.integer(bin.size), ".", toupper(analysis)), list.files(PDIR)))
+  # print("Checking for existing reference data...")
+  # ref.data.exists <- any(grepl(paste0(as.integer(bin.size), ".", toupper(analysis)), list.files(PDIR)))
+  # 
+  # if(ref.data.exists){
+  #   print(paste0("Reading existing data: ", paste0(as.integer(bin.size), ".", toupper(analysis), ".rds"), "..."))
+  #   ref.dat <- file.path(PDIR, paste0(as.integer(bin.size), ".", toupper(analysis), ".rds"))
+  #   format.dat <- readRDS(ref.dat)
+  # } else {
+  # 
+  # }
+  print("Attaching/downloading reference matrix...")
+  ref.mat <- downloadRefCCL(toupper(analysis), saveDir = PDIR)
   
-  if(ref.data.exists){
-    print(paste0("Reading existing data: ", paste0(as.integer(bin.size), ".", toupper(analysis), ".rds"), "..."))
-    ref.dat <- file.path(PDIR, paste0(as.integer(bin.size), ".", toupper(analysis), ".rds"))
-    format.dat <- readRDS(ref.dat)
-  } else {
-    print("Attaching/downloading reference matrix...")
-    ref.mat <- downloadRefCCL(toupper(analysis), saveDir = PDIR)
-    
-    if(rm.gne){
-      rm.idx <- grep("^Unk*", colnames(ref.mat))
-      ref.mat <- ref.mat[,-rm.idx]
-    }
-    
-    print("Ensuring proper format and caluclating variance per bin...")
-    format.dat <- formatRefMat(name=toupper(analysis), ref.mat=ref.mat, saveDir = PDIR, 
-                               analysis=tolower(analysis), bin.size=bin.size, ...) #bin.size=5e5
+  if(rm.gne){
+    rm.idx <- grep("^Unk*", colnames(ref.mat))
+    ref.mat <- ref.mat[,-rm.idx]
   }
   
+  print("Ensuring proper format and caluclating variance per bin...")
+  format.dat <- formatRefMat(name=toupper(analysis), ref.mat=ref.mat, saveDir = PDIR, 
+                             analysis=tolower(analysis), bin.size=bin.size, ...) #bin.size=5e5
   
   ref.mat <- format.dat$mat
   var.dat <- format.dat$var
