@@ -497,3 +497,53 @@ getCinScore <- function(psets, cin.metric='sum'){
   
   return(cin)
 }
+
+#' getGeneExpr
+#' @param psets 
+#' @param gene.id 
+#' @export
+getGeneExpr <- function(psets, gene.id){
+  require(PharmacoGx)
+  require("org.Hs.eg.db")
+  
+  ensids <- mapIds(org.Hs.eg.db, keys = gene.id, keytype = "SYMBOL", column="ENSEMBL")
+  
+  rna <- lapply(psets, function(pset, mDataType='rnaseq'){
+    mdat <- molecularProfiles(pset, mDataType)
+    colnames(mdat) <- pset@molecularProfiles[[mDataType]]$cellid
+    cin.idx <- unlist(sapply(ensids, grep, x=rownames(mdat)))
+    mdat <- mdat[cin.idx,,drop=FALSE]
+    rownames(mdat) <- gene.id
+    mdat
+  })
+  
+  return(rna)
+}
+
+#' corWithDrug
+#' @description IN DEVELOPMENT
+#' @param dat.d 
+#' @param col.idx 
+#' @export
+corWithDrug <- function(dat.d, col.idx){
+  dat.d.abc <- do.call(rbind, apply(dat.d[,-col.idx], 2, function(i){
+    # plot(i, cn.d$tCIN)
+    # plot(i, cn.d$drift)
+    df <- data.frame("cinR"=cor(dat.d$tCIN, i, use="complete.obs"),
+                     "cinR.p"=tryCatch({cor.test(dat.d$tCIN, i, use="complete.obs")$p.value}, error=function(e){NA}),
+                     "driftR"=cor(dat.d$drift, i, use="complete.obs"),
+                     "driftR.p"=tryCatch({cor.test(dat.d$drift, i, use="complete.obs")$p.value}, error=function(e){NA}))
+    cbind(df, t(sapply(genes, function(g){cor(dat.d[,g], i, use='complete.obs')})))
+  }))
+  dat.d.abc$cin.q <- p.adjust(dat.d.abc$cinR.p, method="fdr")
+  dat.d.abc$drift.q <- p.adjust(dat.d.abc$driftR.p, method="fdr")
+  # head(dat.d.abc[order(dat.d.abc$drift.q),],10)
+  # head(dat.d.abc[order(dat.d.abc$cin.q),],10)
+  with(dat.d.abc, plot(cinR, driftR, pch=16, col=scales::alpha("black", 0.7), xlim=c(-0.5,0.5), ylim=c(-0.5,0.5)))
+  abline(h=0, v=0)
+  for(i in seq(0.1, 0.6, by=0.1)){
+    sig.dat.d <- dat.d.abc[which(dat.d.abc$cin.q  < i | dat.d.abc$drift.q < i),]
+    with(sig.dat.d, points(cinR, driftR, col=scales::alpha("red", 0.3), pch=16))
+      with(sig.dat.d, text(cinR+0.02, driftR, labels=rownames(sig.dat.d), col=scales::alpha("red", 0.3), adj=0))
+  }
+}
