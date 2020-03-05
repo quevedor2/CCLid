@@ -25,7 +25,7 @@ loadInData <- function(){
 ## in ASCAT ASCN data.
 driftConcordance <- function(){
   dataset <- 'GNE' #GDSC
-  alt.ds <- 'CCLE'
+  alt.ds <- 'GDSC' #CCLE
   
   ## Find variant features and isolate for cell lines shared in datasets
   ref.mat.var <- mapVariantFeat(ref.dat$ref, ref.dat$var)
@@ -56,8 +56,8 @@ driftConcordance <- function(){
                                alt.l2r=assayData(bins[[alt.ds]]),
                                seg.id='exprs', raw.id='L2Rraw',
                                fdat=featureData(bins[[alt.ds]])@data,
-                               cell.ids=names(baf.drifts), segmenter='PCF',
-                               centering='none',
+                               cell.ids=names(baf.drifts), 
+                               centering='extreme',
                                quantnorm=if(dataset=='GNE') TRUE else FALSE)
   # ref.l2r=assayData(bins[[dataset]]); alt.l2r=assayData(bins[[alt.ds]]);
   # seg.id='exprs'; raw.id='L2Rraw'; fdat=featureData(bins[[alt.ds]])@data;

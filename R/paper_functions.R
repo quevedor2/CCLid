@@ -525,11 +525,15 @@ getGeneExpr <- function(psets, gene.id){
 #' @param dat.d 
 #' @param col.idx 
 #' @export
-corWithDrug <- function(dat.d, col.idx){
+corWithDrug <- function(dat.d, col.idx, title='', text.thresh=0.5){
+  require(RColorBrewer)
+  
   dat.d.abc <- do.call(rbind, apply(dat.d[,-col.idx], 2, function(i){
     # plot(i, cn.d$tCIN)
     # plot(i, cn.d$drift)
-    df <- data.frame("cinR"=cor(dat.d$tCIN, i, use="complete.obs"),
+    dat.d$tCIN
+    df <- data.frame("n"=table((is.na(dat.d$tCIN) == FALSE) + (is.na(i) == FALSE))[['2']],
+                     "cinR"=cor(dat.d$tCIN, i, use="complete.obs"),
                      "cinR.p"=tryCatch({cor.test(dat.d$tCIN, i, use="complete.obs")$p.value}, error=function(e){NA}),
                      "driftR"=cor(dat.d$drift, i, use="complete.obs"),
                      "driftR.p"=tryCatch({cor.test(dat.d$drift, i, use="complete.obs")$p.value}, error=function(e){NA}))
@@ -537,13 +541,29 @@ corWithDrug <- function(dat.d, col.idx){
   }))
   dat.d.abc$cin.q <- p.adjust(dat.d.abc$cinR.p, method="fdr")
   dat.d.abc$drift.q <- p.adjust(dat.d.abc$driftR.p, method="fdr")
+  dat.d.abc$n.scale <- scales::rescale(dat.d.abc$n, to=c(0.2, 2))
   # head(dat.d.abc[order(dat.d.abc$drift.q),],10)
   # head(dat.d.abc[order(dat.d.abc$cin.q),],10)
-  with(dat.d.abc, plot(cinR, driftR, pch=16, col=scales::alpha("black", 0.7), xlim=c(-0.5,0.5), ylim=c(-0.5,0.5)))
-  abline(h=0, v=0)
-  for(i in seq(0.1, 0.6, by=0.1)){
-    sig.dat.d <- dat.d.abc[which(dat.d.abc$cin.q  < i | dat.d.abc$drift.q < i),]
-    with(sig.dat.d, points(cinR, driftR, col=scales::alpha("red", 0.3), pch=16))
-      with(sig.dat.d, text(cinR+0.02, driftR, labels=rownames(sig.dat.d), col=scales::alpha("red", 0.3), adj=0))
+  
+  ## Visualization
+  with(dat.d.abc, plot(cinR, driftR, col=scales::alpha("black", 1), 
+                       xlim=c(-0.5,0.5), ylim=c(-0.5,0.5), cex=n.scale, main=title))
+  abline(h=0, v=0, col="black")
+  
+  q.thresh <- seq(0.1, 0.7, by=0.1)
+  q.col <- setNames(rev(brewer.pal(length(q.thresh),"PuRd")), q.thresh)
+  used.idx <- c()
+  for(i in q.thresh){
+    idx <- which(dat.d.abc$cin.q  < i | dat.d.abc$drift.q < i)
+    uidx <- setdiff(idx, used.idx)
+    sig.dat.d <- dat.d.abc[uidx,]
+    with(sig.dat.d, points(cinR, driftR, col=scales::alpha(q.col[as.character(i)], 0.7), pch=16, cex=n.scale))
+    if(i < text.thresh & nrow(sig.dat.d) >= 1){
+      with(sig.dat.d, text(cinR+0.02, driftR, labels=rownames(sig.dat.d), col=q.col[as.character(i)], adj=0, cex=0.8))
+    }
+    used.idx <- c(used.idx, uidx)
   }
+  
+  legend("topright", col=q.col, legend = paste0("q <= ", names(q.col)), pch=16, cex = 0.8)
+  return(dat.d.abc)
 }

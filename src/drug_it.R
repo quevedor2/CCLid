@@ -21,18 +21,23 @@ loadInData <- function(){
 ## This part assumes that drift_it.R was run and the data
 ## was saved to disk to load in
 iveCinItAlready <- function(){
-  dataset <- 'GDSC'  # or GNE, GDSC
-  alt.ds <- 'CCLE'
-  
   ## Get CIN scores
   drug.pset <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/PSets'
   psets <- loadInPSets(drug.pset)
   cin <- getCinScore(psets, 'mean')
+  
   # merge
   cin.m <- as.data.frame(t(plyr::rbind.fill(lapply(cin, function(i) as.data.frame(t(i))))))
   colnames(cin.m) <- names(cin)
   cin.m$tCIN <- rowMeans(cin.m[,c(dataset, alt.ds)], na.rm=TRUE)
   cin.m$pID <- rownames(cin.m)
+  
+  
+  ### Select Dataset! ###
+  cor.data<- list()
+  dataset <- 'GNE'  # or GNE, GDSC
+  alt.ds <- 'GDSC'
+  
   
   ## Get Gene Expr
   genes <- c('PTEN')
@@ -68,8 +73,11 @@ iveCinItAlready <- function(){
   colnames(abc) <- c("pID", names(abcs))
   
   ## Compare drift to CIN70
-  cn.z <- 1; b.z <- 5  # GDSC
-  # cn.z <- 1; b.z <- 2  # GNE
+  if(dataset=='GDSC'){
+    cn.z <- 1; b.z <- 5  # GDSC
+  } else if (dataset=='GNE'){
+    cn.z <- 1; b.z <- 2  # GNE
+  }
   summ.frac <- summarizeFracDrift(cn.drifts=cn.drifts, cn.z=cn.z,
                                   baf.drifts=baf.drifts, baf.z=b.z,
                                   include.id=TRUE)
@@ -90,49 +98,69 @@ iveCinItAlready <- function(){
   cn.d <- drift.cin$cn
   baf.d <- drift.cin$baf
   
+  ## Check Variance of drift compared to CIN
+  sapply(drift.cin, function(dat){
+    bin <- seq(1,7,by=0.1)
+    drift.by.cin <- split(dat$drift, cut(dat$tCIN, bin))
+    df <- data.frame("var"=sapply(drift.by.cin, function(i) (max(i, na.rm=TRUE) - min(i, na.rm=TRUE))),
+                     "cin"=bin[-1])
+    df[df < 0] <- NA
+    # with(df, plot(var, cin))
+    with(df, cor(var, cin, use='complete.obs'))
+  })
+  #           cn       baf 
+  # GDSC-CCLE 0.6195889 0.5145231
+  # GNE-CCLE  0.6714717 0.5304877
+  
+  
+  ## Visualization
   # i <- cn.d[,grep("Afatinib", colnames(cn.d))]
+  pdf(file.path(PDIR, "drug_it", 
+                paste0(dataset, "-", alt.ds, "_cor-abc.pdf")), height=5, width=10)
   col.idx <- c(1:(ncol(cn.d) - ncol(abc) + 1))
-  corWithDrug(dat.d=cn.d, col.idx = col.idx)
-  corWithDrug(dat.d=baf.d, col.idx = col.idx)
-
-  cn.d.abc <- do.call(rbind, apply(cn.d[,-col.idx], 2, function(i){
-    # plot(i, cn.d$tCIN)
-    # plot(i, cn.d$drift)
-    df <- data.frame("n"=rowSums(matrix(c(x,y), ncol=2)),
-                     "cinR"=cor(cn.d$tCIN, i, use="complete.obs"),
-                     # "cinR.p"=tryCatch({cor.test(cn.d$tCIN, i, use="complete.obs")$p.value}, error=function(e){NA}),
-                     "driftR"=cor(cn.d$drift, i, use="complete.obs"),
-                     "driftR.p"=tryCatch({cor.test(cn.d$drift, i, use="complete.obs")$p.value}, error=function(e){NA}))
-    cbind(df, t(sapply(genes, function(g){cor(cn.d[,g], i, use='complete.obs')})))
-  }))
-  cn.d.abc$cin.q <- p.adjust(cn.d.abc$cinR.p, method="fdr")
-  cn.d.abc$drift.q <- p.adjust(cn.d.abc$driftR.p, method="fdr")
-  head(cn.d.abc[order(cn.d.abc$drift.q),],10)
-  head(cn.d.abc[order(cn.d.abc$cin.q),],10)
-  with(cn.d.abc, plot(cinR, driftR, pch=16, col=scales::alpha("black", 0.7)))
-  abline(h=0, v=0)
-  for(i in seq(0.1, 0.6, by=0.1)){
-    with(cn.d.abc[which(cn.d.abc$cin.q  < i | cn.d.abc$drift.q < i),], points(cinR, driftR, col=scales::alpha("red", 0.3), pch=16))
+  par(mfrow=c(1,3))
+  plot(cn.d$drift, cn.d$tCIN, xlim=c(0, 1), ylim=c(0,8), col=scales::alpha("black", 0.5),
+       xlab="Drift", ylab="mean CIN70", pch=16)
+  points(baf.d$drift, baf.d$tCIN, col=scales::alpha("blue", 0.5), pch=15)
+  legend("topright", pch=c(16,15), col=c("black", "blue"), box.lwd = 0,
+         legend=c(paste0("CN  (r = ", round(cor(cn.d$drift, cn.d$tCIN, use = "complete.obs"),2), ")"), 
+                  paste0("BAF (r = ", round(cor(baf.d$drift, baf.d$tCIN, use = "complete.obs"),2), ")")))
+  cor.data[[dataset]][['cn']] <- corWithDrug(dat.d=cn.d, col.idx = col.idx, title='CN-drift', text.thresh=0.5)
+  cor.data[[dataset]][['baf']] <- corWithDrug(dat.d=baf.d, col.idx = col.idx, title='BAF-drift', text.thresh=0.5)
+  dev.off()
+  scp.path <- "scp quever@192.168.198.99:"
+  cat(paste0(scp.path, file.path(PDIR, "drug_it", paste0(dataset, "-", alt.ds, "_cor-abc.pdf")), ' .\n'))
+  
+  
+  pdf(file.path(PDIR, "drug_it", 
+                paste0("ALL_cor-abc.pdf")), height=6, width=6)
+  ds1 <- cor.data$GDSC[[1]]
+  ds2 <- cor.data$GNE[[1]]
+  ds1$ID <- rownames(ds1); ds2$ID <- rownames(ds2)
+  r.ds <- merge(ds1[,c('ID', 'cinR', 'driftR')],ds2[,c('ID', 'cinR', 'driftR')], by='ID')
+  
+  with(r.ds, plot(cinR.x, cinR.y, xlim=c(-0.3, 0.3), ylim=c(-0.3, 0.3), col=scales::alpha("black", 0.8),
+                  xlab="Correlation (GDSC)", ylab="Correlation (GNE)", pch=18))
+  l <- c(paste0("CIN:ABC  (r = ", round(cor(r.ds$cinR.x, r.ds$cinR.y, use = "complete.obs"),2), ")"))
+  ds.col <- c('cn'='blue', 'baf'='red')
+  for(d.type in c('cn', 'baf')){
+    ds1 <- cor.data$GDSC[[d.type]]
+    ds2 <- cor.data$GNE[[d.type]]
+    ds1$ID <- rownames(ds1); ds2$ID <- rownames(ds2)
+    r.ds <- merge(ds1[,c('ID', 'cinR', 'driftR')],ds2[,c('ID', 'cinR', 'driftR')], by='ID')
+    
+    with(r.ds, points(driftR.x, driftR.y, col=scales::alpha(ds.col[d.type], 0.7), pch=18))
+    l <- c(l,  paste0(toupper(d.type), "-drift:ABC (r = ", round(cor(r.ds$driftR.x, r.ds$driftR.y, use = "complete.obs"),2), ")"))
   }
+  legend("topright", pch=18, col=c("black", ds.col), box.lwd = 0, legend=l)
+  dev.off()
+  scp.path <- "scp quever@192.168.198.99:"
+  cat(paste0(scp.path, file.path(PDIR, "drug_it", paste0("ALL_cor-abc.pdf")), ' .\n'))
   
   
-  baf.d.abc <- do.call(rbind, apply(baf.d[,-col.idx], 2, function(i){
-    data.frame("cinR"=cor(baf.d$tCIN, i, use="complete.obs"),
-               "cinR.p"=tryCatch({cor.test(cn.d$tCIN, i, use="complete.obs")$p.value}, error=function(e){NA}),
-               "driftR"=cor(baf.d$drift, i, use="complete.obs"),
-               "driftR.p"=tryCatch({cor.test(cn.d$drift, i, use="complete.obs")$p.value}, error=function(e){NA}))
-  }))
-  baf.d.abc$cin.q <- p.adjust(baf.d.abc$cinR.p, method="fdr")
-  baf.d.abc$drift.q <- p.adjust(baf.d.abc$driftR.p, method="fdr")
-  head(baf.d.abc[order(baf.d.abc$drift.q),],10)
-  head(baf.d.abc[order(baf.d.abc$cin.q),],10)
-
   
-  
-  cn.d <- cn.d[which(cn.d$drift > 0.1),]
-  plot(cn.d$drift, cn.d$tCIN)
-  cor(cn.d$drift, cn.d$tCIN, use = "complete.obs", method='spearman')
-  plot(drift.cin$baf$drift, drift.cin$baf$tCIN)
-  cor(drift.cin$baf$drift, drift.cin$baf$tCIN, use = "complete.obs")
-  
+  cn <- cor.data$GNE$cn
+  head(cn[order(cn$drift.q),])
+  cn[order(rownames(cn)),]
+  head(cn[order(cn$cin.q),])
 }
