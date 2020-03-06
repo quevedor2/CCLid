@@ -24,8 +24,8 @@ loadInData <- function(){
 ## from the CCLid package, and the difference
 ## in ASCAT ASCN data.
 driftConcordance <- function(){
-  dataset <- 'GNE' #GDSC
-  alt.ds <- 'GDSC' #CCLE
+  dataset <- 'GDSC' #GDSC
+  alt.ds <- 'CCLE' #CCLE
   
   ## Find variant features and isolate for cell lines shared in datasets
   ref.mat.var <- mapVariantFeat(ref.dat$ref, ref.dat$var)
@@ -412,23 +412,30 @@ minimumSnps <- function(){
   seed <- 1234
   
   set.seed(seed)
-  s.range <- sort(sample(1:length(all.vcfs), size=100))
+  # s.range <- sort(sample(1:length(all.vcfs), size=100))
   # f1.scores.by.snps <- lapply(seq(40, 10, by=-2), function(num.snps){
-  vcf.f1.scores <- mclapply(all.vcfs[s.range], function(vcf){
+  vcf.f1.scores <- mclapply(all.vcfs, function(vcf){
     vcf.map <- mapVcf2Affy(file.path(vcf.dir, vcf))
     
     cat(paste0(vcf, "(", match(vcf, all.vcfs), "/", length(all.vcfs), "): "))
     f1.scores <- sapply(num.snps.to.test, function(num.snps){
       cat(paste0(num.snps, "."))
-      idx <- sort(sample(1:length(var.dat), size=num.snps, replace = FALSE))
-      vcf.map.var <- mapVariantFeat(vcf.map, var.dat[idx])
+      idx <- sample(1:length(ref.dat$var), size=max(num.snps.to.test)*10, replace = FALSE)
+      vcf.map.var <- mapVariantFeat(vcf.map, ref.dat$var[idx])
+      vcf.map.var$BAF <- vcf.map.var$BAF[1:num.snps,]
+      vcf.map.var$GT <- vcf.map.var$GT[1:num.snps,]
+      
       vaf.to.map <- vcf.map.var
       
       ## Overlap the two VCFs to form a single matrix to combine
       ov.idx <- overlapPos(comp = vaf.to.map$BAF,
-                           ref=ref.mat, mapping = 'probeset')
+                           ref=ref.dat$ref, mapping = 'probeset')
       x.mat <- cbind(vaf.to.map$BAF$BAF[ov.idx$comp], 
-                     ref.mat[ov.idx$ref,])
+                     ref.dat$ref[ov.idx$ref,])
+      # if(rm.gne){
+      #   gne.idx <- c(grep("^GNE_", colnames(x.mat)), grep("^Unk[0-9]", colnames(x.mat)))
+      #   x.mat <- x.mat[,-gne.idx]
+      # }
       
       ## Calculate distance between samples
       x.dist <- similarityMatrix(x.mat, 'euclidean')
@@ -440,10 +447,11 @@ minimumSnps <- function(){
       x.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=NULL)
       pred <- assemblePredDat(x.vals, known.class=FALSE)
       pred <- mkPredictions(pred, models)
-      x.pred <- split(pred, pred$Var2)[[1]]
+      x.pred <- split(pred, pred$Var2)[[colnames(x.mat)[1]]]
+      x.pred <- x.pred[order(x.pred$q),]
       
       rna.idx <- grep(gsub(".snpOut.*", "", vcf), rna.meta.df$EGAF)
-      match.idx <- grepl(paste0("_", rna.meta.df[rna.idx,]$ID, "$"), x.pred$Var1)
+      match.idx <- factor(grepl(paste0("_?", rna.meta.df[rna.idx,]$ID, "$"), x.pred$Var1), levels=c(TRUE,FALSE))
       c.tbl <- sapply(split(x.pred, match.idx), function(i) table(i$baf.p.fit))
       
       if(all(dim(c.tbl) == c(2,2))){
