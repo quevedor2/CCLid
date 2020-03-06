@@ -4,7 +4,7 @@
 \alias{corWithDrug}
 \title{corWithDrug}
 \usage{
-corWithDrug(dat.d, col.idx)
+corWithDrug(dat.d, col.idx, title = "", text.thresh = 0.5)
 }
 \arguments{
 \item{dat.d}{}

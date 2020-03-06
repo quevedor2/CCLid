@@ -25,18 +25,17 @@ iveCinItAlready <- function(){
   drug.pset <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/PSets'
   psets <- loadInPSets(drug.pset)
   cin <- getCinScore(psets, 'mean')
+
+  ### Select Dataset! ###
+  cor.data<- list()
+  dataset <- 'GNE'  # or GNE, GDSC
+  alt.ds <- 'CCLE'
   
   # merge
   cin.m <- as.data.frame(t(plyr::rbind.fill(lapply(cin, function(i) as.data.frame(t(i))))))
   colnames(cin.m) <- names(cin)
   cin.m$tCIN <- rowMeans(cin.m[,c(dataset, alt.ds)], na.rm=TRUE)
   cin.m$pID <- rownames(cin.m)
-  
-  
-  ### Select Dataset! ###
-  cor.data<- list()
-  dataset <- 'GNE'  # or GNE, GDSC
-  alt.ds <- 'GDSC'
   
   
   ## Get Gene Expr
@@ -109,7 +108,7 @@ iveCinItAlready <- function(){
     with(df, cor(var, cin, use='complete.obs'))
   })
   #           cn       baf 
-  # GDSC-CCLE 0.6195889 0.5145231
+  # GDSC-CCLE 0.6590224 0.4862286 
   # GNE-CCLE  0.6714717 0.5304877
   
   
@@ -159,8 +158,16 @@ iveCinItAlready <- function(){
   
   
   
-  cn <- cor.data$GNE$cn
-  head(cn[order(cn$drift.q),])
-  cn[order(rownames(cn)),]
-  head(cn[order(cn$cin.q),])
+  sapply(c("GDSC", "GNE"), function(ds){
+    sapply(c("cn", "baf"), function(ty){
+      cn <- cor.data[[ds]][[ty]]
+      cn <- cn[order(cn$drift.q),]
+      write.table(cn, file=file.path(PDIR, "drug_it", paste0(ds, "-", ty, "_table.csv")), quote=FALSE, col.names=TRUE, row.names=TRUE, sep=",")
+      cat(paste0(scp.path, file.path(PDIR, "drug_it", paste0(ds, "-", ty, "_table.csv")), ' .\n'))
+      NA
+    })
+  })
+  # gdsc <- rownames(cor.data[['GDSC']][[ty]])
+  # gne <- rownames(cor.data[['GNE']][[ty]])
+  
 }
