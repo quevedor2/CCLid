@@ -252,8 +252,9 @@ combineSamples <- function(data.type, sample.mat, prop){
 #'
 #' @return A string
 #' @export
-test <- function(a){
+test <- function(a='NULL'){
   print("Hello world")
   print(a)
-  return(paste0("hello world - ", a))
+  return(list("A"=paste0("hello world - ", a),
+              "B"="hello world"))
 }
