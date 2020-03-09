@@ -587,7 +587,6 @@ corWithDrug <- function(dat.d, col.idx, title='', text.thresh=0.5){
 #' @description Gets the genes from UCSC hg19 TxDb knownGene
 #'
 #' @return A Granges object containing strand-specific genes with EntrezIDs
-#' @export
 #' @examples getGenes()
 getGenes <- function(genome.build="hg19"){
   switch(genome.build,
@@ -612,7 +611,6 @@ getGenes <- function(genome.build="hg19"){
 #' @param use.mart [boolean]: If no mart is given, it will load in a biomart object
 #'
 #' @return Annotated GRanges object with gene ids for the input GRanges
-#' @export
 #' @examples 
 #' annotateSegments(PLTK::genDemoData(), PLTK::getGenes())
 annotateSegments <- function(cn.data, genes, out.key="SYMBOL", mart=NULL, use.mart=FALSE){
