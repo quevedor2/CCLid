@@ -246,3 +246,14 @@ combineSamples <- function(data.type, sample.mat, prop){
        "seg"=bdf$cna.obj[[sample]]$output)
 }
 
+#' test function for denis
+#'
+#' @param a A string
+#'
+#' @return A string
+#' @export
+test <- function(a){
+  print("Hello world")
+  print(a)
+  return(paste0("hello world - ", a))
+}

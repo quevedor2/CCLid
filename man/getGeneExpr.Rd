@@ -4,7 +4,7 @@
 \alias{getGeneExpr}
 \title{getGeneExpr}
 \usage{
-getGeneExpr(psets, gene.id)
+getGeneExpr(psets, gene.id, in.key = "SYMBOL")
 }
 \arguments{
 \item{psets}{}
