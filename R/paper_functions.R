@@ -588,25 +588,12 @@ corWithDrug <- function(dat.d, col.idx, title='', text.thresh=0.5){
 #'
 #' @return A Granges object containing strand-specific genes with EntrezIDs
 #' @export
-#' @import TxDb.Hsapiens.UCSC.hg19.knownGene 
-#' TxDb.Hsapiens.UCSC.hg38.knownGene
-#' TxDb.Hsapiens.UCSC.hg18.knownGene 
-#' GenomicRanges
-#' 
 #' @examples getGenes()
 getGenes <- function(genome.build="hg19"){
   switch(genome.build,
-         hg18={ 
-           require(TxDb.Hsapiens.UCSC.hg18.knownGene)
-           package <- TxDb.Hsapiens.UCSC.hg18.knownGene 
-          },
          hg19={ 
            require(TxDb.Hsapiens.UCSC.hg19.knownGene)
            package <- TxDb.Hsapiens.UCSC.hg19.knownGene 
-          },
-         hg38={ 
-           require(TxDb.Hsapiens.UCSC.hg38.knownGene)
-           package <- TxDb.Hsapiens.UCSC.hg38.knownGene 
           },
          stop("genome must be hg18, hg19, or hg38"))
   
@@ -626,9 +613,6 @@ getGenes <- function(genome.build="hg19"){
 #'
 #' @return Annotated GRanges object with gene ids for the input GRanges
 #' @export
-#' @import org.Hs.eg.db GenomicRanges
-#' @importFrom AnnotationDbi mapIds
-#' 
 #' @examples 
 #' annotateSegments(PLTK::genDemoData(), PLTK::getGenes())
 annotateSegments <- function(cn.data, genes, out.key="SYMBOL", mart=NULL, use.mart=FALSE){
