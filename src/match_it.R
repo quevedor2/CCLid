@@ -51,6 +51,215 @@ benchmarkCCLid <- function(bench){
   ref.mat <- ref.dat$ref
 }
 
+############################
+#### F1 Score Min.Snps  ####
+############################
+## This process is meant to calculate the minimum
+## number of SNPS needed by calculating the F1 score
+## for a series of different number of SNPs
+minimumSnps <- function(){
+  dataset <- 'GDSC'
+  vcf.dir <- file.path('/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs',
+                       dataset)
+  all.vcfs <- list.files(vcf.dir, pattern="vcf.gz$")
+  rna.meta.df <- readinRnaFileMapping()
+  num.snps.to.test <- seq(100,10,by=-10)
+  seed <- 1234
+  
+  set.seed(seed)
+  # s.range <- sort(sample(1:length(all.vcfs), size=100))
+  # f1.scores.by.snps <- lapply(seq(40, 10, by=-2), function(num.snps){
+  vcf.f1.scores <- mclapply(all.vcfs[1:400], function(vcf){
+    vcf.map <- mapVcf2Affy(file.path(vcf.dir, vcf))
+    
+    cat(paste0(vcf, "(", match(vcf, all.vcfs), "/", length(all.vcfs), "): "))
+    f1.scores <- sapply(num.snps.to.test, function(num.snps){
+      cat(paste0(num.snps, "."))
+      idx <- sample(1:length(ref.dat$var), size=max(num.snps.to.test)*10, replace = FALSE)
+      vcf.map.var <- mapVariantFeat(vcf.map, ref.dat$var[idx])
+      vcf.map.var$BAF <- vcf.map.var$BAF[1:num.snps,]
+      vcf.map.var$GT <- vcf.map.var$GT[1:num.snps,]
+      
+      vaf.to.map <- vcf.map.var
+      
+      ## Overlap the two VCFs to form a single matrix to combine
+      ov.idx <- overlapPos(comp = vaf.to.map$BAF,
+                           ref=ref.dat$ref, mapping = 'probeset')
+      x.mat <- cbind(vaf.to.map$BAF$BAF[ov.idx$comp], 
+                     ref.dat$ref[ov.idx$ref,])
+      # if(rm.gne){
+      #   gne.idx <- c(grep("^GNE_", colnames(x.mat)), grep("^Unk[0-9]", colnames(x.mat)))
+      #   x.mat <- x.mat[,-gne.idx]
+      # }
+      
+      ## Calculate distance between samples
+      x.dist <- similarityMatrix(x.mat, 'euclidean')
+      D.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=meta.df)
+      balanced <- balanceGrps(D.vals)
+      
+      ## Train model
+      models <- trainLogit(balanced, predictors=c('baf'))
+      x.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=NULL)
+      pred <- assemblePredDat(x.vals, known.class=FALSE)
+      pred <- mkPredictions(pred, models)
+      x.pred <- split(pred, pred$Var2)[[colnames(x.mat)[1]]]
+      x.pred <- x.pred[order(x.pred$q),]
+      
+      rna.idx <- grep(gsub(".snpOut.*", "", vcf), rna.meta.df$EGAF)
+      match.idx <- factor(grepl(paste0("_?", rna.meta.df[rna.idx,]$ID, "$"), x.pred$Var1), levels=c(TRUE,FALSE))
+      c.tbl <- sapply(split(x.pred, match.idx), function(i) table(i$baf.p.fit))
+      
+      if(all(dim(c.tbl) == c(2,2))){
+        c.tbl <- c.tbl[c("M", "NM"), c('TRUE', 'FALSE')]
+        
+        precision <- c.tbl[1,1] / (c.tbl[1,1] + c.tbl[1,2])
+        recall <- c.tbl[1,1] / (c.tbl[1,1] + c.tbl[2,1])
+        f1.score <- 2 * ((precision * recall) / (precision + recall))
+        if(is.nan(f1.score)) f1.score <- 0
+      } else {
+        f1.score <- NULL
+      }
+      return(f1.score)
+    })
+    cat("\n")
+    
+    gc()
+    return(f1.scores)
+  }, mc.cores = 4)
+  save(vcf.f1.scores, file=file.path(PDIR, "match_it", paste0("vcf_f1.", seed, "_", dataset, ".rda")))
+  load(file.path(PDIR, "match_it", paste0("vcf_f1.", seed, "_", dataset, ".rda")))
+  
+  pdf(file.path(vcf.dir, paste0("f1score_", dataset, ".pdf")), height = 4, width=5)
+  f1.mat <- do.call(rbind, lapply(vcf.f1.scores, unlist))
+  colnames(f1.mat) <- num.snps.to.test
+  dataset <- 'GDSC'
+  boxplot(f1.mat, col="#0000ff22", las=1, outline=FALSE, 
+          ylab='F1-Score', xlab='Num. of SNPs', main=dataset)
+  rm.idx <- apply(f1.mat, 2, function(i) i >= median(i))
+  f1.mat[rm.idx] <- NA
+  colnames(f1.mat) <- rev(colnames(f1.mat))
+  melt.f1 <- reshape::melt(f1.mat)
+  
+  beeswarm::beeswarm(value ~ X2, data = melt.f1, method = 'swarm', corral = 'gutter',
+                     cex=0.8, pch = 16, add=TRUE, col=scales::alpha("black", 0.6))
+  dev.off()
+  scp.path <- "scp quever@192.168.198.99:"
+  cat(paste0(scp.path, file.path(vcf.dir, paste0("f1score_", dataset, ".pdf")), ' .\n'))
+  
+}
+
+
+
+##########################
+#### Match All RNAseq ####
+##########################
+## Matches all the RNAseq data from CCLE and GDSC2
+expressThis <- function(){
+  dataset <- 'CCLE' #GDSC
+  ds.pattern = '(CCLE)_|(GDSC)_|(GDSC2)_|(CCLE2)_|(GNE)_|(GNE2)_'
+  
+  vcf.dir <- file.path('/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs',
+                       dataset)
+  all.vcfs <- list.files(vcf.dir, pattern="vcf.gz$")
+  rna.meta.df <- readinRnaFileMapping()
+
+  rna.identity <- mclapply(all.vcfs, function(vcf, num.snps=200, top.hits=4){
+    vcf.map <- mapVcf2Affy(file.path(vcf.dir, vcf))
+    
+    cat(paste0(vcf, "(", match(vcf, all.vcfs), "/", length(all.vcfs), "): "))
+    idx <- sample(1:length(ref.dat$var), size=max(num.snps)*10, replace = FALSE)
+    vcf.map.var <- mapVariantFeat(vcf.map, ref.dat$var[idx])
+    vcf.map.var$BAF <- vcf.map.var$BAF[1:num.snps,]
+    vcf.map.var$GT <- vcf.map.var$GT[1:num.snps,]
+    vaf.to.map <- vcf.map.var
+    
+    ## Overlap the two VCFs to form a single matrix to combine
+    ov.idx <- overlapPos(comp = vaf.to.map$BAF,
+                         ref=ref.dat$ref, mapping = 'probeset')
+    x.mat <- cbind(vaf.to.map$BAF$BAF[ov.idx$comp], 
+                   ref.dat$ref[ov.idx$ref,])
+    # if(rm.gne){
+    #   gne.idx <- c(grep("^GNE_", colnames(x.mat)), grep("^Unk[0-9]", colnames(x.mat)))
+    #   x.mat <- x.mat[,-gne.idx]
+    # }
+    
+    ## Calculate distance between samples
+    x.dist <- similarityMatrix(x.mat, 'euclidean')
+    D.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=meta.df)
+    balanced <- balanceGrps(D.vals)
+    
+    ## Train model
+    models <- trainLogit(balanced, predictors=c('baf'))
+    x.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=NULL)
+    pred <- assemblePredDat(x.vals, known.class=FALSE)
+    pred <- mkPredictions(pred, models)
+    x.pred <- split(pred, pred$Var2)[[colnames(x.mat)[1]]]
+    x.pred <- x.pred[order(x.pred$q),]
+    
+    if(length(grep("^M$", x.pred$baf.p.fit)) < top.hits){
+      return(x.pred[1:top.hits,])
+    } else {
+      return(x.pred[grep("^M$", x.pred$baf.p.fit), ])
+    }
+  }, mc.cores = 4)
+  names(rna.identity) <- gsub(".snpOut.*", "", all.vcfs)
+  err.idx <- sapply(rna.identity, function(i) class(i) == 'try-error')
+  if(any(err.idx)) rna.identity <- rna.identity[-which(err.idx)]
+  save(rna.identity, file=file.path(PDIR, "match_it", paste0(dataset, "_rnaID.rda")))
+  load(file.path(PDIR, "match_it", paste0(dataset, "_rnaID.rda")))
+  
+  ## Annonate the CVCL IDs
+  rna.cvcl <- lapply(names(rna.identity), function(id, dataset){
+    print(id)
+    rna.id <- rna.identity[[id]]
+    file.prefix <- switch(dataset,
+                          "GDSC"="EGAF",
+                          "CCLE"="SRR")
+    if(any(grepl(paste0("^", id, "$"), rna.meta.df[[file.prefix]]))){
+      rna.id$Var2 <-  rna.meta.df[grep(paste0("^", id, "$"), rna.meta.df[[file.prefix]]),]$ID
+      
+      rna.id$clA <- as.character(gsub(ds.pattern, "", rna.id$Var1))
+      rna.id$clB <- as.character(gsub(ds.pattern, "", rna.id$Var2))
+      rna.id$cvclA <- meta.df[match(rna.id$clA, meta.df$ID),]$CVCL
+      rna.id$cvclB <- meta.df[match(rna.id$clB, meta.df$ID),]$CVCL
+      rna.id$g.truth <- with(rna.id, clA == clB)
+      rna.id[rna.id == 'character(0)'] <- 'CVCL_X482'
+      rna.id[is.na(rna.id)] <- 'CVCL_X482'
+      if(any(grepl("\\\t$", rna.id$cvclA))) rna.id$cvclA <- gsub("\\\t$", "", rna.id$cvclA)
+      if(any(grepl("\\\t$", rna.id$cvclB))) rna.id$cvclB <- gsub("\\\t$", "", rna.id$cvclB)
+      rna.id$cellosaurus <- CCLid:::checkAgainst(rna.id) #CCLid:::
+      rna.id[order(rna.id$cellosaurus, decreasing=TRUE),]
+    }  else {
+      rna.id$Var2 <-  id
+      rna.id
+    }
+  }, dataset=dataset)
+  names(rna.cvcl)  <- names(rna.identity)
+  no.match.idx <- which(sapply(rna.cvcl, function(i) !any(i$g.truth)))
+  match.idx <- which(sapply(rna.cvcl, function(i) any(i$g.truth)))
+  
+  ## Descriptive stats of the number of "matching" and "nonmatching" based on CVCL
+  print(paste0("Match: ", length(match.idx),  " / ", length(rna.cvcl)))
+  print(paste0("No-match: ", length(no.match.idx),  " / ", length(rna.cvcl)))
+  
+  ## Concatenate everything and output csv
+  rna.m <- plyr::rbind.fill(lapply(rna.cvcl[match.idx], function(i){
+    i[which(i$baf.p.fit == 'M'),]
+  }))
+  rna.nm <- plyr::rbind.fill(rna.cvcl[no.match.idx])
+  rna.mnm <- plyr::rbind.fill(rna.m, rna.nm)
+  
+  table(sapply(rna.cvcl[no.match.idx], function(i) i[1,'baf.p.fit'])) # GDSC-M:14  NM:19 || CCLE-M:13  NM:44 
+  table(sapply(rna.cvcl[match.idx], function(i) any(i$g.truth))) # GDSC-M:14  NM:19 || CCLE-M:13  NM:44 
+  
+  cat(paste0("grep \"", names(rna.cvcl[no.match.idx]), "\" *\n"), "\n")
+  
+  write.table(rna.mnm, file.path(PDIR, "match_it", paste0(dataset, "_rnaID.csv")),
+              sep=",", quote=FALSE, row.names=FALSE, col.names=TRUE)
+  scp.path <- "scp quever@192.168.198.99:"
+  cat(paste0(scp.path, file.path(PDIR, "match_it", paste0(dataset, "_rnaID.csv")), ' .\n'))
+}
+  
 ######################################################
 #### Genotype concordance between every cell line ####
 ######################################################

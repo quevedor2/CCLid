@@ -10,23 +10,8 @@ benchmarkCCLid <- function(bench){
   dataset.cols <- setNames(RColorBrewer::brewer.pal(6, "Dark2"),
                            c("GDSC", "CCLE", "gCSI", "CGP", "Pfizer"))
   
-  ## Load in Ref mat file
   PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
-  analysis <- 'baf'
-  ref.mat <- downloadRefCCL("BAF", saveDir = PDIR)
-  format.dat <- formatRefMat(name="BAF", ref.mat=ref.mat, saveDir=PDIR, 
-                             analysis='baf', bin.size=5e5)
-  # var.dat10mb <- var.dat2
-  # var.dat5mb <- var.dat2
-  # var.dat500k <- var.dat
-  # var.dat1mb <- var.dat2
-  # var.dat <- var.dat2
-  ref.mat <- format.dat$mat
-  var.dat <- format.dat$var
-  
-  ref.mat.bkup <- ref.mat
-  new.ids <- assignGrpIDs(ref.mat.bkup, meta.df)
-  colnames(ref.mat) <- new.ids
+  ref.dat <- CCLid::loadRef(PDIR, 'baf', bin.size=5e5)
 }
 
 

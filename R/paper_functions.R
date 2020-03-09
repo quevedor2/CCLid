@@ -367,18 +367,18 @@ plotFracDrift <- function(summ.frac){
   par(mar=c(5.1, 4.1, 6, 6), xpd=FALSE)
   with(cn.baf.frac, plot(drift.x, drift.y, pch=16, col=scales::alpha("black", 0.6),
                          axes=FALSE,
-                         xlab="Fraction drift (BAF)", ylab="Fraction drift(L2R)", 
+                         xlab="Fraction drift (BAF)", ylab="Fraction drift (L2R)", 
                          xlim=c(0,1), ylim=c(0,1)))
   abline(coef=c(0,1), col="grey", lty=2)
   axis(side = 1, at = seq(0, 1, by=0.2))
   axis(side = 2, at = seq(0, 1, by=0.2))
   
   par(xpd=NA)
-  dx <- density(cn.baf.frac$drift.x)
+  dx <- density(cn.baf.frac$drift.x, na.rm=TRUE)
   polygon(x = c(min(dx$x), dx$x, 1), 
           y=c(1, scales::rescale(dx$y, to=c(1,1.1)), 1), col="black")
   
-  dy <- density(cn.baf.frac$drift.y)
+  dy <- density(cn.baf.frac$drift.y, na.rm=TRUE)
   polygon(y = c(min(dy$x), dy$x, 1), 
           x = c(1, scales::rescale(dy$y, to=c(1,1.1)), 1), col="black")
   
@@ -502,16 +502,27 @@ getCinScore <- function(psets, cin.metric='sum'){
 #' @param psets 
 #' @param gene.id 
 #' @export
-getGeneExpr <- function(psets, gene.id){
+getGeneExpr <- function(psets, gene.id, in.key='SYMBOL'){
   require(PharmacoGx)
   require("org.Hs.eg.db")
   
-  ensids <- mapIds(org.Hs.eg.db, keys = gene.id, keytype = "SYMBOL", column="ENSEMBL")
+  if(in.key != 'ENSEMBL'){
+    ensids <- mapIds(org.Hs.eg.db, keys = gene.id, keytype = in.key, column="ENSEMBL")
+  } else {
+    ensids <- gene.id
+  }
+  
   
   rna <- lapply(psets, function(pset, mDataType='rnaseq'){
     mdat <- molecularProfiles(pset, mDataType)
     colnames(mdat) <- pset@molecularProfiles[[mDataType]]$cellid
-    cin.idx <- unlist(sapply(ensids, grep, x=rownames(mdat)))
+    cin.idx <- match(ensids, gsub("\\..*", "", rownames(mdat)))
+    na.idx <- is.na(cin.idx)
+    # cin.idx <- unlist(sapply(ensids, grep, x=rownames(mdat)))
+    if(any(na.idx)) {
+      cin.idx <- cin.idx[-which(na.idx)]
+      gene.id <- gene.id[-which(na.idx)]
+    }
     mdat <- mdat[cin.idx,,drop=FALSE]
     rownames(mdat) <- gene.id
     mdat
@@ -566,4 +577,99 @@ corWithDrug <- function(dat.d, col.idx, title='', text.thresh=0.5){
   
   legend("topright", col=q.col, legend = paste0("q <= ", names(q.col)), pch=16, cex = 0.8)
   return(dat.d.abc)
+}
+
+
+########################
+#### PLTK Functions ####
+########################
+#' cnTools: get Genes in TxDb.Hsapiens.UCSC.hg19.knownGene
+#' @description Gets the genes from UCSC hg19 TxDb knownGene
+#'
+#' @return A Granges object containing strand-specific genes with EntrezIDs
+#' @export
+#' @import TxDb.Hsapiens.UCSC.hg19.knownGene 
+#' TxDb.Hsapiens.UCSC.hg38.knownGene
+#' TxDb.Hsapiens.UCSC.hg18.knownGene 
+#' GenomicRanges
+#' 
+#' @examples getGenes()
+getGenes <- function(genome.build="hg19"){
+  switch(genome.build,
+         hg18={ 
+           require(TxDb.Hsapiens.UCSC.hg18.knownGene)
+           package <- TxDb.Hsapiens.UCSC.hg18.knownGene 
+          },
+         hg19={ 
+           require(TxDb.Hsapiens.UCSC.hg19.knownGene)
+           package <- TxDb.Hsapiens.UCSC.hg19.knownGene 
+          },
+         hg38={ 
+           require(TxDb.Hsapiens.UCSC.hg38.knownGene)
+           package <- TxDb.Hsapiens.UCSC.hg38.knownGene 
+          },
+         stop("genome must be hg18, hg19, or hg38"))
+  
+  genes0 <- genes(package)
+  idx <- rep(seq_along(genes0), elementNROWS(genes0$gene_id))
+  genes <- granges(genes0)[idx]
+  genes$gene_id = unlist(genes0$gene_id)
+  genes
+}
+
+#' cnTools: annotate GRanges segments
+#'
+#' @param cn.data [Data.frame]: A dataframe that can be converted to GRanges object easily, or a granges object
+#' @param genes [GRanges]: A GRanges object of genes with gene_ids housing annotation data. Easiest as the output from getGenes()
+#' @param mart [object]: A biomart object if you want to annotate missed genes with ensembl
+#' @param use.mart [boolean]: If no mart is given, it will load in a biomart object
+#'
+#' @return Annotated GRanges object with gene ids for the input GRanges
+#' @export
+#' @import org.Hs.eg.db GenomicRanges
+#' @importFrom AnnotationDbi mapIds
+#' 
+#' @examples 
+#' annotateSegments(PLTK::genDemoData(), PLTK::getGenes())
+annotateSegments <- function(cn.data, genes, out.key="SYMBOL", mart=NULL, use.mart=FALSE){
+  suppressPackageStartupMessages(require(biomaRt))
+  suppressPackageStartupMessages(require(org.Hs.eg.db))
+  suppressPackageStartupMessages(require(GenomicRanges))
+  suppressPackageStartupMessages(require(AnnotationDbi))
+  if(use.mart & is.null(mart)){
+    mart <- useMart("ENSEMBL_MART_ENSEMBL")
+    mart <- useDataset("hsapiens_gene_ensembl", mart)
+  }
+  
+  if(class(cn.data) == 'GRanges') {
+    gr0 <- cn.data
+  } else {
+    gr0 <- makeGRangesFromDataFrame(cn.data,keep.extra.columns=TRUE)
+  }
+  seqlevelsStyle(gr0) <- 'UCSC'
+  olaps <- findOverlaps(genes, gr0, type="within")
+  idx <- factor(subjectHits(olaps), levels=seq_len(subjectLength(olaps)))
+  gr0$gene_ids <- splitAsList(genes$gene_id[queryHits(olaps)], idx)
+  gr0$gene_ids <- lapply(gr0$gene_ids, function(input.id) {
+    if(length(input.id) > 0){ 
+      tryCatch({
+        ens <- mapIds(org.Hs.eg.db,
+                      keys=input.id,
+                      column=out.key,
+                      keytype="ENTREZID",
+                      multiVals="first")
+        
+        if(!is.null(mart)){
+          ens[which(is.na(ens))] <- getBM(
+            mart=mart,
+            attributes="external_gene_name",
+            filter="entrezgene",
+            values=names(ens[which(is.na(ens))]),
+            uniqueRows=TRUE)
+        }
+        ens
+      }, error=function(e){NULL})
+    } else { NA }
+  })
+  return(gr0)
 }

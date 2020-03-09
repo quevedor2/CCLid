@@ -24,7 +24,7 @@ loadInData <- function(){
 ## from the CCLid package, and the difference
 ## in ASCAT ASCN data.
 driftConcordance <- function(){
-  dataset <- 'GDSC' #GDSC
+  dataset <- 'GNE' #GDSC
   alt.ds <- 'CCLE' #CCLE
   
   ## Find variant features and isolate for cell lines shared in datasets
@@ -72,7 +72,7 @@ driftConcordance <- function(){
   load(file=file.path(PDIR, "drift_it", 
                       paste0(dataset, "-", alt.ds, "_baf_drift.rda")))
   
-  cn.z <- 1; b.z <- 5
+  if(dataset == 'GDSC'){ cn.z <- 1; b.z <- 5 } else if(dataset == 'GNE'){  cn.z <- 1; b.z <- 2  }
   summ.frac <- summarizeFracDrift(cn.drifts=cn.drifts, cn.z=cn.z,
                                   baf.drifts=baf.drifts, baf.z=b.z,
                                   include.id=TRUE)
@@ -105,7 +105,9 @@ driftConcordance <- function(){
                        cell.ids = names(baf.drifts),
                        baf.z=baf.z, cn.z=cn.z, cn.gtruth=FALSE)
   }, mc.cores = 10)
-  
+  drift.dat <-  driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.cn, 
+                                   cell.ids = names(baf.drifts),
+                                   baf.z=b.z, cn.z=cn.z, cn.gtruth=FALSE)
   
   ## Plot the saturation-sensitvity curve
   pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf")),
@@ -127,9 +129,8 @@ driftConcordance <- function(){
            labels = sat.points, cex=0.8, adj=0 )
       print(1-drift.dat$saturation[sat.points,])
     }, error=function(e){ NA })
-    # 0.7     0.8     0.9 
-    # 0.838   0.784   0.690 
-    
+    #GNE(b.z=2) 0.7   0.8   0.9 
+    #GNE(b.z=2) 0.867 0.823 0.747 
   })
   dev.off()
   cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf .\n"))))
@@ -150,14 +151,15 @@ driftConcordance <- function(){
 # #           'JHOS-2', 'NB-1', 'NCI-H23', 'PC-3', 
 # #           'AsPC-1', 'A172', 
 #            'Capan-1'), function(ccl.id){
-  sapply(c('NCI-H23', 'NCI-H2052', 'MCF-7', 'A3-KAW'), function(ccl.id){
+  #'NCI-H23', 'NCI-H2052', 'MCF-7', 'A3-KAW'
+  sapply(c('HCC1599', 'Hs-294T'), function(ccl.id){
     pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift_", ccl.id, ".pdf")),
         width=7, height=3)
     CNAo <- cn.drifts$cna.obj
     CNAo$output <- split(CNAo$output, CNAo$output$ID)[[ccl.id]]
     CNAo$data <- CNAo$data[,c(1,2,grep(paste0("^", ccl.id, "$"), colnames(CNAo$data)))]
-    plot.CCLid(CNAo, min.z=1)
-    plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=if(dataset=='GNE') 2 else 5)
+    CCLid:::plot.CCLid(CNAo, min.z=1)
+    CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=b.z)
     dev.off()
     
     meta.cclid <- meta.df[grep(paste0("^", ccl.id, "$"), meta.df$ID),]
@@ -394,97 +396,4 @@ driftTech <- function(){
   dev.off()
   print(file.path(vcf.dir, paste0("drift_", dataset, "-", alt.ds, ".pdf")))
 
-}
-  
-############################
-#### F1 Score Min.Snps  ####
-############################
-## This process is meant to calculate the minimum
-## number of SNPS needed by calculating the F1 score
-## for a series of different number of SNPs
-minimumSnps <- function(){
-  dataset <- 'GDSC'
-  vcf.dir <- file.path('/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs',
-                       dataset)
-  all.vcfs <- list.files(vcf.dir, pattern="vcf.gz$")
-  rna.meta.df <- readinRnaFileMapping()
-  num.snps.to.test <- seq(100,10,by=-10)
-  seed <- 1234
-  
-  set.seed(seed)
-  # s.range <- sort(sample(1:length(all.vcfs), size=100))
-  # f1.scores.by.snps <- lapply(seq(40, 10, by=-2), function(num.snps){
-  vcf.f1.scores <- mclapply(all.vcfs, function(vcf){
-    vcf.map <- mapVcf2Affy(file.path(vcf.dir, vcf))
-    
-    cat(paste0(vcf, "(", match(vcf, all.vcfs), "/", length(all.vcfs), "): "))
-    f1.scores <- sapply(num.snps.to.test, function(num.snps){
-      cat(paste0(num.snps, "."))
-      idx <- sample(1:length(ref.dat$var), size=max(num.snps.to.test)*10, replace = FALSE)
-      vcf.map.var <- mapVariantFeat(vcf.map, ref.dat$var[idx])
-      vcf.map.var$BAF <- vcf.map.var$BAF[1:num.snps,]
-      vcf.map.var$GT <- vcf.map.var$GT[1:num.snps,]
-      
-      vaf.to.map <- vcf.map.var
-      
-      ## Overlap the two VCFs to form a single matrix to combine
-      ov.idx <- overlapPos(comp = vaf.to.map$BAF,
-                           ref=ref.dat$ref, mapping = 'probeset')
-      x.mat <- cbind(vaf.to.map$BAF$BAF[ov.idx$comp], 
-                     ref.dat$ref[ov.idx$ref,])
-      # if(rm.gne){
-      #   gne.idx <- c(grep("^GNE_", colnames(x.mat)), grep("^Unk[0-9]", colnames(x.mat)))
-      #   x.mat <- x.mat[,-gne.idx]
-      # }
-      
-      ## Calculate distance between samples
-      x.dist <- similarityMatrix(x.mat, 'euclidean')
-      D.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=meta.df)
-      balanced <- balanceGrps(D.vals)
-      
-      ## Train model
-      models <- trainLogit(balanced, predictors=c('baf'))
-      x.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=NULL)
-      pred <- assemblePredDat(x.vals, known.class=FALSE)
-      pred <- mkPredictions(pred, models)
-      x.pred <- split(pred, pred$Var2)[[colnames(x.mat)[1]]]
-      x.pred <- x.pred[order(x.pred$q),]
-      
-      rna.idx <- grep(gsub(".snpOut.*", "", vcf), rna.meta.df$EGAF)
-      match.idx <- factor(grepl(paste0("_?", rna.meta.df[rna.idx,]$ID, "$"), x.pred$Var1), levels=c(TRUE,FALSE))
-      c.tbl <- sapply(split(x.pred, match.idx), function(i) table(i$baf.p.fit))
-      
-      if(all(dim(c.tbl) == c(2,2))){
-        c.tbl <- c.tbl[c("M", "NM"), c('TRUE', 'FALSE')]
-        
-        precision <- c.tbl[1,1] / (c.tbl[1,1] + c.tbl[1,2])
-        recall <- c.tbl[1,1] / (c.tbl[1,1] + c.tbl[2,1])
-        f1.score <- 2 * ((precision * recall) / (precision + recall))
-        if(is.nan(f1.score)) f1.score <- 0
-      } else {
-        f1.score <- NULL
-      }
-      return(f1.score)
-    })
-    cat("\n")
-    
-    gc()
-    return(f1.scores)
-  }, mc.cores = 4)
-  save(vcf.f1.scores, file=file.path(vcf.dir, paste0("vcf_f1.", seed, "_", dataset, ".rda")))
-  
-  pdf(file.path(vcf.dir, paste0("f1score_", dataset, ".pdf")), height = 4, width=5)
-  f1.mat <- do.call(rbind, lapply(vcf.f1.scores, unlist))
-  colnames(f1.mat) <- num.snps.to.test
-  dataset <- 'GDSC'
-  boxplot(f1.mat, col="#0000ff22", las=1, outline=FALSE, 
-          ylab='F1-Score', xlab='Num. of SNPs', main=dataset)
-  rm.idx <- apply(f1.mat, 2, function(i) i >= median(i))
-  f1.mat[rm.idx] <- NA
-  colnames(f1.mat) <- rev(colnames(f1.mat))
-  melt.f1 <- reshape::melt(f1.mat)
-  
-  beeswarm::beeswarm(value ~ X2, data = melt.f1, method = 'swarm', corral = 'gutter',
-           cex=0.8, pch = 16, add=TRUE, col=scales::alpha("black", 0.6))
-  dev.off()
 }
