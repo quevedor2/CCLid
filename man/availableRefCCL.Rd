@@ -6,6 +6,7 @@
 \usage{
 availableRefCCL(
   saveDir = file.path(".", "CCLid"),
+  tableDir = NULL,
   myfn = "downloadTable.csv",
   verbose = TRUE
 )

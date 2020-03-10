@@ -4,7 +4,7 @@
 \alias{test}
 \title{test function for denis}
 \usage{
-test(a)
+test(a = "NULL")
 }
 \arguments{
 \item{a}{A string}

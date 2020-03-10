@@ -610,6 +610,7 @@ getGenes <- function(genome.build="hg19"){
 #' @param mart [object]: A biomart object if you want to annotate missed genes with ensembl
 #' @param use.mart [boolean]: If no mart is given, it will load in a biomart object
 #'
+#'
 #' @return Annotated GRanges object with gene ids for the input GRanges
 #' @examples 
 #' annotateSegments(PLTK::genDemoData(), PLTK::getGenes())

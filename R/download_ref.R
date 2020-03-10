@@ -45,13 +45,15 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
 #'
 #' @return
 #' @export
-availableRefCCL <- function (saveDir = file.path(".", "CCLid"), 
+availableRefCCL <- function (saveDir = file.path(".", "CCLid"), tableDir=NULL,
                              myfn = "downloadTable.csv", verbose = TRUE) {
+  if(is.null(tableDir)){
+    tableDir <- system.file(file.path("extdata"), package="CCLid")   #file.path("~", "git", "CCLid", "data-raw")
+  }
   if (!file.exists(saveDir)) {
     dir.create(saveDir, recursive = TRUE)
   }
-  saveDir <- file.path("~", "git", "CCLid", "data-raw")
-  dl.table <- read.csv(file.path(saveDir, myfn), check.names = FALSE, stringsAsFactors = FALSE)
+  dl.table <- read.csv(file.path(tableDir, myfn), check.names = FALSE, stringsAsFactors = FALSE)
   return(dl.table)
 }
 
