@@ -176,7 +176,7 @@ driftConcordance <- function(){
 ## of drift found in the RNAseq and the SNP array
 ## data.  As well as calculate the overlap of
 ## segments between the two
-driftTech <- function(){
+driftRNA <- function(){
   # dataset <- 'GDSC'
   # alt.ds <- 'CCLE'
   dataset <- 'CCLE'
@@ -286,6 +286,7 @@ driftTech <- function(){
   
   pdf(file.path(PDIR, "drift_it", paste0("RNA-", dataset, "_cn-baf-rna-drift.pdf")))
   sapply(c('VM-CUB-1', 'KM-H2', 'CL-40', 'HLE'), function(ccl.id){
+  #sapply(c('HCC1937', 'JHOS-2', 'RS4-11'), function(ccl.id){
     print(length(baf.drifts[[ccl.id]]))
     print(length(vcf.drift[[ccl.id]]))
     cn.obj <- cn.drifts$cna.obj

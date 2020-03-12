@@ -39,7 +39,7 @@
 #' @param ref 
 #' @param dat.type 
 .addCumPos <- function(dat, ref, dat.type){
-  m.row.idx <- match(dat$chrom, seqnames(ref))
+  m.row.idx <- match(as.character(dat$chrom), as.character(seqnames(ref)))
   if(dat.type=='data'){
     dat$cpos <- ref[m.row.idx,]$cum.start +  dat$pos - 1
     dat$chr.stat
@@ -270,7 +270,7 @@ plot.SimpleCCLid <- function(obj, add.chr.sep=TRUE, min.z=2){
   }
   
   chr.size.dat <- CCLid:::.getChrLength()
-  chr.seg <- .addCumPos(obj$output, chr.size.dat, dat.type='seg') #CCLid:::
+  chr.seg <- CCLid:::.addCumPos(dat=obj$output, ref=chr.size.dat, dat.type='seg') #CCLid:::
   
   seg.col <- c('gray80', 'gray60')
   sig.col <- 'red'
