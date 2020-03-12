@@ -105,9 +105,6 @@ driftConcordance <- function(){
                        cell.ids = names(baf.drifts),
                        baf.z=baf.z, cn.z=cn.z, cn.gtruth=FALSE)
   }, mc.cores = 10)
-  drift.dat <-  driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.cn, 
-                                   cell.ids = names(baf.drifts),
-                                   baf.z=b.z, cn.z=cn.z, cn.gtruth=FALSE)
   
   ## Plot the saturation-sensitvity curve
   pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf")),
@@ -158,8 +155,8 @@ driftConcordance <- function(){
     CNAo <- cn.drifts$cna.obj
     CNAo$output <- split(CNAo$output, CNAo$output$ID)[[ccl.id]]
     CNAo$data <- CNAo$data[,c(1,2,grep(paste0("^", ccl.id, "$"), colnames(CNAo$data)))]
-    CCLid:::plot.CCLid(CNAo, min.z=1)
-    CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=b.z)
+    plot.CCLid(CNAo, min.z=1) # CCLid:::
+    plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=b.z) # CCLid:::
     dev.off()
     
     meta.cclid <- meta.df[grep(paste0("^", ccl.id, "$"), meta.df$ID),]
@@ -208,7 +205,13 @@ driftTech <- function(){
   # vcfFile=file.path(vcf.dir, vcf)
   for(vcf in all.vcfs){
     vcf.drift[[vcf]] <- getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), 
-                                     ref.dat, rna.meta.df, min.depth=5)
+                                     ref.dat, rna.meta.df, min.depth=5,
+                                     centering='extreme')
+    ccl.id <- 'VM-CUB-1'; vcf <- paste0(rna.meta.df[grep(ccl.id, rna.meta.df$ID),]$SRR, '.snpOut.vcf.gz')
+    ccl.id <- 'KM-H2'; vcf <- paste0(rna.meta.df[grep(ccl.id, rna.meta.df$ID),]$SRR, '.snpOut.vcf.gz')
+    vcf.drift[[ccl.id]] <- getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), 
+                                        ref.dat, rna.meta.df, min.depth=5,
+                                        centering='median')
   }
   ## Very weird bugs happens when I use lapply
   # vcf.drift <- mclapply(all.vcfs[1:4], function(vcf){  
@@ -220,15 +223,17 @@ driftTech <- function(){
 
   
   load(file=file.path(PDIR, "drift_it", 
-                      paste0(dataset, "-", alt.ds, "_vcf_drift.rda")))
+                      paste0(dataset, "-", alt.ds, "_vcf_drift.rda"))) #vcf.drift
   load(file=file.path(PDIR, "drift_it", 
-                      paste0(dataset, "-", alt.ds, "_baf_drift.rda")))
+                      paste0('GDSC', "-", 'CCLE', "_baf_drift.rda"))) #baf.drifts
+  load(file=file.path(PDIR, "drift_it", 
+                      paste0('GDSC', "-", 'CCLE', "_cn_drift.rda"))) #cn.drifts
   
   ##################################################################################################
   gr.rna <- lapply(setNames(c("GDSC", "CCLE"),c("GDSC", "CCLE")), function(ds){
     rna <- lapply(vcf.drift, function(i) {
-      d <- i$cna.obj[[1]]$output
-      d <- d[grep(paste0(ds, "_"), d$ID),]
+      d <- i$cna.obj[[1]]$output ## The RNA file copared to all other files
+      d <- d[grep(paste0(ds, "_"), d$ID),]  ## subset for comparison to SNP dataset ds (GDSC or CCLE)
       d$ID <- gsub("(GDSC_)|(CCLE_)", "", d$ID)
       return(d)
     })
@@ -277,28 +282,38 @@ driftTech <- function(){
   dev.off()
   cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-rna-drift.pdf .\n"))))
   
-  head(sort(colSums(rna.drift.dat[[3]]$dat)), 50)
-  tail(sort(colSums(rna.drift.dat[[3]]$dat)), 50)
   
-  pdf("~/test2.pdf")
+  
+  pdf(file.path(PDIR, "drift_it", paste0("RNA-", dataset, "_cn-baf-rna-drift.pdf")))
   sapply(c('VM-CUB-1', 'KM-H2', 'CL-40', 'HLE'), function(ccl.id){
     print(length(baf.drifts[[ccl.id]]))
     print(length(vcf.drift[[ccl.id]]))
-    CCLid:::plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=5)
-    CCLid:::plot.CCLid(vcf.drift[[ccl.id]]$cna.obj[[1]], min.z=3)
+    cn.obj <- cn.drifts$cna.obj
+    cn.obj$data <- NULL
+    cn.obj$output <- cn.obj$output[which(cn.obj$output$ID %in% ccl.id),]
+
+    baf.vcf.drift <- Reduce(append, list(list("CN"=cn.obj), 
+                            baf.drifts[[ccl.id]]$sig.gr,
+                            vcf.drift[[ccl.id]]$cna.obj))
+    plot.multiObj(baf.vcf.drift, min.z=2)
+    
+    # plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=5)
+    # plot.CCLid(vcf.drift[[ccl.id]]$cna.obj[[1]], min.z=3)
   })
   dev.off()
+  cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0("RNA-", dataset, "_cn-baf-rna-drift.pdf .\n"))))
+  
+  
   
   
   ## Drift overlaps between a given sample
-  rna.meta.df[match(names(seg.sig[-null.idx])[cl.idx], rna.meta.df$EGAF),]
   ##################################################################################################
   ccl.id <- "CL-40"
   srr.file <- as.character(rna.meta.df[grep(ccl.id, rna.meta.df$ID),]$SRR)
   egaf.file <- as.character(rna.meta.df[grep(ccl.id, rna.meta.df$ID),]$EGAF)
   # col.idx <- grep("(UNK)|(GNE_)", colnames(ref.dat$ref))
   # ref.dat$ref <- ref.dat$ref[,-col.idx]
-  vcf.x <- getVcfDrifts(vcfFile = file.path(vcf.dir, paste0(egaf.file, ".snpOut.vcf.gz")), 
+  vcf.x <- getVcfDrifts(vcfFile = file.path(vcf.dir, paste0(if(dataset=='CCLE') srr.file else egaf.file, ".snpOut.vcf.gz")), 
                         ref.dat=ref.dat, rna.meta.df = rna.meta.df)
   multiDriftPlot(vcf.x$sig, chr.size.gr=CCLid:::.getChrLength(), ref.ds=dataset, alt.ds=alt.ds)
   

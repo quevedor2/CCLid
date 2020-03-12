@@ -4,7 +4,13 @@
 \alias{getVcfDrifts}
 \title{getVcfDrifts}
 \usage{
-getVcfDrifts(vcfFile, ref.dat, rna.meta.df, ...)
+getVcfDrifts(
+  vcfFile,
+  ref.dat,
+  rna.meta.df,
+  min.depth = 5,
+  centering = "extreme"
+)
 }
 \arguments{
 \item{vcfFile}{path to vcf file}

@@ -34,6 +34,23 @@
   return(chr.len.gr)
 }
 
+#' .addCumPos
+#' @param dat 
+#' @param ref 
+#' @param dat.type 
+.addCumPos <- function(dat, ref, dat.type){
+  m.row.idx <- match(dat$chrom, seqnames(ref))
+  if(dat.type=='data'){
+    dat$cpos <- ref[m.row.idx,]$cum.start +  dat$pos - 1
+    dat$chr.stat
+  } else if(dat.type == 'seg'){
+    dat$cloc.start <- ref[m.row.idx,]$cum.start +  dat$loc.start - 1
+    dat$cloc.end <- ref[m.row.idx,]$cum.start +  dat$loc.end - 1
+  }
+  dat$chr.stat <- (m.row.idx %% 2) + 1
+  return(dat)
+}
+
 #### Main Functions ####
 ########################
 #' multiDriftPlot
@@ -158,7 +175,7 @@ plot.CCLid <- function (obj, sample.size=600, low.sig.alpha=0.01,
   # low.sig.alpha=0.01
   # hi.sig.alpha=0.2
   # add.chr.sep=TRUE
-  # sample.size=50
+  # sample.size=600
   # add.points=TRUE
   # atype='sd'
   require(scales)
@@ -177,21 +194,8 @@ plot.CCLid <- function (obj, sample.size=600, low.sig.alpha=0.01,
   
   chr.size.dat <- CCLid:::.getChrLength()
   
-  .addCumPos <- function(dat, ref, dat.type){
-    m.row.idx <- match(dat$chrom, seqnames(ref))
-    if(dat.type=='data'){
-      dat$cpos <- ref[m.row.idx,]$cum.start +  dat$pos - 1
-      dat$chr.stat
-    } else if(dat.type == 'seg'){
-      dat$cloc.start <- ref[m.row.idx,]$cum.start +  dat$loc.start - 1
-      dat$cloc.end <- ref[m.row.idx,]$cum.start +  dat$loc.end - 1
-    }
-    dat$chr.stat <- (m.row.idx %% 2) + 1
-    return(dat)
-  }
-  
-  chr.data <- .addCumPos(obj$data, chr.size.dat, dat.type='data')
-  chr.seg <- .addCumPos(obj$output, chr.size.dat, dat.type='seg')
+  chr.data <- CCLid:::.addCumPos(obj$data, chr.size.dat, dat.type='data')
+  chr.seg <- CCLid:::.addCumPos(obj$output, chr.size.dat, dat.type='seg')
   samples <- colnames(obj$data)[-c(1:2)]
   chr.cols <- c('black', 'green')
   seg.col <- 'orange'
@@ -245,33 +249,96 @@ plot.CCLid <- function (obj, sample.size=600, low.sig.alpha=0.01,
 }
 
 
+#' plot.SimpleCCLid
+#'
+#' @param obj 
+#' @param add.chr.sep 
+#' @param min.z 
+plot.SimpleCCLid <- function(obj, add.chr.sep=TRUE, min.z=2){
+  require(scales)
+  chroms <- paste0("chr", c(1:22, "X", "Y"))
+  if(any(grepl("(23)|(24)$", obj$data$chrom))){
+    require(dplyr)
+    obj$data$chrom <- gsub("23$", "X", obj$data$chrom) %>%
+      gsub("24$", "Y", .)
+    obj$output$chrom <- gsub("23$", "X", obj$output$chrom) %>%
+      gsub("24$", "Y", .)
+  }
+  if(any(!grepl("^chr", obj$data$chrom))){
+    obj$data$chrom <- paste0("chr", obj$data$chrom)
+    obj$output$chrom <- paste0("chr", obj$output$chrom)
+  }
+  
+  chr.size.dat <- CCLid:::.getChrLength()
+  chr.seg <- .addCumPos(obj$output, chr.size.dat, dat.type='seg') #CCLid:::
+  
+  seg.col <- c('gray80', 'gray60')
+  sig.col <- 'red'
+  
+  seg.spl <- split(chr.seg, chr.seg$ID)
+  
+  ### Viz begins!
+  ## Create blank canvas to map the brilliance!
+  plot(x = 0, type='n', xlab='', ylab='', 
+       pch=16, ylim=c(0, length(seg.spl)), xlim=c(1, max(chr.size.dat$cum.end)), 
+       yaxt='n', xaxt='n', axes=FALSE, cex=0.6)
+  abline(h = 0)
+  if(add.chr.sep) abline(v = chr.size.dat$cum.end, lwd=0.5, col='grey')
+  
+  ## Adds chr labels
+  axis(side=1, at = chr.size.dat$cum.mid[c(TRUE, FALSE)], 
+       labels = gsub("^chr", "", as.character(seqnames(chr.size.dat)))[c(TRUE, FALSE)], 
+       las=1,  tick=FALSE, lwd = 0, line=-1, cex.axis=0.6)
+  axis(side=1, at = chr.size.dat$cum.mid[c(FALSE, TRUE)], 
+       labels = gsub("^chr", "", as.character(seqnames(chr.size.dat)))[c(FALSE, TRUE)], 
+       las=1,  tick=FALSE, lwd = 0, line=0, cex.axis=0.6)
+  axis(side = 2, at=(c(1:length(seg.spl)) - 0.5), labels=names(seg.spl), 
+       las=1, cex.axis=0.8)
+  
+  for(s in names(seg.spl)){
+    ssid <- seg.spl[[s]]
+    ssid[is.na(ssid)] <- 0
+    
+    ssid$max.t <- ssid$t
+    if(any(ssid$max.t > 5)) ssid[ssid$max.t > 5,]$max.t <- 5
+    y.idx <- match(s, names(seg.spl))
+    
+    ## Add rectangles for the multiplots
+    rect(xleft = ssid$cloc.start, ybottom = (y.idx - 0.8), 
+         xright = ssid$cloc.end, ytop = (y.idx - 0.5 + ssid$max.t/10), 
+         col=seg.col[ssid$chr.stat], border = NA)
+    if(any(ssid$t >= min.z)){
+      ss.sig <- ssid[which(ssid$t >= min.z),]
+      rect(xleft = ss.sig$cloc.start, ybottom = (y.idx - 0.8), 
+           xright = ss.sig$cloc.end, ytop = (y.idx - 0.5 + ss.sig$max.t/10), 
+           col=sig.col, border = NA)
+    }
+  }
+  
+}
 
-# 
-# sample.ids <- unique(obj$output$ID)
-# lapply(sample.ids, function(id){
-#   print(paste0("Plotting sample: ", id))  
-#   
-  # chroms <- paste0("chr", c(1:22, "X", "Y"))
-  # if(any(grepl("(23)|(24)$", obj$data$chrom))){
-  #   require(dplyr)
-  #   obj$data$chrom <- gsub("23$", "X", obj$data$chrom) %>%
-  #     gsub("24$", "Y", .)
-  #   obj$output$chrom <- gsub("23$", "X", obj$output$chrom) %>%
-  #     gsub("24$", "Y", .)
-  # }
-#   
-  # if(any(!grepl("^chr", obj$data$chrom))){
-  #   obj$data$chrom <- paste0("chr", obj$data$chrom)
-  #   obj$output$chrom <- paste0("chr", obj$output$chrom)
-  # }
-#   
-#   chr.data <- split(obj$data[,id], obj$data$chrom)
-#   id.idx <- grep(paste0("^", id, "$"), obj$output$ID)
-#   chr.seg <- split(obj$output[id.idx,], obj$output[id.idx,]$chrom)
-#   samples <- id
-#   chr.cols <- c('black', 'green')
-#   seg.col <- 'orange'
-#   sig.col <- 'red'
-#   
-#   
-# })
+
+#' plot.multiObj
+#'
+#' @param OBJ A list of CCLid Objects
+#' @param add.chr.sep 
+#' @param min.z 
+#'
+#' @export
+plot.multiObj <- function(OBJ, add.chr.sep=TRUE, min.z=2){
+  if(class(OBJ) == 'list'){
+    par(mfrow=c(length(OBJ), 1), mar=c(3, 8, 3, 2))
+    
+    if(length(min.z) > 1){
+      if(length(min.z) != length(OBJ)) stop("min.z length does not equal input length of CCLid objects")
+      lapply(seq_along(OBJ), function(idx){
+        plot.SimpleCCLid(OBJ[[idx]], min.z[idx], add.chr.sep=add.chr.sep)
+      })
+    } else {
+      lapply(OBJ, plot.SimpleCCLid, min.z=min.z, add.chr.sep=add.chr.sep)
+    }
+  } else if(class(OBJ)=='CCLid'){
+    par(mar=c(3, 8, 3, 2))
+    plot.SimpleCCLid(OBJ, min.z=min.z, add.chr.sep=add.chr.sep)
+  }
+}

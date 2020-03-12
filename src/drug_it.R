@@ -171,3 +171,77 @@ iveCinItAlready <- function(){
   # gne <- rownames(cor.data[['GNE']][[ty]])
   
 }
+
+## Compares gene expression between isogenic cell lines 
+## in BAF/CN drift to non-drifted regions.
+## This part assumes that drift_it.R was run and the data
+## was saved to disk to load in
+exprInDrift <- function(){
+  ### Select Dataset! ###
+  dataset <- 'GDSC'  # or GNE, GDSC
+  alt.ds <- 'CCLE'
+  
+  ## Get CIN scores
+  drug.pset <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/PSets'
+  psets <- loadInPSets(drug.pset)[c(dataset, alt.ds)]
+  
+  ## Load drift data
+  load(file=file.path(PDIR, "drift_it", 
+                      paste0(dataset, "-", alt.ds, "_cn_drift.rda"))) #cn.drifts
+  load(file=file.path(PDIR, "drift_it", 
+                      paste0(dataset, "-", alt.ds, "_baf_drift.rda"))) #baf.drifts
+  d.cn <- split(cn.drifts$cna.obj$output, f=cn.drifts$cna.obj$output$ID)
+  d.baf <- lapply(names(baf.drifts), function(id) {
+    o <- baf.drifts[[id]]$sig.gr[[1]]$output
+    o$ID <- id
+    return(o)
+  })
+  rm(baf.drifts, cn.drifts)
+  if(dataset=='GDSC'){
+    cn.z <- 1; b.z <- 5  # GDSC
+  } else if (dataset=='GNE'){
+    cn.z <- 1; b.z <- 2  # GNE
+  }
+  
+  ## Identify genes based on drifted/non-drifted regions
+  genes <- CCLid:::getGenes()
+  drift.expr <- lapply(d.cn, function(gene.drift){
+    id <- unique(gene.drift$ID)
+    
+    ## Check if the pharmacoGx ID is in both datasets
+    pID <- meta.df[match(id, meta.df$ID),]$PharmacoGX_ID
+    print(pID)
+    cl.in.pset <- sapply(psets, function(pset){
+      !is.na(match(pID, pset@molecularProfiles$rnaseq$cellid))
+    })
+    if(is.na(all(cl.in.pset))) cl.in.pset <- FALSE
+    
+    if(all(cl.in.pset)){
+      ## Annotate each segment and report gene expr difference between datasets in those regions
+      dg <- suppressMessages(CCLid:::annotateSegments(cn.data=gene.drift, genes=genes, out.key='ENSEMBL'))
+      for(pset.id in names(psets)){
+        dexp <- sapply(dg$gene_ids, function(g){ 
+          i <- getGeneExpr(psets[pset.id], as.character(g), in.key='ENSEMBL')[[1]]
+          stat <- (i[,pID,drop=FALSE] - as.matrix(matrixStats::rowMeans2(i))) / as.matrix(matrixStats::rowSds(i))
+          return(c('mu'=mean(stat, na.rm=TRUE), 'sd'=sd(stat, na.rm=TRUE)))
+        })
+        dexp <- round(t(dexp),3)
+        colnames(dexp) <- paste0(pset.id, "_expr.", colnames(dexp))
+        mcols(dg) <- cbind(mcols(dg), dexp)
+      }
+      dg$gene_ids <- NA
+      return(dg)
+    } else {
+      NULL
+    }
+  })
+  null.idx <- sapply(drift.expr, is.null)
+  drift.expr <- drift.expr[-which(null.idx)]
+  idx <- 3
+  plot(drift.expr[[idx]]$t, drift.expr[[idx]]$GDSC_expr.mu, col=scales::alpha("red", 0.50), pch=16)
+  points(drift.expr[[idx]]$t, drift.expr[[idx]]$CCLE_expr.mu, col=scales::alpha("blue", 0.50), pch=16)
+  
+  ## Get Gene Expr
+  genes <- c('PTEN')
+  gene.exprs <- getGeneExpr(psets, drift.genes[[2]], in.key='ENSEMBL')
+}
