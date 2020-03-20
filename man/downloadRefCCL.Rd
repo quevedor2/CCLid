@@ -8,7 +8,8 @@ downloadRefCCL(
   name,
   saveDir = file.path(".", "CCLid"),
   refFileName = NULL,
-  verbose = TRUE
+  verbose = TRUE,
+  bin.size = NULL
 )
 }
 \arguments{

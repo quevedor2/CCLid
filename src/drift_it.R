@@ -72,7 +72,7 @@ driftConcordance <- function(){
   load(file=file.path(PDIR, "drift_it", 
                       paste0(dataset, "-", alt.ds, "_baf_drift.rda")))
   
-  if(dataset == 'GDSC'){ cn.z <- 1; b.z <- 5 } else if(dataset == 'GNE'){  cn.z <- 1; b.z <- 2  }
+  if(dataset == 'GDSC'){ cn.z <- 1; b.z <- 4 } else if(dataset == 'GNE'){  cn.z <- 1; b.z <- 2  }
   summ.frac <- summarizeFracDrift(cn.drifts=cn.drifts, cn.z=cn.z,
                                   baf.drifts=baf.drifts, baf.z=b.z,
                                   include.id=TRUE)
@@ -82,6 +82,8 @@ driftConcordance <- function(){
   dev.off()
   cat(paste0("scp quever@192.168.198.99:", 
              file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-frac.pdf .\n"))))
+  sapply(summ.frac, function(i) summary(i$drift))
+  
   
   
   
@@ -131,6 +133,27 @@ driftConcordance <- function(){
   })
   dev.off()
   cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-cn-drift.pdf .\n"))))
+  
+  ## Write out seg file of RNA drift compared to all other samples
+  if(dataset == 'GDSC'){ cn.z <- 1; b.z <- 4 } else if(dataset == 'GNE'){  cn.z <- 1; b.z <- 2  }
+  scp.path <- "scp quever@192.168.198.99:"
+  
+  seg.out <- cn.drifts$cna.obj$output
+  seg.out <- seg.out[which(seg.out$t >= cn.z),]
+  write.table(seg.out, file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_cn-drift.tsv")),
+              row.names=FALSE, col.names=TRUE, quote=FALSE, sep="\t")
+  cat(paste0(scp.path, file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_cn-drift.tsv .\n"))))
+  
+  
+  seg.out <- plyr::rbind.fill(lapply(baf.drifts, function(bf){
+    tmp <- bf$sig.gr[[1]]$output
+    tmp$ID <- names(bf$sig.gr)[1]
+    tmp[which(tmp$t >= b.z),]
+  }))
+  write.table(seg.out, file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-drift.tsv")),
+              row.names=FALSE, col.names=TRUE, quote=FALSE, sep="\t")
+  cat(paste0(scp.path, file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-drift.tsv .\n"))))
+  
   
   # baf.idx <- 4
   # as.matrix(head(sort(colSums(baf.drift.dat[[baf.idx]]$dat)), 30))
@@ -200,18 +223,18 @@ driftRNA <- function(){
   
   ## Compare every VCF to the entire ref matrix to calculate BAF drift
   vcf.drift <- list()
-  # ccl.id <- 'HLE'
-  # vcf <- all.vcfs[ccl.id]
-  # vcfFile=file.path(vcf.dir, vcf)
   for(vcf in all.vcfs){
     vcf.drift[[vcf]] <- getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), 
                                      ref.dat, rna.meta.df, min.depth=5,
                                      centering='extreme')
-    ccl.id <- 'VM-CUB-1'; vcf <- paste0(rna.meta.df[grep(ccl.id, rna.meta.df$ID),]$SRR, '.snpOut.vcf.gz')
-    ccl.id <- 'KM-H2'; vcf <- paste0(rna.meta.df[grep(ccl.id, rna.meta.df$ID),]$SRR, '.snpOut.vcf.gz')
-    vcf.drift[[ccl.id]] <- getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), 
-                                        ref.dat, rna.meta.df, min.depth=5,
-                                        centering='median')
+    # ccl.id <- 'VM-CUB-1'; vcf <- paste0(rna.meta.df[grep(ccl.id, rna.meta.df$ID),]$SRR, '.snpOut.vcf.gz')
+    # ccl.id <- 'HuP-T4'; vcf <- paste0(rna.meta.df[grep(ccl.id, rna.meta.df$ID),]$SRR, '.snpOut.vcf.gz')
+    # vcf.drift[[ccl.id]] <- getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), 
+    #                                     ref.dat, rna.meta.df, min.depth=5,
+    #                                     centering='none')
+    # pdf("~/test2.pdf")
+    # plot.CCLid(vcf.drift[[ccl.id]]$cna.obj[[1]], min.z = 1)
+    # dev.off()
   }
   ## Very weird bugs happens when I use lapply
   # vcf.drift <- mclapply(all.vcfs[1:4], function(vcf){  
@@ -285,8 +308,9 @@ driftRNA <- function(){
   
   
   pdf(file.path(PDIR, "drift_it", paste0("RNA-", dataset, "_cn-baf-rna-drift.pdf")))
-  sapply(c('VM-CUB-1', 'KM-H2', 'CL-40', 'HLE'), function(ccl.id){
-  #sapply(c('HCC1937', 'JHOS-2', 'RS4-11'), function(ccl.id){
+  sapply(c('VM-CUB-1', 'KM-H2', 'CL-40', 'BT-549', 'HT-29', 'HuP-T4', 'HEL'), function(ccl.id){
+  # sapply(c('VM-CUB-1', 'KM-H2', 'CL-40', 'HT-29'), function(ccl.id){
+    print(ccl.id)
     print(length(baf.drifts[[ccl.id]]))
     print(length(vcf.drift[[ccl.id]]))
     cn.obj <- cn.drifts$cna.obj
@@ -295,8 +319,8 @@ driftRNA <- function(){
 
     baf.vcf.drift <- Reduce(append, list(list("CN"=cn.obj), 
                             baf.drifts[[ccl.id]]$sig.gr,
-                            vcf.drift[[ccl.id]]$cna.obj))
-    plot.multiObj(baf.vcf.drift, min.z=2)
+                            vcf.drift[[ccl.id]]$cna.obj[1]))
+    plot.multiObj(baf.vcf.drift, min.z=c(1, 3, 1))
     
     # plot.CCLid(baf.drifts[[ccl.id]]$sig.gr[[1]], min.z=5)
     # plot.CCLid(vcf.drift[[ccl.id]]$cna.obj[[1]], min.z=3)
@@ -304,8 +328,15 @@ driftRNA <- function(){
   dev.off()
   cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0("RNA-", dataset, "_cn-baf-rna-drift.pdf .\n"))))
   
-  
-  
+  ## Write out seg file of RNA drift compared to all other samples
+  seg.out <- do.call(rbind, lapply(vcf.drift, function(v){
+    v.out <- v$cna.obj[[1]]$output
+    v.out$RNA_ID <- names(v$cna.obj)[1]
+    v.out
+  }))
+  write.table(seg.out, file=file.path(PDIR, "drift_it", paste0("RNA-", dataset, "_drift.tsv")),
+              row.names=FALSE, col.names=TRUE, quote=FALSE, sep="\t")
+  cat(paste0("scp quever@192.168.198.99:", file.path(PDIR, "drift_it", paste0("RNA-", dataset, "_drift.tsv .\n"))))
   
   ## Drift overlaps between a given sample
   ##################################################################################################

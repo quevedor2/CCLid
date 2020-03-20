@@ -269,7 +269,7 @@ getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df,
   
   ## Identify matching cell line data to RNAseq
   ## Calculate drift of Cell line with RNAseq with external control
-  match.idx <- grep(paste0("_", gsub("NCI-", ".*", rna.meta.df[rna.idx,]$ID), "$"), colnames(vcf.mat))
+  match.idx <- grep(paste0("(^|_)", gsub("NCI-", ".*", rna.meta.df[rna.idx,]$ID), "$"), colnames(vcf.mat))
   if(length(match.idx) > 1){
     x.drift <- bafDrift(sample.mat=vcf.mat[,match.idx, drop=FALSE], hom.filt.val=0,
                         norm.baf=TRUE, segmenter='PCF', centering=centering)

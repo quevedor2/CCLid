@@ -302,3 +302,31 @@ rna.meta.df <- read.csv(file.path(pdir, "rna_meta_df.csv"), sep=",", header=TRUE
                         check.names=FALSE, stringsAsFactors = FALSE)
 rna.meta.df[rna.meta.df=='#N/A'] <- NA
 usethis::use_data(rna.meta.df, overwrite = T)
+
+###########################
+#### bigmemory ref.mat ####
+# library(CCLid)
+library (bigmemory)
+library (biganalytics)
+library (bigtabulate)
+
+PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
+analysis <- 'baf'
+ref.mat <- downloadRefCCL(toupper(analysis), saveDir = PDIR)
+saveRDS(ref.mat$ID, file=file.path(PDIR, "ref_mat_ID.rds"))
+
+rownames(ref.mat) <- ref.mat$ID
+ref.mat <- as.matrix(ref.mat[,-1] * 100)
+storage.mode(ref.mat) <- 'integer'
+
+PDIR <- '/mnt/work1/users/home2/quever/git/CCLid-web/extdata'
+setwd(PDIR)
+write.table(as.matrix(ref.mat), file=file.path(PDIR, "ref_mat2.csv"), sep=",", 
+            row.names=FALSE, col.names=TRUE, quote=FALSE)
+
+ref.matrix <- read.big.matrix(file.path(PDIR, "ref_mat2.csv"), 
+                              type ="integer", header = TRUE, 
+                              backingfile = paste0("ref_", as.integer(bin.size), ".bin"), 
+                              descriptorfile = paste0("ref_", as.integer(bin.size), ".desc"), 
+                              extraCols =NULL) 
+desc <- describe(ref.matrix)

@@ -12,7 +12,7 @@
 #' @examples
 #' downloadRefCCL(name="BAF")
 downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"), 
-                            refFileName = NULL, verbose = TRUE) {
+                            refFileName = NULL, verbose = TRUE, bin.size=NULL) {
   ccl.table <- CCLid::availableRefCCL(saveDir = saveDir)
   whichx <- match(name, ccl.table[, 1])
   if (is.na(whichx)) {
@@ -24,15 +24,30 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
   if (is.null(refFileName)) {
     refFileName <- paste0(ccl.table[whichx, "Ref.type"], ".rds")
   }
-  if (!file.exists(file.path(saveDir, refFileName))) {
-    downloader::download(url = as.character(ccl.table[whichx, "URL"]), 
-                         destfile = file.path(saveDir, paste0(refFileName, ".gz")), 
-                         quiet = !verbose)
-    print(paste0("Unzipping: ", file.path(saveDir, paste0(refFileName, ".gz"))))
-    system(command = paste0('gunzip ', file.path(saveDir, paste0(refFileName, ".gz"))))
+  
+  if(file.exists(file.path(PDIR, paste0("ref_", as.integer(bin.size), ".desc")))){
+    ## Looks for pre-existing bigmemory data structure to circumvent loading into memory
+    require(bigmemory)
+    require(biganalytics)
+    
+    shared.desc <- dget(file.path(PDIR, paste0("ref_", as.integer(bin.size), ".desc")))
+    shared.bigobject <- attach.big.matrix(shared.desc)
+    ids <- readRDS(file.path(PDIR, "ref_mat_ID.rds"))
+    ref.mat <- shared.bigobject
+    options(bigmemory.allow.dimnames=TRUE)
+    rownames(ref.mat) <- ids
+  } else {
+    if (!file.exists(file.path(saveDir, refFileName))) {
+      downloader::download(url = as.character(ccl.table[whichx, "URL"]), 
+                           destfile = file.path(saveDir, paste0(refFileName, ".gz")), 
+                           quiet = !verbose)
+      print(paste0("Unzipping: ", file.path(saveDir, paste0(refFileName, ".gz"))))
+      system(command = paste0('gunzip ', file.path(saveDir, paste0(refFileName, ".gz"))))
+    }
+    
+    ref.mat <- readRDS(file.path(saveDir, refFileName))
   }
   
-  ref.mat <- readRDS(file.path(saveDir, refFileName))
   return(ref.mat)
 }
 
@@ -85,8 +100,10 @@ formatRefMat <- function(name, ref.mat, analysis,
   
   ## Process if existing RDS doesn't exist
   if(!just.var){
-    rownames(ref.mat) <- ref.mat$ID
-    ref.mat <- ref.mat[,-1]
+    if(any(grepl("^ID$", colnames(ref.mat)))) {
+      rownames(ref.mat) <- ref.mat$ID
+      ref.mat <- ref.mat[,-1]
+    }
     keep.idx <- switch(analysis,
                        lrr=grep("CN", gsub("_.*", "", rownames(ref.mat))),
                        baf=grep("SNP", gsub("_.*", "", rownames(ref.mat))),

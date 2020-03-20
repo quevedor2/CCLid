@@ -24,7 +24,7 @@ loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE, bin.size=1e6, ...){
   # 
   # }
   print("Attaching/downloading reference matrix...")
-  ref.mat <- downloadRefCCL(toupper(analysis), saveDir = PDIR)
+  ref.mat <- downloadRefCCL(toupper(analysis), saveDir = PDIR, bin.size=bin.size)
   
   if(rm.gne){
     rm.idx <- grep("^Unk*", colnames(ref.mat))
@@ -41,8 +41,13 @@ loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE, bin.size=1e6, ...){
   
   ## Assign group IDs (e.g. 22Rv1.cel -> GDSC_22Rv1)
   print("Assigning group IDs...")
-  new.ids <- assignGrpIDs(ref.mat, meta.df)
-  new.ids[duplicated(new.ids)] <- gsub("_", "2_",new.ids[duplicated(new.ids)])
+  if(!file.exists(file=file.path(PDIR, "col_ids.rda"))){
+    new.ids <- assignGrpIDs(ref.mat, meta.df)
+    new.ids[duplicated(new.ids)] <- gsub("_", "2_",new.ids[duplicated(new.ids)])
+    save(new.ids, file=file.path(PDIR, "col_ids.rda"))
+  } else {
+    load(file=file.path(PDIR, "col_ids.rda"))
+  }
   colnames(ref.mat) <- new.ids
   return(list("ref"=ref.mat,
               "var"=var.dat))
@@ -75,8 +80,14 @@ compareVcf <- function(vcfFile, var.dat, ref.mat, ...){
   vcf.to.use <- vcf.map.var
   ov.idx <- CCLid::overlapPos(comp = vcf.to.use$BAF,
                               ref=ref.mat, mapping = 'probeset')
+  
   x.mat <- cbind(vcf.to.use$BAF$BAF[ov.idx$comp], 
                  ref.mat[ov.idx$ref,])
+  colnames(x.mat)[1] <- paste0("RNA_", gsub(".vcf.*", "", basename(vcfFile)))
+  
+  if(storage.mode(ref.mat[,1]) == 'integer'){
+    x.mat[,-1] <- x.mat[,-1] / 100
+  }
   return(x.mat)
 }
 

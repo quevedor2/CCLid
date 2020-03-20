@@ -211,6 +211,8 @@ plot.CCLid <- function (obj, sample.size=600, low.sig.alpha=0.01,
     size <- min(nrow(chr.data), sample.size)
     sample.idx <- sample(1:nrow(chr.data), size=size, replace=FALSE)
     sample.dat <- chr.data[sample.idx, , drop=FALSE]
+    sample.seg <- chr.seg[which(chr.seg$ID %in% s),]
+    
     plot(x = sample.dat$cpos, y=sample.dat[,s], col=chr.cols[sample.dat$chr.stat],
          pch=16, ylim=ylim, xlim=c(1, max(chr.size.dat$cum.end)), xlab='', ylab=s,
          yaxt='n', xaxt='n', axes=FALSE, cex=0.6)
@@ -228,8 +230,8 @@ plot.CCLid <- function (obj, sample.size=600, low.sig.alpha=0.01,
          las=1, cex.axis=0.8)
     
     ## Adds Signiifcant deviated regions
-    if(any(na.omit(chr.seg$t) > 0)){
-      sig.chr.seg <- chr.seg[which(chr.seg$t > 0),]
+    if(any(na.omit(sample.seg$t) > 0)){
+      sig.chr.seg <- sample.seg[which(sample.seg$t > 0),]
       sig.chr.seg$alpha <- 0
       sig.chr.seg$alpha[sig.chr.seg$t < min.z] <- low.sig.alpha
       sig.chr.seg$alpha[sig.chr.seg$t >= min.z] <- hi.sig.alpha
@@ -239,10 +241,10 @@ plot.CCLid <- function (obj, sample.size=600, low.sig.alpha=0.01,
     }
     
     ## Adds Segmean and SD intervals
-    with(chr.seg, rect(xleft = cloc.start, ybottom = seg.mean - seg.sd, 
+    with(sample.seg, rect(xleft = cloc.start, ybottom = seg.mean - seg.sd, 
                        xright = cloc.end, ytop = seg.mean + seg.sd,
                        border=NA, col = scales::alpha(seg.col, 0.3)))
-    with(chr.seg, segments(x0 = cloc.start, y0 = seg.mean, 
+    with(sample.seg, segments(x0 = cloc.start, y0 = seg.mean, 
                            x1 = cloc.end, y1 = seg.mean, 
                            lwd=3, col=seg.col))
   }
