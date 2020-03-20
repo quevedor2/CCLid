@@ -25,15 +25,17 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
     refFileName <- paste0(ccl.table[whichx, "Ref.type"], ".rds")
   }
   
-  if(file.exists(file.path(PDIR, paste0("ref_", as.integer(bin.size), ".desc")))){
+  print(file.path(saveDir, paste0("ref_", as.integer(bin.size), ".desc")))
+  print("...")
+  if(file.exists(file.path(saveDir, paste0("ref_", as.integer(bin.size), ".desc")))){
     ## Looks for pre-existing bigmemory data structure to circumvent loading into memory
     require(bigmemory)
     require(biganalytics)
     
     print("Reading in existing bigmemory object...")
-    shared.desc <- dget(file.path(PDIR, paste0("ref_", as.integer(bin.size), ".desc")))
+    shared.desc <- dget(file.path(saveDir, paste0("ref_", as.integer(bin.size), ".desc")))
     shared.bigobject <- attach.big.matrix(shared.desc)
-    ids <- readRDS(file.path(PDIR, "ref_mat_ID.rds"))
+    ids <- readRDS(file.path(saveDir, "ref_mat_ID.rds"))
     ref.mat <- shared.bigobject
     options(bigmemory.allow.dimnames=TRUE)
     rownames(ref.mat) <- ids
