@@ -24,9 +24,7 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
   if (is.null(refFileName)) {
     refFileName <- paste0(ccl.table[whichx, "Ref.type"], ".rds")
   }
-  
-  print(file.path(saveDir, paste0("ref_", as.integer(bin.size), ".desc")))
-  print("...")
+
   if(file.exists(file.path(saveDir, paste0("ref_", as.integer(bin.size), ".desc")))){
     ## Looks for pre-existing bigmemory data structure to circumvent loading into memory
     require(bigmemory)
