@@ -2,14 +2,17 @@ readinRnaFileMapping <- function(){
   meta <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/data/GDSC/fileList1357.txt'
   meta.gdsc <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/data/GDSC/E-MTAB-3983.sdrf.txt'
   meta.ccle <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/data/CCLE/CCLE_meta.txt'
+  meta.gcsi <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/data/GNE/gcsi_meta.tsv'
   pattern="[-\\(\\)\\.\\,\\_\\/ ]"
   
   meta <- read.table(meta, sep="\t", header=F, fill=TRUE)
   meta.gdsc <- read.table(meta.gdsc, sep="\t", header=T, fill=TRUE)
   meta.ccle <- read.table(meta.ccle, sep=",", header=T, fill=TRUE)
+  meta.gcsi <- read.table(meta.gcsi, sep="\t", header=T, fill=TRUE)
   
   meta.gdsc$simpleid = toupper(gsub(pattern, "", meta.gdsc$Source.Name))
   meta.ccle$simpleid = toupper(gsub(pattern, "", meta.ccle$Cell_Line))
+  meta.gcsi$simpleid = toupper(gsub(pattern, "", meta.gcsi$Cell_line))
   ov = sort(intersect(meta.gdsc$simpleid, meta.ccle$simpleid))  ## 61 from non simple.id, 79 simple
   gdsc.o = sort(setdiff(meta.gdsc$simpleid, meta.ccle$simpleid))
   ccle.o = sort(setdiff(meta.ccle$simpleid, meta.gdsc$simpleid))
@@ -24,7 +27,12 @@ readinRnaFileMapping <- function(){
   meta.df[grep("^T-T$", meta.df$ID),]$simpleid <- 'T-T'
   all.meta.df <- merge(all.meta, meta.df, by="simpleid", all.x=TRUE)
   
-  colnames(all.meta.df)[1:8] <- c("tmp", "V1", "GDSC_ID", "EGAF", "EGAR", "SRR", "CCLE_ID", "ID")
+  colnames(all.meta.df)[1:8] <- c("simpleid", "V1", "GDSC_ID", "EGAF", "EGAR", "SRR", "CCLE_ID", "ID")
+  ## Adding gCSI
+  meta.gcsi <- meta.gcsi[,c(2, 3,10),drop=FALSE]
+  colnames(meta.gcsi) <- c("gCSI_cellid", "gCSI_RNA", "simpleid")
+  all.meta.df <- merge(all.meta.df, meta.gcsi, by='simpleid', all=TRUE)
+  
   return(all.meta.df)
 }
 
@@ -42,11 +50,10 @@ benchmarkCCLid <- function(bench){
   dataset.cols <- setNames(RColorBrewer::brewer.pal(6, "Dark2"),
                            c("GDSC", "CCLE", "gCSI", "CGP", "Pfizer"))
   
+  refdir="/mnt/work1/users/home2/quever/git/CCLid-web/extdata"
   PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
-  ref.dat <- CCLid::loadRef(PDIR, 'baf', bin.size=5e5)
+  ref.dat <- CCLid::loadRef(refdir, 'baf', bin.size=5e5, just.var=TRUE)
   
-  
-  var.dat <- format.dat$var
   var.dat <- ref.dat$var
   ref.mat <- ref.dat$ref
 }
@@ -69,7 +76,7 @@ minimumSnps <- function(){
   set.seed(seed)
   # s.range <- sort(sample(1:length(all.vcfs), size=100))
   # f1.scores.by.snps <- lapply(seq(40, 10, by=-2), function(num.snps){
-  vcf.f1.scores <- mclapply(all.vcfs[1:400], function(vcf){
+  vcf.f1.scores <- mclapply(all.vcfs, function(vcf){
     vcf.map <- mapVcf2Affy(file.path(vcf.dir, vcf))
     
     cat(paste0(vcf, "(", match(vcf, all.vcfs), "/", length(all.vcfs), "): "))
@@ -87,6 +94,12 @@ minimumSnps <- function(){
                            ref=ref.dat$ref, mapping = 'probeset')
       x.mat <- cbind(vaf.to.map$BAF$BAF[ov.idx$comp], 
                      ref.dat$ref[ov.idx$ref,])
+      rna.idx <- grep(gsub(".snpOut.*", "", vcf), rna.meta.df$EGAF)
+      colnames(x.mat)[1] <- paste0("RNA_", rna.meta.df[rna.idx,]$ID)
+      if(class(ref.dat$ref) == 'big.matrix'){
+        x.mat[,-1] <- x.mat[,-1] / 100
+        
+      }
       # if(rm.gne){
       #   gne.idx <- c(grep("^GNE_", colnames(x.mat)), grep("^Unk[0-9]", colnames(x.mat)))
       #   x.mat <- x.mat[,-gne.idx]
@@ -155,7 +168,7 @@ minimumSnps <- function(){
 ##########################
 ## Matches all the RNAseq data from CCLE and GDSC2
 expressThis <- function(){
-  dataset <- 'CCLE' #GDSC
+  dataset <- 'GNE' #GDSC
   ds.pattern = '(CCLE)_|(GDSC)_|(GDSC2)_|(CCLE2)_|(GNE)_|(GNE2)_'
   
   vcf.dir <- file.path('/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs',
@@ -178,6 +191,11 @@ expressThis <- function(){
                          ref=ref.dat$ref, mapping = 'probeset')
     x.mat <- cbind(vaf.to.map$BAF$BAF[ov.idx$comp], 
                    ref.dat$ref[ov.idx$ref,])
+    if(class(ref.dat$ref) == 'big.matrix'){
+      x.mat[,-1] <- x.mat[,-1]/100
+      colnames(x.mat)[1] <- gsub(".snpOut.*", "", vcf)
+
+    }
     # if(rm.gne){
     #   gne.idx <- c(grep("^GNE_", colnames(x.mat)), grep("^Unk[0-9]", colnames(x.mat)))
     #   x.mat <- x.mat[,-gne.idx]
@@ -214,7 +232,8 @@ expressThis <- function(){
     rna.id <- rna.identity[[id]]
     file.prefix <- switch(dataset,
                           "GDSC"="EGAF",
-                          "CCLE"="SRR")
+                          "CCLE"="SRR",
+                          "GNE"="gCSI_RNA")
     if(any(grepl(paste0("^", id, "$"), rna.meta.df[[file.prefix]]))){
       rna.id$Var2 <-  rna.meta.df[grep(paste0("^", id, "$"), rna.meta.df[[file.prefix]]),]$ID
       
