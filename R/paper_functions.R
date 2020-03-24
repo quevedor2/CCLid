@@ -264,8 +264,12 @@ getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df,
                         ref.mat=ref.dat$ref, min.depth=min.depth)
   rna.idx <- switch(dataset,
                     "GDSC"=grep(gsub(".snpOut.*", "", vcf), rna.meta.df$EGAF),
-                    "CCLE"=grep(gsub(".snpOut.*", "", vcf), rna.meta.df$SRR))  
+                    "CCLE"=grep(gsub(".snpOut.*", "", vcf), rna.meta.df$SRR),
+                    "GNE"=grep(gsub(".snpOut.*", "", vcf), rna.meta.df$gCSI_RNA))  
   colnames(vcf.mat)[1] <- paste0("RNA_", rna.meta.df[rna.idx, 'ID'])
+  if(is.na(rna.meta.df[rna.idx, 'ID']) & dataset=='GNE'){
+    colnames(vcf.mat)[1] <- rna.meta.df[rna.idx,'gCSI_RNA']
+  }
   
   ## Identify matching cell line data to RNAseq
   ## Calculate drift of Cell line with RNAseq with external control

@@ -11,8 +11,9 @@ loadInData <- function(){
   dataset.cols <- setNames(RColorBrewer::brewer.pal(6, "Dark2"),
                            c("GDSC", "CCLE", "gCSI", "CGP", "Pfizer"))
   
+  refdir <- '/mnt/work1/users/home2/quever/git/CCLid-web/extdata'
   PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
-  ref.dat <- CCLid::loadRef(PDIR, 'baf', bin.size=5e5)
+  ref.dat <- CCLid::loadRef(refdir, 'baf', bin.size=5e5, just.var=TRUE)
 }
 
 
@@ -24,7 +25,7 @@ loadInData <- function(){
 ## from the CCLid package, and the difference
 ## in ASCAT ASCN data.
 driftConcordance <- function(){
-  dataset <- 'GNE' #GDSC
+  dataset <- 'GDSC' #GDSC
   alt.ds <- 'CCLE' #CCLE
   
   ## Find variant features and isolate for cell lines shared in datasets
@@ -200,10 +201,8 @@ driftConcordance <- function(){
 ## data.  As well as calculate the overlap of
 ## segments between the two
 driftRNA <- function(){
-  # dataset <- 'GDSC'
-  # alt.ds <- 'CCLE'
-  dataset <- 'CCLE'
-  alt.ds <- 'GDSC'
+  dataset <- 'GNE'
+  alt.ds <- 'GNE'
   
   vcf.dir <- file.path('/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs',
                        dataset)
@@ -212,12 +211,41 @@ driftRNA <- function(){
   names(all.vcfs) <-  sapply(gsub(".snpOut.*", "", all.vcfs), function(i){
     idx <- switch(dataset,
                   "GDSC"=grep(paste0("^", i, "$"), rna.meta.df$EGAF),
-                  "CCLE"=grep(paste0("^", i, "$"), rna.meta.df$SRR))
+                  "CCLE"=grep(paste0("^", i, "$"), rna.meta.df$SRR),
+                  "GNE"=grep(paste0("^", i, "$"), rna.meta.df$gCSI_RNA))
+    
     if(length(idx) >= 1){
-      rna.meta.df[idx,]$ID[1]
+      id <- rna.meta.df[idx,]$ID[1]
     } else {
-      gsub(".snpOut.vcf.gz$", "", i)
+      id <- gsub(".snpOut.vcf.gz$", "", i)
     }
+    
+    if(is.na(id) & dataset == 'GNE') {
+      require(dplyr)
+      gcsi.id <- rna.meta.df[idx,]$gCSI_cellid[1]
+      id <- gsub("^Caco", "CACO", gcsi.id) %>%
+        gsub(" ", "-", .) %>%
+        gsub("A4/", "A4-", .) %>%
+        gsub("^CI-", "Ci-", .) %>%
+        gsub("OCI-LY-", "OCI-Ly", .) %>%
+        gsub("RAJI", "Raji", .) %>%
+        gsub("RAMOS", "Ramos", .) %>%
+        gsub("^RI-1", "Ri-1", .) %>%
+        gsub("^SC-1", "Sc-1", .) %>%
+        gsub("^OVCA(-)?", "OvCA", .) %>%
+        gsub("^928-mel", "928-MEL", .) %>%
+        gsub("^SNU-1", "NCI-SNU-1", .) %>%
+        gsub("^CACO-2", "CACO2", .) %>%
+        gsub("^Okajima", "OKAJIMA", .) %>%
+        gsub("-Paca-", "-PaCa-", .) %>%
+        gsub("PANC-1", "Panc-1", .) %>%
+        gsub("^HUP-T4", "HuP-T4", .) %>%
+        gsub("^LS-174T", "LS174T", .) %>%
+        gsub("^786-O", "786-0", .) %>%
+        gsub("^SET-2", "Set-2", .) %>%
+        gsub("SW-527", "SW527", .)
+    }
+    return(id)
   })
   vcf.ids <- setNames(names(all.vcfs), all.vcfs)
   

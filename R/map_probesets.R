@@ -86,6 +86,23 @@
   nBAF
 }
 
+#' jsonToGr
+#' @description converts a JSON object into a VariantAnnotation object
+#' @param json 
+.jsonToGr <- function(json){
+  ad <- json$sampleInfo[[1]]$AD
+  vr <- VRanges(seqnames=as.character(json$chr), 
+                ranges = IRanges(start=as.integer(json$pos), 
+                                 end=as.integer(json$pos)),
+                ref=as.character(json$ref),
+                alt=as.character(json$alt),
+                totalDepth=sapply(strsplit(ad, ','), function(i) sum(as.integer(i))),
+                refDepth=as.integer(sapply(strsplit(ad, ','), function(i) i[[1]])),
+                altDepth=as.integer(sapply(strsplit(ad, ','), function(i) i[[2]])),
+                sampleNames = json$sampleInfo[[1]]$Name)
+  return(vr)
+}
+
 #' mapVcf2Affy
 #' @description Takes a VCF files and reads it into VariantAnnotation package to overlap with
 #' GRanges probeset dataset of snp6.dat.  It willc onvert the 0/0, 0/1, etc.. genotypes to 0,1,2.
@@ -101,8 +118,16 @@
 #' mapVcf2Affy(vcfFile)
 mapVcf2Affy <- function(vcfFile){
   require(VariantAnnotation)
-  message(paste0("Reading in VCF file (", basename(vcfFile), "..."))
-  vcf.gr <- readVcfAsVRanges(vcfFile)
+  if(grepl("\\.json$", vcfFile)){
+    require(rjson)
+    message(paste0("Reading in JSON file (", basename(vcfFile), "..."))
+    vcfFile='/mnt/work1/users/home2/quever/xfer/vcf.json'
+    json_data <- fromJSON(file=vcfFile)
+    vcf.gr <- .jsonToGr(json_data)
+  } else if(grepl('\\.vcf', vcfFile)){
+    message(paste0("Reading in VCF file (", basename(vcfFile), "..."))
+    vcf.gr <- readVcfAsVRanges(vcfFile)
+  }
   seqlevelsStyle(vcf.gr) <- 'UCSC'
   vcf.gr <- sort(vcf.gr)
   

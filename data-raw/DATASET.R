@@ -171,6 +171,13 @@ pgx.map <- read.csv("pharmacogx_mapping.csv", header=TRUE, stringsAsFactors = FA
 pgx.map[pgx.map=='#N/A'] <- NA
 meta.df <- merge(meta.df, pgx.map, by='ID', all=TRUE)
 
+# After manual revision of meta.df nad merging with rna
+pdir <- "~/git/CCL_authenticator/data-raw/"
+meta.df <- read.csv(file.path(pdir, "rna_meta_df.csv"), sep=",", header=TRUE,
+                    check.names=FALSE, stringsAsFactors = FALSE)
+meta.df[meta.df=='#N/A'] <- NA
+# 
+
 usethis::use_data(meta.df, overwrite = T)
 
 ###############
@@ -330,3 +337,33 @@ ref.matrix <- read.big.matrix(file.path(PDIR, "ref_mat2.csv"),
                               descriptorfile = paste0("ref_", as.integer(bin.size), ".desc"), 
                               extraCols =NULL) 
 desc <- describe(ref.matrix)
+
+
+###################
+#### gcsi.meta ####
+PDIR='/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs/metadata'
+delimDIR=file.path(PDIR, "EGAD00001000725/delimited_maps")
+
+gcsi.meta <- read.table(file.path(delimDIR, "Run_Sample_meta_info_fixed.map"), sep=";", header=FALSE, 
+                        stringsAsFactors = FALSE, check.names=FALSE, fill=FALSE, comment.char='')
+colnames(gcsi.meta) <- gsub("=.*", "", gcsi.meta[1,])
+gcsi.meta$Cell_line <- gsub("Cell_line=", "", gcsi.meta$Cell_line)
+
+xml.meta <- read.table(file.path(delimDIR, "xml_meta.tsv"), sep="\t", header=FALSE, 
+                       stringsAsFactors = FALSE, check.names=FALSE, fill=FALSE)
+ega.meta <- read.table(file.path(delimDIR, "Study_Experiment_Run_sample.map"), sep="\t", header=FALSE, 
+                       stringsAsFactors = FALSE, check.names=FALSE, fill=FALSE)
+file.meta <- read.table(file.path(PDIR, "gcsi_fileList0725.txt"), header=FALSE, sep="\t",
+                        stringsAsFactors = FALSE, check.names=FALSE, fill=FALSE)
+
+m1 <- merge(gcsi.meta, xml.meta, by.x="Cell_line", by.y="V2", all=TRUE)
+m2 <- merge(m1, ega.meta, by.x="V1", by.y="V15", all=TRUE)
+gcsi.meta <- merge(m2, file.meta, by.x='V1', by.y='V2', all=TRUE)
+
+gcsi.meta <- gcsi.meta[,c(1,2,28,14,24,25,30,6,3)]
+saveRDS(gcsi.meta, file=file.path(PDIR, "gcsi_meta.rds"))
+
+gcsi.meta <- gcsi.meta[-which(duplicated(gcsi.meta$Cell_line)),]
+gcsi.meta$V1.y <- paste0(gcsi.meta$V1.y, "_1")
+write.table(gcsi.meta, file=file.path(PDIR, "gcsi_meta.tsv"), sep="\t",
+            col.names=TRUE, row.names=FALSE, quote=FALSE)

@@ -23,15 +23,16 @@ readinRnaFileMapping <- function(){
   all.meta <- all.meta[,c('V1','Source.Name', 'V4', 'Comment.EGA_RUN.', 'Run', 
                           'Cell_Line', 'simpleid')]
   
-  meta.df$simpleid <- gsub(pattern, "", meta.df$ID)
+  meta.df$simpleid <- toupper(gsub(pattern, "", meta.df$ID))
   meta.df[grep("^T-T$", meta.df$ID),]$simpleid <- 'T-T'
-  all.meta.df <- merge(all.meta, meta.df, by="simpleid", all.x=TRUE)
+  all.meta.df <- merge(all.meta, meta.df, by="simpleid", all=TRUE)
   
   colnames(all.meta.df)[1:8] <- c("simpleid", "V1", "GDSC_ID", "EGAF", "EGAR", "SRR", "CCLE_ID", "ID")
   ## Adding gCSI
   meta.gcsi <- meta.gcsi[,c(2, 3,10),drop=FALSE]
   colnames(meta.gcsi) <- c("gCSI_cellid", "gCSI_RNA", "simpleid")
   all.meta.df <- merge(all.meta.df, meta.gcsi, by='simpleid', all=TRUE)
+  write.table(all.meta.df, file="~/rna_meta_df.csv", sep=",", col.names=TRUE, row.names=FALSE, quote=FALSE)
   
   return(all.meta.df)
 }
@@ -182,6 +183,7 @@ expressThis <- function(){
     cat(paste0(vcf, "(", match(vcf, all.vcfs), "/", length(all.vcfs), "): "))
     idx <- sample(1:length(ref.dat$var), size=max(num.snps)*10, replace = FALSE)
     vcf.map.var <- mapVariantFeat(vcf.map, ref.dat$var[idx])
+    if(nrow(vcf.map.var$GT) < num.snps) num.snps <- nrow(vcf.map.var$GT)
     vcf.map.var$BAF <- vcf.map.var$BAF[1:num.snps,]
     vcf.map.var$GT <- vcf.map.var$GT[1:num.snps,]
     vaf.to.map <- vcf.map.var
@@ -219,7 +221,7 @@ expressThis <- function(){
     } else {
       return(x.pred[grep("^M$", x.pred$baf.p.fit), ])
     }
-  }, mc.cores = 4)
+  }, mc.cores = 6)
   names(rna.identity) <- gsub(".snpOut.*", "", all.vcfs)
   err.idx <- sapply(rna.identity, function(i) class(i) == 'try-error')
   if(any(err.idx)) rna.identity <- rna.identity[-which(err.idx)]
@@ -227,7 +229,7 @@ expressThis <- function(){
   load(file.path(PDIR, "match_it", paste0(dataset, "_rnaID.rda")))
   
   ## Annonate the CVCL IDs
-  rna.cvcl <- lapply(names(rna.identity), function(id, dataset){
+  rna.cvcl <- mclapply(names(rna.identity), function(id, dataset){
     print(id)
     rna.id <- rna.identity[[id]]
     file.prefix <- switch(dataset,
@@ -235,7 +237,34 @@ expressThis <- function(){
                           "CCLE"="SRR",
                           "GNE"="gCSI_RNA")
     if(any(grepl(paste0("^", id, "$"), rna.meta.df[[file.prefix]]))){
-      rna.id$Var2 <-  rna.meta.df[grep(paste0("^", id, "$"), rna.meta.df[[file.prefix]]),]$ID
+      id.x <- rna.meta.df[grep(paste0("^", id, "$"), as.character(rna.meta.df[[file.prefix]])),]$ID[1]
+      if(is.na(id.x) & dataset == 'GNE'){
+        require(dplyr)
+        gcsi.id <- rna.meta.df[grep(paste0("^", id, "$"), as.character(rna.meta.df[[file.prefix]])),]$gCSI_cellid
+        rna.id$Var2 <- gsub("^Caco", "CACO", gcsi.id) %>%
+          gsub(" ", "-", .) %>%
+          gsub("A4/", "A4-", .) %>%
+          gsub("^CI-", "Ci-", .) %>%
+          gsub("OCI-LY-", "OCI-Ly", .) %>%
+          gsub("RAJI", "Raji", .) %>%
+          gsub("RAMOS", "Ramos", .) %>%
+          gsub("^RI-1", "Ri-1", .) %>%
+          gsub("^SC-1", "Sc-1", .) %>%
+          gsub("^OVCA(-)?", "OvCA", .) %>%
+          gsub("^928-mel", "928-MEL", .) %>%
+          gsub("^SNU-1", "NCI-SNU-1", .) %>%
+          gsub("^CACO-2", "CACO2", .) %>%
+          gsub("^Okajima", "OKAJIMA", .) %>%
+          gsub("-Paca-", "-PaCa-", .) %>%
+          gsub("PANC-1", "Panc-1", .) %>%
+          gsub("^HUP-T4", "HuP-T4", .) %>%
+          gsub("^LS-174T", "LS174T", .) %>%
+          gsub("^786-O", "786-0", .) %>%
+          gsub("^SET-2", "Set-2", .) %>%
+          gsub("SW-527", "SW527", .)
+      } else {
+        rna.id$Var2 <-  id.x
+      }
       
       rna.id$clA <- as.character(gsub(ds.pattern, "", rna.id$Var1))
       rna.id$clB <- as.character(gsub(ds.pattern, "", rna.id$Var2))
@@ -252,8 +281,9 @@ expressThis <- function(){
       rna.id$Var2 <-  id
       rna.id
     }
-  }, dataset=dataset)
+  }, dataset=dataset, mc.cores = 10)
   names(rna.cvcl)  <- names(rna.identity)
+  x <- sapply(rna.cvcl, function(i) any(grepl('g.truth', colnames(i))))
   no.match.idx <- which(sapply(rna.cvcl, function(i) !any(i$g.truth)))
   match.idx <- which(sapply(rna.cvcl, function(i) any(i$g.truth)))
   

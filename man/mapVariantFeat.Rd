@@ -4,7 +4,7 @@
 \alias{mapVariantFeat}
 \title{mapVariantFeat}
 \usage{
-mapVariantFeat(vcf.map, var.dat, slow.method = FALSE)
+mapVariantFeat(vcf.map, var.dat)
 }
 \arguments{
 \item{vcf.map}{An object returned by mapVcf2Aff()}
