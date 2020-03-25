@@ -90,16 +90,20 @@
 #' @description converts a JSON object into a VariantAnnotation object
 #' @param json 
 .jsonToGr <- function(json){
-  ad <- json$sampleInfo[[1]]$AD
-  vr <- VRanges(seqnames=as.character(json$chr), 
-                ranges = IRanges(start=as.integer(json$pos), 
-                                 end=as.integer(json$pos)),
-                ref=as.character(json$ref),
-                alt=as.character(json$alt),
+  ad <- sapply(json, function(i) i$sampleinfo[[1]]$AD)
+  null.idx <- sapply(ad, is.null)
+  if(any(null.idx)) ad[which(null.idx)] <- '0,0'
+  ad <- unlist(ad)
+  vr <- VRanges(seqnames=as.character(sapply(json, function(i) i$chr)), 
+                ranges = IRanges(start=as.integer(sapply(json, function(i) i$pos)), 
+                                 end=as.integer(sapply(json, function(i) i$pos))),
+                ref=as.character(sapply(json, function(i) i$ref)),
+                alt=as.character(sapply(json, function(i) i$alt)),
                 totalDepth=sapply(strsplit(ad, ','), function(i) sum(as.integer(i))),
                 refDepth=as.integer(sapply(strsplit(ad, ','), function(i) i[[1]])),
                 altDepth=as.integer(sapply(strsplit(ad, ','), function(i) i[[2]])),
-                sampleNames = json$sampleInfo[[1]]$Name)
+                sampleNames = sapply(json, function(i) i$sampleinfo[[1]]$NAME))
+  vr$GT <- sapply(json, function(i) i$sampleinfo[[1]]$GT)
   return(vr)
 }
 
@@ -121,7 +125,6 @@ mapVcf2Affy <- function(vcfFile){
   if(grepl("\\.json$", vcfFile)){
     require(rjson)
     message(paste0("Reading in JSON file (", basename(vcfFile), "..."))
-    vcfFile='/mnt/work1/users/home2/quever/xfer/vcf.json'
     json_data <- fromJSON(file=vcfFile)
     vcf.gr <- .jsonToGr(json_data)
   } else if(grepl('\\.vcf', vcfFile)){

@@ -207,7 +207,7 @@ driftRNA <- function(){
   vcf.dir <- file.path('/mnt/work1/users/pughlab/projects/cancer_cell_lines/rnaseq_dat/vcfs',
                        dataset)
   all.vcfs <- list.files(vcf.dir, pattern="vcf.gz$")
-  rna.meta.df <- readinRnaFileMapping()
+  data(rna.meta.df)
   names(all.vcfs) <-  sapply(gsub(".snpOut.*", "", all.vcfs), function(i){
     idx <- switch(dataset,
                   "GDSC"=grep(paste0("^", i, "$"), rna.meta.df$EGAF),
@@ -219,32 +219,6 @@ driftRNA <- function(){
     } else {
       id <- gsub(".snpOut.vcf.gz$", "", i)
     }
-    
-    if(is.na(id) & dataset == 'GNE') {
-      require(dplyr)
-      gcsi.id <- rna.meta.df[idx,]$gCSI_cellid[1]
-      id <- gsub("^Caco", "CACO", gcsi.id) %>%
-        gsub(" ", "-", .) %>%
-        gsub("A4/", "A4-", .) %>%
-        gsub("^CI-", "Ci-", .) %>%
-        gsub("OCI-LY-", "OCI-Ly", .) %>%
-        gsub("RAJI", "Raji", .) %>%
-        gsub("RAMOS", "Ramos", .) %>%
-        gsub("^RI-1", "Ri-1", .) %>%
-        gsub("^SC-1", "Sc-1", .) %>%
-        gsub("^OVCA(-)?", "OvCA", .) %>%
-        gsub("^928-mel", "928-MEL", .) %>%
-        gsub("^SNU-1", "NCI-SNU-1", .) %>%
-        gsub("^CACO-2", "CACO2", .) %>%
-        gsub("^Okajima", "OKAJIMA", .) %>%
-        gsub("-Paca-", "-PaCa-", .) %>%
-        gsub("PANC-1", "Panc-1", .) %>%
-        gsub("^HUP-T4", "HuP-T4", .) %>%
-        gsub("^LS-174T", "LS174T", .) %>%
-        gsub("^786-O", "786-0", .) %>%
-        gsub("^SET-2", "Set-2", .) %>%
-        gsub("SW-527", "SW527", .)
-    }
     return(id)
   })
   vcf.ids <- setNames(names(all.vcfs), all.vcfs)
@@ -252,9 +226,11 @@ driftRNA <- function(){
   ## Compare every VCF to the entire ref matrix to calculate BAF drift
   vcf.drift <- list()
   for(vcf in all.vcfs){
-    vcf.drift[[vcf]] <- getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), 
-                                     ref.dat, rna.meta.df, min.depth=5,
-                                     centering='extreme')
+    vcf.drift[[vcf]] <- tryCatch({
+      getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), 
+                   ref.dat, rna.meta.df, min.depth=5,
+                   centering='extreme')
+    }, error=function(e) {NULL})
     # ccl.id <- 'VM-CUB-1'; vcf <- paste0(rna.meta.df[grep(ccl.id, rna.meta.df$ID),]$SRR, '.snpOut.vcf.gz')
     # ccl.id <- 'HuP-T4'; vcf <- paste0(rna.meta.df[grep(ccl.id, rna.meta.df$ID),]$SRR, '.snpOut.vcf.gz')
     # vcf.drift[[ccl.id]] <- getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), 
@@ -268,7 +244,7 @@ driftRNA <- function(){
   # vcf.drift <- mclapply(all.vcfs[1:4], function(vcf){  
   #   getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), ref.dat, rna.meta.df)
   # }, mc.cores = 3)
-  names(vcf.drift) <- vcf.ids[names(vcf.drift)]
+  # names(vcf.drift) <- vcf.ids[names(vcf.drift)]
   save(vcf.drift, file=file.path(PDIR, "drift_it", 
                                  paste0(dataset, "-", alt.ds, "_vcf_drift.rda")))
 
