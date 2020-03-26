@@ -4,7 +4,7 @@
 \alias{.jsonToGr}
 \title{jsonToGr}
 \usage{
-.jsonToGr(json)
+.jsonToGr(json, from.file = TRUE)
 }
 \arguments{
 \item{json}{}

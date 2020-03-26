@@ -244,7 +244,7 @@ driftRNA <- function(){
   # vcf.drift <- mclapply(all.vcfs[1:4], function(vcf){  
   #   getVcfDrifts(vcfFile=file.path(vcf.dir, vcf), ref.dat, rna.meta.df)
   # }, mc.cores = 3)
-  # names(vcf.drift) <- vcf.ids[names(vcf.drift)]
+  names(vcf.drift) <- vcf.ids[names(vcf.drift)]
   save(vcf.drift, file=file.path(PDIR, "drift_it", 
                                  paste0(dataset, "-", alt.ds, "_vcf_drift.rda")))
 
@@ -252,16 +252,16 @@ driftRNA <- function(){
   load(file=file.path(PDIR, "drift_it", 
                       paste0(dataset, "-", alt.ds, "_vcf_drift.rda"))) #vcf.drift
   load(file=file.path(PDIR, "drift_it", 
-                      paste0('GDSC', "-", 'CCLE', "_baf_drift.rda"))) #baf.drifts
+                      paste0(dataset, "-", 'CCLE', "_baf_drift.rda"))) #baf.drifts
   load(file=file.path(PDIR, "drift_it", 
-                      paste0('GDSC', "-", 'CCLE', "_cn_drift.rda"))) #cn.drifts
+                      paste0(dataset, "-", 'CCLE', "_cn_drift.rda"))) #cn.drifts
   
   ##################################################################################################
-  gr.rna <- lapply(setNames(c("GDSC", "CCLE"),c("GDSC", "CCLE")), function(ds){
+  gr.rna <- lapply(setNames(c("GDSC", "CCLE", "GNE"),c("GDSC", "CCLE", "GNE")), function(ds){
     rna <- lapply(vcf.drift, function(i) {
       d <- i$cna.obj[[1]]$output ## The RNA file copared to all other files
       d <- d[grep(paste0(ds, "_"), d$ID),]  ## subset for comparison to SNP dataset ds (GDSC or CCLE)
-      d$ID <- gsub("(GDSC_)|(CCLE_)", "", d$ID)
+      d$ID <- gsub("(GDSC_)|(CCLE_)|(GNE_)", "", d$ID)
       return(d)
     })
     rna <- rna[-which(sapply(rna, nrow)==0)]
@@ -272,7 +272,7 @@ driftRNA <- function(){
   
   df.baf <- lapply(baf.drifts, function(i) {
     d <- i$sig.gr[[1]]$output
-    d$ID <- gsub("(GDSC_)|(CCLE_)", "", names(i$sig.gr)[1])
+    d$ID <- gsub("(GDSC_)|(CCLE_)|(GNE_)", "", names(i$sig.gr)[1])
     return(d)
   })
   gr.baf <- makeGRangesFromDataFrame(do.call(rbind, df.baf), keep.extra.columns = TRUE)
@@ -281,12 +281,12 @@ driftRNA <- function(){
   
   
   
-  rna.drift.dat <- mclapply(c(1:5), function(baf.z){
+  rna.drift.dat <- mclapply(c(1:4), function(b.z){
     print(baf.z)
-    driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.rna$CCLE, 
+    driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.rna[[dataset]], 
                        cell.ids = names(baf.drifts),
-                       baf.z=5, cn.z=baf.z)
-  }, mc.cores = 5)
+                       baf.z=5, cn.z=b.z)
+  }, mc.cores = 4)
 
   pdf(file=file.path(PDIR, "drift_it", paste0(dataset, "-", alt.ds, "_baf-rna-drift.pdf")),
       width=5, height=5)
