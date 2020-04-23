@@ -4,7 +4,15 @@
 \alias{compareVcf}
 \title{compareVcf}
 \usage{
-compareVcf(vcfFile, var.dat, ref.mat, ...)
+compareVcf(
+  vcfFile,
+  var.dat,
+  ref.mat,
+  max.snps = 1e+06,
+  ids = NULL,
+  sampletype = "RNA",
+  ...
+)
 }
 \arguments{
 \item{vcfFile}{Path to VCF file to check against reference datasets}
@@ -12,6 +20,14 @@ compareVcf(vcfFile, var.dat, ref.mat, ...)
 \item{var.dat}{Variance data (list)}
 
 \item{ref.mat}{Reference matrix (matrix)}
+
+\item{max.snps}{}
+
+\item{ids}{}
+
+\item{sampletype}{}
+
+\item{...}{}
 }
 \value{
 Matrix: Containing reference matrix subsetted to common SNPs as 

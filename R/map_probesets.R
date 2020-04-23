@@ -140,31 +140,32 @@ mapVcf2Affy <- function(vcfFile){
     vcf.gr <- .jsonToGr(json_data, from.file=TRUE)
   } else if(grepl('\\.vcf', vcfFile)){
     message(paste0("Reading in VCF file (", basename(vcfFile), "..."))
-    vcf.gr <- readVcfAsVRanges(vcfFile)
+    vcf.gr <- readVcfAsVRanges(vcfFile) # Memory: 700Mb -> 959Mb
   }
   seqlevelsStyle(vcf.gr) <- 'UCSC'
   vcf.gr <- sort(vcf.gr)
   
   ## Overlap VCF file with the snp6 SNP probesets
-  ov.idx <- findOverlaps(vcf.gr, CCLid::snp6.dat$SNP)
+  ov.idx <- findOverlaps(vcf.gr, CCLid::snp6.dat$SNP) # Memory: 1.6Gb
   vcf.affy.gr <- vcf.gr[queryHits(ov.idx)]
   mcols(vcf.affy.gr) <- cbind(mcols(vcf.affy.gr), 
                               mcols(CCLid::snp6.dat$SNP[subjectHits(ov.idx),]))
   vcf.affy.gr$tdepth <- (refDepth(vcf.affy.gr) + altDepth(vcf.affy.gr))
+  gc() # Memory: 1.4Gb
   
   ## Add the Affymetrix Genotype Scores (0, 1, 2 from 0/0, 1/0, 0/1, and 1/1)
   affy.genotype <- CCLid:::.vcf2AffyGT(vcf.affy.gr)  ## e.g., Convert 0/0 -> 0
   vcf.affy.gr <- CCLid:::.revComp(vcf.affy.gr) ## Reverse complement negative strand alleles
   vcf.affy.gr$affyGT <- CCLid:::.fixGT(vcf.affy.gr, affy.genotype) ## Fix genotypes for negative strand
   if(any(vcf.affy.gr$affyGT == -1)) vcf.affy.gr <- vcf.affy.gr[which(vcf.affy.gr$affyGT != -1),]
-  
+
   ## Calculate BAF
   vcf.affy.gr$BAF <- round(altDepth(vcf.affy.gr) / (vcf.affy.gr$tdepth),2)
   flip.idx <- CCLid:::.fixGT(vcf.affy.gr, affy.genotype, ret.idx=T)
   vcf.affy.gr[flip.idx,]$BAF <- (1-vcf.affy.gr[flip.idx,]$BAF)
   #vcf.affy.gr$BAF <- round(altDepth(vcf.affy.gr) / totalDepth(vcf.affy.gr),2)
   vcf.affy.gr$nBAF <- CCLid:::.normBAF(vcf.affy.gr$BAF)
-  
+  gc() # Memory: 1.4Gb
   
   vcf.baf.df <- mcols(vcf.affy.gr)[,c('Probe_Set_ID', 'BAF', 'nBAF', 'tdepth')]
   vcf.gt.df <- mcols(vcf.affy.gr)[,c('Probe_Set_ID', 'GT', 'affyGT', 'tdepth')]

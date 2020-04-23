@@ -56,9 +56,14 @@ loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE, bin.size=1e6, ...){
 #' compareVcf
 #' @description Checks a VCF file(s) against reference dataset
 #' to look for similarity to any known cell lines
+#'
 #' @param vcfFile Path to VCF file to check against reference datasets
 #' @param var.dat Variance data (list)
 #' @param ref.mat Reference matrix (matrix)
+#' @param max.snps 
+#' @param ids 
+#' @param sampletype 
+#' @param ... 
 #'
 #' @return Matrix: Containing reference matrix subsetted to common SNPs as 
 #' the input VCF, as well as a left-joined VCF data
@@ -70,9 +75,10 @@ loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE, bin.size=1e6, ...){
 #'   var.dat <- ref.dat$var
 #'   vcfFile <- '/mnt/work1/users/home2/quever/xfer/A549.sample_id.vcf' ## A549 WES
 #'   vcf.mat <- compareVcf(vcfFile, var.dat=ref.dat$var, ref.mat=ref.dat$ref)
-compareVcf <- function(vcfFile, var.dat, ref.mat, ...){
+compareVcf <- function(vcfFile, var.dat, ref.mat, 
+                       max.snps=1e6, ids=NULL, sampletype='RNA', ...){
   vcf.map <- CCLid::mapVcf2Affy(vcfFile)
-  vcf.map <- CCLid:::.filt(vcf.map, ...) 
+  vcf.map <- CCLid:::.filt(vcf.map, ...) ## Memory: up to 1.8Gb 
   
   ## Combine matrices and reduce features
   ## Find the overlap between the COMParator and the REFerence
@@ -80,10 +86,22 @@ compareVcf <- function(vcfFile, var.dat, ref.mat, ...){
   vcf.to.use <- vcf.map.var
   ov.idx <- CCLid::overlapPos(comp = vcf.to.use$BAF,
                               ref=ref.mat, mapping = 'probeset')
+  if(nrow(ov.idx) > max.snps){
+    ov.idx <- ov.idx[order(ov.idx$ref)[1:max.snps],]
+  }
+  rm(vcf.map, vcf.map.var); gc()  ## Cleanup
   
+  ## BIG memory sink: shoots up to 7Gb
+  if(is.null(ids)){
+    refm <- ref.mat
+  } else {
+    colidx <- which(colnames(ref.mat) %in% all.ids)
+    message("Isolating for: ", paste(colnames(ref.mat)[colidx], collapse=", "))
+    refm <- ref.mat[,colidx,drop=FALSE]
+  }
   x.mat <- cbind(vcf.to.use$BAF$BAF[ov.idx$comp], 
-                 ref.mat[ov.idx$ref,])
-  colnames(x.mat)[1] <- paste0("RNA_", gsub(".vcf.*", "", basename(vcfFile)))
+                 refm[ov.idx$ref,])
+  colnames(x.mat)[1] <- paste0(sampletype, "_", gsub(".vcf.*", "", basename(vcfFile)))
   
   if(storage.mode(ref.mat[,1]) == 'integer'){
     x.mat[,-1] <- x.mat[,-1] / 100
@@ -148,19 +166,22 @@ checkForConcordance <- function(x.mat, metric='euclidean',
     data(meta.df)
     meta.dat <- meta.df
   }
+  gc();
   
   if(return.pred){
     D.vals <- lapply(list("baf"=x.dist), CCLid::splitConcordanceVals, meta.df=meta.dat)
     balanced <- CCLid::balanceGrps(D.vals)
     models <- CCLid::trainLogit(balanced, predictors=c('baf'))
     pred <- assemblePredDat(D.vals, known.class=FALSE)
+    gc();
     pred <- mkPredictions(pred, models)
     pred <- pred[order(pred$baf.fit),]
     pred$Var1 <- as.character(pred$Var1)
     pred$Var2 <- as.character(pred$Var2)
+    gc();
     
-    sample.idx <- grep(paste0("^", sampleID, "$"), pred$Var1)
-    sample.idx <- c(sample.idx, grep(paste0("^", sampleID, "$"), pred$Var2))
+    sample.idx <- grep(paste0("", sampleID, ""), pred$Var1, fixed = TRUE)
+    sample.idx <- c(sample.idx, grep(paste0("", sampleID, ""), pred$Var2, fixed = TRUE))
     pred.sample <- pred[sort(sample.idx),]
     pred <- split(pred.sample, pred.sample$baf.p.fit)
     ret.dat[['pred']] <- pred
