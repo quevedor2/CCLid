@@ -23,7 +23,7 @@ loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE, bin.size=1e6, ...){
   # } else {
   # 
   # }
-  print("Attaching/downloading reference matrix...")
+  # print("Attaching/downloading reference matrix...")
   ref.mat <- downloadRefCCL(toupper(analysis), saveDir = PDIR, bin.size=bin.size)
   
   if(rm.gne){
@@ -31,7 +31,7 @@ loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE, bin.size=1e6, ...){
     ref.mat <- ref.mat[,-rm.idx]
   }
   
-  print("Ensuring proper format and caluclating variance per bin...")
+  # print("Ensuring proper format and caluclating variance per bin...")
   format.dat <- formatRefMat(name=toupper(analysis), ref.mat=ref.mat, saveDir = PDIR, 
                              analysis=tolower(analysis), bin.size=bin.size, ...) #bin.size=5e5
   
@@ -40,7 +40,7 @@ loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE, bin.size=1e6, ...){
   rm(format.dat)
   
   ## Assign group IDs (e.g. 22Rv1.cel -> GDSC_22Rv1)
-  print("Assigning group IDs...")
+  # print("Assigning group IDs...")
   if(!file.exists(file=file.path(PDIR, "col_ids.rda"))){
     new.ids <- assignGrpIDs(ref.mat, meta.df)
     new.ids[duplicated(new.ids)] <- gsub("_", "2_",new.ids[duplicated(new.ids)])
@@ -162,7 +162,7 @@ checkForConcordance <- function(x.mat, metric='euclidean',
   
   x.dist <- CCLid::similarityMatrix(x.mat, method = metric)
   if(is.null(meta.dat)){
-    if(verbose) print("Loading in metadata designed for reference matrix...")
+    # if(verbose) print("Loading in metadata designed for reference matrix...")
     data(meta.df)
     meta.dat <- meta.df
   }

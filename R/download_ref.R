@@ -30,7 +30,7 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
     require(bigmemory)
     require(biganalytics)
     
-    print("Reading in existing bigmemory object...")
+    # print("Reading in existing bigmemory object...")
     shared.desc <- dget(file.path(saveDir, paste0("ref_", as.integer(bin.size), ".desc")))
     shared.bigobject <- attach.big.matrix(shared.desc)
     ids <- readRDS(file.path(saveDir, "ref_mat_ID.rds"))
@@ -42,7 +42,7 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
       downloader::download(url = as.character(ccl.table[whichx, "URL"]), 
                            destfile = file.path(saveDir, paste0(refFileName, ".gz")), 
                            quiet = !verbose)
-      print(paste0("Unzipping: ", file.path(saveDir, paste0(refFileName, ".gz"))))
+      # print(paste0("Unzipping: ", file.path(saveDir, paste0(refFileName, ".gz"))))
       system(command = paste0('gunzip ', file.path(saveDir, paste0(refFileName, ".gz"))))
     }
     
@@ -115,11 +115,11 @@ formatRefMat <- function(name, ref.mat, analysis,
   
   ## Calculate variant features if file doesn't already exist
   if (!file.exists(file.path(saveDir, varFileName))) {
-    print("Generate feature variance data")
+    # print("Generate feature variance data")
     var.feats <- .getVariantFeatures(ref.mat, bin.size)
     saveRDS(var.feats, file.path(saveDir, varFileName))
   } else {
-    print("Reading existing variance data")
+    # print("Reading existing variance data")
     var.feats <- readRDS(file.path(saveDir, varFileName))
   }
   
