@@ -210,7 +210,7 @@ exprInDrift <- function(){
     
     ## Check if the pharmacoGx ID is in both datasets
     pID <- meta.df[match(id, meta.df$ID),]$PharmacoGX_ID
-    print(pID)
+    # print(pID)
     cl.in.pset <- sapply(psets, function(pset){
       !is.na(match(pID, pset@molecularProfiles$rnaseq$cellid))
     })

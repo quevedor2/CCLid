@@ -103,7 +103,7 @@ driftConcordance <- function(){
   
   ## Calculate concordance between SNP and CN drifted regions
   baf.drift.dat <- mclapply(c(0:9), function(baf.z){
-    print(baf.z)
+    # print(baf.z)
     driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.cn, 
                        cell.ids = names(baf.drifts),
                        baf.z=baf.z, cn.z=cn.z, cn.gtruth=FALSE)
@@ -127,7 +127,7 @@ driftConcordance <- function(){
       abline(v=drift.dat$saturation[sat.points,], col=sat.cols)
       text(x =drift.dat$saturation[sat.points,], y=rep(1, length(sat.points)), 
            labels = sat.points, cex=0.8, adj=0 )
-      print(1-drift.dat$saturation[sat.points,])
+      # print(1-drift.dat$saturation[sat.points,])
     }, error=function(e){ NA })
     #GNE(b.z=2) 0.7   0.8   0.9 
     #GNE(b.z=2) 0.867 0.823 0.747 
@@ -282,7 +282,7 @@ driftRNA <- function(){
   
   
   rna.drift.dat <- mclapply(c(1:4), function(b.z){
-    print(baf.z)
+    # print(baf.z)
     driftOverlapMetric(gr.baf = gr.baf, gr.cn = gr.rna[[dataset]], 
                        cell.ids = names(baf.drifts),
                        baf.z=5, cn.z=b.z)
@@ -302,7 +302,7 @@ driftRNA <- function(){
     abline(v=drift.dat$saturation[sat.points,], col=sat.cols)
     text(x =drift.dat$saturation[sat.points,], y=rep(1, length(sat.points)), 
          labels = sat.points, cex=0.8, adj=0 )
-    print(1-drift.dat$saturation[sat.points,])
+    # print(1-drift.dat$saturation[sat.points,])
     # 0.7     0.8     0.9 
     # 0.838   0.784   0.690 
   })
@@ -314,9 +314,9 @@ driftRNA <- function(){
   pdf(file.path(PDIR, "drift_it", paste0("RNA-", dataset, "_cn-baf-rna-drift.pdf")))
   sapply(c('VM-CUB-1', 'KM-H2', 'CL-40', 'BT-549', 'HT-29', 'HuP-T4', 'HEL'), function(ccl.id){
   # sapply(c('VM-CUB-1', 'KM-H2', 'CL-40', 'HT-29'), function(ccl.id){
-    print(ccl.id)
-    print(length(baf.drifts[[ccl.id]]))
-    print(length(vcf.drift[[ccl.id]]))
+    # print(ccl.id)
+    # print(length(baf.drifts[[ccl.id]]))
+    # print(length(vcf.drift[[ccl.id]]))
     cn.obj <- cn.drifts$cna.obj
     cn.obj$data <- NULL
     cn.obj$output <- cn.obj$output[which(cn.obj$output$ID %in% ccl.id),]
@@ -445,6 +445,6 @@ driftRNA <- function(){
   abline(coef = c(0,1), col="grey", lty=2)
 
   dev.off()
-  print(file.path(vcf.dir, paste0("drift_", dataset, "-", alt.ds, ".pdf")))
+  # print(file.path(vcf.dir, paste0("drift_", dataset, "-", alt.ds, ".pdf")))
 
 }

@@ -230,7 +230,7 @@ expressThis <- function(){
   
   ## Annonate the CVCL IDs
   rna.cvcl <- mclapply(names(rna.identity), function(id, dataset){
-    print(id)
+    # print(id)
     rna.id <- rna.identity[[id]]
     file.prefix <- switch(dataset,
                           "GDSC"="EGAF",
@@ -288,8 +288,8 @@ expressThis <- function(){
   match.idx <- which(sapply(rna.cvcl, function(i) any(i$g.truth)))
   
   ## Descriptive stats of the number of "matching" and "nonmatching" based on CVCL
-  print(paste0("Match: ", length(match.idx),  " / ", length(rna.cvcl)))
-  print(paste0("No-match: ", length(no.match.idx),  " / ", length(rna.cvcl)))
+  # print(paste0("Match: ", length(match.idx),  " / ", length(rna.cvcl)))
+  # print(paste0("No-match: ", length(no.match.idx),  " / ", length(rna.cvcl)))
   
   ## Concatenate everything and output csv
   rna.m <- plyr::rbind.fill(lapply(rna.cvcl[match.idx], function(i){
@@ -374,7 +374,7 @@ snpsCellIdentity <- function(){
     p.m.nm <- cbind(p.m.nm, err.pcl)
     p.m.nm <- p.m.nm[order(err.pcl[,1], err.pcl[,2]),]
     
-    print(table(err.pcl))
+    # print(table(err.pcl))
     barplot(t(table(err.pcl)), horiz=TRUE, las=1, xlim=c(0,80), 
             col=c("FALSE"="#f4a582", "TRUE"="#b2182b"), border=NA)
     return(p.m.nm)

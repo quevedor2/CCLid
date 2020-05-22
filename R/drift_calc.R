@@ -157,7 +157,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' @return
 .addSegSd <- function(seg.obj, winsor=0.95, ...){
   adj.segs <- lapply(split(seg.obj$output, f=seg.obj$output$ID), function(seg){
-    print(paste0(unique(seg$ID), "..."))
+    # print(paste0(unique(seg$ID), "..."))
     seg.dat <- as.data.frame(seg.obj$data)
     seg.dat$chrom <- as.character(seg.dat$chrom)
     
@@ -326,7 +326,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 .estimateZcutoff <- function(seg, data.type='baf'){
   ref.frac <- switch(data.type,
                      "baf"={
-                       print("Estimating BAF diff significance from theoretical framework")
+                      #  print("Estimating BAF diff significance from theoretical framework")
                        ref.frac <- sapply(c(1:5), function(tcn){
                          sapply(c(0:4), function(alt){
                            if(alt <= tcn) alt/tcn else 0

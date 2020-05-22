@@ -31,10 +31,10 @@ setwd(pdir); dir.create(out.dir)
 ##############################
 #### Read in all the data ####
 if(opt$section == 'read'){
-  print("Reading in data")
+  # print("Reading in data")
   dat <- lapply(list.files(pdir), function(i){
     if(dir.exists(i)){
-      print(i)
+      # print(i)
       tryCatch({
         dat <- readRDS(file.path(i, paste0(i, rds.id)))
         switch(opt$analysis,
@@ -75,7 +75,7 @@ if(opt$section == 'matrix'){
     dat.m <- do.call(cbind, dat)
   } else {
     dat.ms <- apply(se.df, 1, function(i){
-      print(paste0(i['start'], '-', i['end']))
+      # print(paste0(i['start'], '-', i['end']))
       dat.exp <- lapply(dat[c(i['start']:i['end'])], function(b) {
         b$ID <- rownames(b)
         b
