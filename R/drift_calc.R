@@ -157,7 +157,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' @return
 .addSegSd <- function(seg.obj, winsor=0.95, ...){
   adj.segs <- lapply(split(seg.obj$output, f=seg.obj$output$ID), function(seg){
-    print(paste0(unique(seg$ID), "..."))
+    if (verbose) print(paste0(unique(seg$ID), "..."))
     seg.dat <- as.data.frame(seg.obj$data)
     seg.dat$chrom <- as.character(seg.dat$chrom)
     
@@ -174,7 +174,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
     sd.per.seg <- sapply(split(ov.idx, subjectHits(ov.idx)), function(ov.i, winsorize.data=FALSE){
       dat <- mcols(gr.dat[queryHits(ov.i),])[, s.idx]
       if(winsorize.data){
-        # print("Winsorizing")
+        # if (verbose) print("Winsorizing")
         lim <- quantile(dat, probs=c(winsor, 1-winsor), na.rm=TRUE) ##winsorization
         dat[dat < min(lim) ] <- min(lim)
         dat[dat > max(lim) ] <- max(lim)
@@ -206,7 +206,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' @param seg.obj A seg obj
 #'
 #' @return A list of seg objects
-.compSegs <- function(seg.obj){
+.compSegs <- function(seg.obj, verbose=FALSE){
   spl.segs <- split(seg.obj$output, f=seg.obj$output$ID)
   seg.dat <- as.data.frame(as.matrix(seg.obj$data))
   gr.dat <- makeGRangesFromDataFrame(seg.dat, seqnames.field='chrom', 
@@ -229,7 +229,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
       gr.seg1 <- makeGRangesFromDataFrame(seg1, keep.extra.columns = TRUE)
       seg1.id <- unique(gr.seg1$ID)
       if(seg0.id == seg1.id) return(NULL)
-      #print(paste0(seg0.id, " - ", seg1.id))
+      #if (verbose)(paste0(seg0.id, " - ", seg1.id))
       
       ## Find all overlap/intersects between segments
       ov.segs <- findOverlapPairs(gr.seg0, gr.seg1)
@@ -323,10 +323,10 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' @param seg an output dataframe from a CNA object
 #'
 #' @return Returned seg with $t and $seg.diff
-.estimateZcutoff <- function(seg, data.type='baf'){
+.estimateZcutoff <- function(seg, data.type='baf', verbose=FALSE){
   ref.frac <- switch(data.type,
                      "baf"={
-                       print("Estimating BAF diff significance from theoretical framework")
+                       if (verbose) print("Estimating BAF diff significance from theoretical framework")
                        ref.frac <- sapply(c(1:5), function(tcn){
                          sapply(c(0:4), function(alt){
                            if(alt <= tcn) alt/tcn else 0

@@ -72,7 +72,7 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
 #'
 #' @return CN drift object
 #' @export
-getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, ...){
+getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, verbose=TRUE, ...){
   ## Index matching cell line pairs for the CN PSets
   ref.bin.ids <- assignGrpIDs(ref.l2r[[seg.id]], meta.df)
   alt.bin.ids <- assignGrpIDs(alt.l2r[[seg.id]], meta.df)
@@ -120,7 +120,7 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, ...){
                   D.med <- apply(D, 2, median, na.rm=TRUE)
                   Draw.med <- apply(Draw, 2, median, na.rm=TRUE)
                   if(abs(D.med) >= max.med & abs(Draw.med) >= max.med){
-                    print(paste0("Extreme difference in ", colnames(D)))
+                    if (verbose) print(paste0("Extreme difference in ", colnames(D)))
                     list("seg"= D - matrix(rep(D.med, nrow(D)), byrow=TRUE, nrow=nrow(D)), 
                          "raw"= Draw - matrix(rep(Draw.med, nrow(Draw)), byrow=TRUE, nrow=nrow(Draw)))
                   } else {

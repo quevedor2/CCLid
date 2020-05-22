@@ -12,7 +12,7 @@
 #' @examples
 #' downloadRefCCL(name="BAF")
 downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"), 
-                            refFileName = NULL, verbose = TRUE, bin.size=NULL) {
+                            refFileName = NULL, verbose = FALSE, bin.size=NULL) {
   ccl.table <- CCLid::availableRefCCL(saveDir = saveDir)
   whichx <- match(name, ccl.table[, 1])
   if (is.na(whichx)) {
@@ -30,7 +30,7 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
     require(bigmemory)
     require(biganalytics)
     
-    print("Reading in existing bigmemory object...")
+    if(verbose) print("Reading in existing bigmemory object...")
     shared.desc <- dget(file.path(saveDir, paste0("ref_", as.integer(bin.size), ".desc")))
     shared.bigobject <- attach.big.matrix(shared.desc)
     ids <- readRDS(file.path(saveDir, "ref_mat_ID.rds"))
@@ -42,7 +42,7 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
       downloader::download(url = as.character(ccl.table[whichx, "URL"]), 
                            destfile = file.path(saveDir, paste0(refFileName, ".gz")), 
                            quiet = !verbose)
-      print(paste0("Unzipping: ", file.path(saveDir, paste0(refFileName, ".gz"))))
+      if(verbose) print(paste0("Unzipping: ", file.path(saveDir, paste0(refFileName, ".gz"))))
       system(command = paste0('gunzip ', file.path(saveDir, paste0(refFileName, ".gz"))))
     }
     
@@ -115,11 +115,11 @@ formatRefMat <- function(name, ref.mat, analysis,
   
   ## Calculate variant features if file doesn't already exist
   if (!file.exists(file.path(saveDir, varFileName))) {
-    print("Generate feature variance data")
+    if(verbose) print("Generate feature variance data")
     var.feats <- .getVariantFeatures(ref.mat, bin.size)
     saveRDS(var.feats, file.path(saveDir, varFileName))
   } else {
-    print("Reading existing variance data")
+    if(verbose) print("Reading existing variance data")
     var.feats <- readRDS(file.path(saveDir, varFileName))
   }
   

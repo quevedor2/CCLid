@@ -4,7 +4,7 @@
 \alias{.compSegs}
 \title{.compSegs}
 \usage{
-.compSegs(seg.obj)
+.compSegs(seg.obj, verbose = FALSE)
 }
 \arguments{
 \item{seg.obj}{A seg obj}

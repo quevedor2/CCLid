@@ -8,7 +8,7 @@ downloadRefCCL(
   name,
   saveDir = file.path(".", "CCLid"),
   refFileName = NULL,
-  verbose = TRUE,
+  verbose = FALSE,
   bin.size = NULL
 )
 }

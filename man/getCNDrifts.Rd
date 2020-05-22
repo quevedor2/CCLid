@@ -4,7 +4,16 @@
 \alias{getCNDrifts}
 \title{getCnDrifts}
 \usage{
-getCNDrifts(ref.l2r, alt.l2r, fdat, seg.id, raw.id, cell.ids, ...)
+getCNDrifts(
+  ref.l2r,
+  alt.l2r,
+  fdat,
+  seg.id,
+  raw.id,
+  cell.ids,
+  verbose = TRUE,
+  ...
+)
 }
 \arguments{
 \item{ref.l2r}{Matrix of L2R data of genomic bins by samples for reference dataset}

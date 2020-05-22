@@ -4,7 +4,14 @@
 \alias{loadRef}
 \title{loadRef}
 \usage{
-loadRef(PDIR = NULL, analysis = "baf", rm.gne = FALSE, bin.size = 1e+06, ...)
+loadRef(
+  PDIR = NULL,
+  analysis = "baf",
+  rm.gne = FALSE,
+  bin.size = 1e+06,
+  verbose = FALSE,
+  ...
+)
 }
 \arguments{
 \item{analysis}{Only support BAF at the moment}
