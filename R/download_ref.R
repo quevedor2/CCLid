@@ -84,7 +84,7 @@ availableRefCCL <- function (saveDir = file.path(".", "CCLid"), tableDir=NULL,
 #' @examples
 formatRefMat <- function(name, ref.mat, analysis, 
                          varFileName=NULL, saveDir = file.path(".", "CCLid"), 
-                         bin.size=1e6, just.var=FALSE, fill.na=FALSE){
+                         bin.size=1e6, just.var=FALSE, fill.na=FALSE, verbose=FALSE){
   # saveDir=PDIR
   # name='BAF'
   # analysis='baf'
