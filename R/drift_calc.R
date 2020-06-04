@@ -63,11 +63,10 @@ segmentDrift <- function(segmenter='PCF', fdat, D, kmin=5, rm.homo=FALSE){
 
 
 #' bafDrift
-#' @definition Calcualtes the amount of genetic drift in a sample
+#' @description Calcualtes the amount of genetic drift in a sample
 #' 
 #' @param sample.mat 
 #' @param debug should be set to FALSE and only changed when debugging
-#' @return
 #' @export
 bafDrift <- function(sample.mat, debug=FALSE, centering='none', 
                      norm.baf=TRUE, hom.filt.val=0.07, ...){
@@ -362,7 +361,6 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' @param each.sample 
 #' @param sig.es 
 #'
-#' @return
 #' @export
 sigDiffBaf <- function(each.sample, sig.es=NULL){
   es <- each.sample$output
@@ -382,9 +380,6 @@ sigDiffBaf <- function(each.sample, sig.es=NULL){
 #' @param idx 
 #'
 #' @return
-#' @export
-#'
-#' @examples
 .getDrift <- function(i, idx=1){
   if(length(i$frac) >= idx){
     ## Select the "z > 3" row from all baf-drift estimates

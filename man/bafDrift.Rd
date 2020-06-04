@@ -18,9 +18,6 @@ bafDrift(
 
 \item{debug}{should be set to FALSE and only changed when debugging}
 }
-\value{
-
-}
 \description{
-bafDrift
+Calcualtes the amount of genetic drift in a sample
 }

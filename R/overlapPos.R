@@ -31,7 +31,6 @@
 #' @param ref 
 #' @param mapping 
 #'
-#' @return
 #' @export
 overlapPos <- function(comp, ref, mapping='probeset'){
   switch(mapping,

@@ -7,12 +7,9 @@
 assignGrpIDs(mat, meta.df)
 }
 \arguments{
-\item{mat}{}
+\item{mat}{Matrix of BAF/Geno}
 
-\item{meta.df}{}
-}
-\value{
-
+\item{meta.df}{Metadata for the samples being used with CVCL ids}
 }
 \description{
 Creates a standardized set of group names for 

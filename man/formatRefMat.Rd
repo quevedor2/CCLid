@@ -2,27 +2,54 @@
 % Please edit documentation in R/download_ref.R
 \name{formatRefMat}
 \alias{formatRefMat}
-\title{Title}
+\title{formatRefMat}
 \usage{
 formatRefMat(
   name,
   ref.mat,
-  analysis,
+  analysis = "baf",
   varFileName = NULL,
   saveDir = file.path(".", "CCLid"),
   bin.size = 1e+06,
   just.var = FALSE,
-  fill.na = FALSE
+  fill.na = FALSE,
+  verbose = FALSE
 )
 }
 \arguments{
-\item{ref.mat}{}
+\item{name}{Name to be applied to the returned object}
 
-\item{analysis}{}
+\item{ref.mat}{A reference matrix of all pharmacogenomic reference samples and their BAFs,
+typically obtained from the downloadRefCCL() function}
+
+\item{analysis}{Only 'baf' is implemented at this point}
+
+\item{varFileName}{RDS containing the variant SNP information}
+
+\item{saveDir}{Directory to save/load the variant RDS file to}
+
+\item{bin.size}{Default is set to 5e5, a variant file must be created for this bin size}
+
+\item{just.var}{}
+
+\item{fill.na}{}
+
+\item{verbose}{}
 }
 \value{
-
+Returns a list object:
+'ref' = matrix of SNPs by samples for least variant SNPs
+'var' = list of each 'bin size' and the SNPs and their BAF that populate it
 }
 \description{
-Title
+Pre-processes the input data into a matrix of BAF values and 
+the least/most variant SNPs within that cohort
+}
+\examples{
+refdir <- '/mnt/work1/users/home2/quever/git/CCLid-web/extdata/tmp'
+analysis = 'baf'
+
+ref.mat <- downloadRefCCL(toupper(analysis), saveDir = refdir, bin.size=5e5, verbose=TRUE)
+format.dat <- formatRefMat(name=toupper(analysis), ref.mat=ref.mat, saveDir = refdir,
+analysis=tolower(analysis), bin.size=bin.size) #bin.size=5e5
 }

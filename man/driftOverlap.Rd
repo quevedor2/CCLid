@@ -13,9 +13,6 @@ driftOverlap(seg, ref.ds = NULL, alt.ds = NULL)
 
 \item{alt.ds}{}
 }
-\value{
-
-}
 \description{
 driftOverlap
 }

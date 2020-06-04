@@ -4,7 +4,7 @@
 \alias{plot.SimpleCCLid}
 \title{plot.SimpleCCLid}
 \usage{
-plot.SimpleCCLid(obj, add.chr.sep = TRUE, min.z = 2)
+\method{plot}{SimpleCCLid}(obj, add.chr.sep = TRUE, min.z = 2)
 }
 \arguments{
 \item{obj}{}

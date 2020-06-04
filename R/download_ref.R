@@ -6,7 +6,6 @@
 #' @param verbose 
 #' @param refFileName 
 #'
-#' @return
 #' @export
 #'
 #' @examples
@@ -55,11 +54,10 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
 #' availableRefCCL
 #' @description table describing the different datasets for download 
 #' 
-#' @param saveDir 
-#' @param myfn 
-#' @param verbose 
+#' @param saveDir Directory to store Ref files 
+#' @param myfn Default: "downloadTable.csv"
+#' @param verbose Default: TRUE
 #'
-#' @return
 #' @export
 availableRefCCL <- function (saveDir = file.path(".", "CCLid"), tableDir=NULL,
                              myfn = "downloadTable.csv", verbose = TRUE) {
@@ -73,16 +71,34 @@ availableRefCCL <- function (saveDir = file.path(".", "CCLid"), tableDir=NULL,
   return(dl.table)
 }
 
-#' Title
+#' formatRefMat
+#' @description Pre-processes the input data into a matrix of BAF values and 
+#' the least/most variant SNPs within that cohort
+#' 
+#' @param ref.mat A reference matrix of all pharmacogenomic reference samples and their BAFs,
+#' typically obtained from the downloadRefCCL() function
+#' @param analysis Only 'baf' is implemented at this point
+#' @param name Name to be applied to the returned object
+#' @param varFileName RDS containing the variant SNP information
+#' @param saveDir Directory to save/load the variant RDS file to
+#' @param bin.size Default is set to 5e5, a variant file must be created for this bin size
+#' @param just.var 
+#' @param fill.na 
+#' @param verbose 
 #'
-#' @param ref.mat 
-#' @param analysis 
-#'
-#' @return
+#' @return Returns a list object:
+#' 'ref' = matrix of SNPs by samples for least variant SNPs
+#' 'var' = list of each 'bin size' and the SNPs and their BAF that populate it
 #' @export
 #'
 #' @examples
-formatRefMat <- function(name, ref.mat, analysis, 
+#' refdir <- '/mnt/work1/users/home2/quever/git/CCLid-web/extdata/tmp'
+#' analysis = 'baf'
+#' 
+#' ref.mat <- downloadRefCCL(toupper(analysis), saveDir = refdir, bin.size=5e5, verbose=TRUE)
+#' format.dat <- formatRefMat(name=toupper(analysis), ref.mat=ref.mat, saveDir = refdir,
+#' analysis=tolower(analysis), bin.size=bin.size) #bin.size=5e5
+formatRefMat <- function(name, ref.mat, analysis='baf', 
                          varFileName=NULL, saveDir = file.path(".", "CCLid"), 
                          bin.size=1e6, just.var=FALSE, fill.na=FALSE, verbose=FALSE){
   # saveDir=PDIR
@@ -116,7 +132,7 @@ formatRefMat <- function(name, ref.mat, analysis,
   ## Calculate variant features if file doesn't already exist
   if (!file.exists(file.path(saveDir, varFileName))) {
     if(verbose) print("Generate feature variance data")
-    var.feats <- .getVariantFeatures(ref.mat, bin.size)
+    var.feats <- CCLid:::.getVariantFeatures(ref.mat, bin.size)
     saveRDS(var.feats, file.path(saveDir, varFileName))
   } else {
     if(verbose) print("Reading existing variance data")
@@ -182,10 +198,9 @@ formatRefMat <- function(name, ref.mat, analysis,
 #' @description Creates a standardized set of group names for 
 #' samples using a reference
 #' 
-#' @param mat 
-#' @param meta.df 
+#' @param mat Matrix of BAF/Geno
+#' @param meta.df Metadata for the samples being used with CVCL ids
 #'
-#' @return
 #' @export
 assignGrpIDs <- function(mat, meta.df){
   cvcl.idx <- grep("CVCL", colnames(meta.df))

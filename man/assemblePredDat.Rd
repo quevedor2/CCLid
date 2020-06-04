@@ -7,12 +7,9 @@
 assemblePredDat(D.vals, known.class = FALSE)
 }
 \arguments{
-\item{D.vals}{}
+\item{D.vals}{Group values (M/NM)}
 
-\item{known.class}{}
-}
-\value{
-
+\item{known.class}{Default = FALSE, hardcodes a M/NM for demo data}
 }
 \description{
 Creates a melted data-structure designed for predictions,

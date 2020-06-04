@@ -4,10 +4,10 @@
 \alias{demoSample}
 \title{demoSample}
 \usage{
-demoSample(data.type, sample.ord, demo.dat)
+demoSample(data.type = "BAF", sample.ord, demo.dat)
 }
 \arguments{
-\item{data.type}{}
+\item{data.type}{Must be either "BAF" (default) or "geno" (case-sensitive),}
 
 \item{sample.ord}{}
 

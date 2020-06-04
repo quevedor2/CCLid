@@ -6,9 +6,6 @@
 \usage{
 readinRnaFileMapping()
 }
-\value{
-
-}
 \description{
 Map the RNA files to the SNP files
 using hardcoded metadata

@@ -1,14 +1,49 @@
 Package: CCLid
-Title: What the Package Does (One Line, Title Case)
+Title: Compares Cancer Cell Line Genotypes Against Pharmacogenomic Datasets
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Rene",
+           family = "Quevedo",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: What license it uses
+           email = "rquevedo@uhnresearch.ca",
+           comment = c(ORCID = "0000-0001-8288-1929"))
+Description: This package has 3 main functions that all centre on analyzing the
+  genotypes of cancer cell lines and compares them against 1,497 unique cancer cell
+  lines analyzed across 3 large pharmacogenomic datasets. The 3 functions are to
+  1) identify an input cell line VCF using the genotype and B-allele fraction (BAF) as the 
+  input for a logistic regression, 2) identify regions of the genome that are drifted
+  by scanning for segments where the BAF are significantly different from a comparator
+  cell line, and 3) run a deconvolution on the cell line BAFs using NMF to identify 
+  if two or more cell lines are mixed and to what proportion they are.
+License: MIT License
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.0.0
+Imports:
+    optparse,
+    VariantAnnotation,
+    NNLM,
+    reshape2,
+    bigmemory,
+    biganalytics,
+    BSgenome.Hsapiens.UCSC.hg19,
+    dplyr,
+    DNAcopy,
+    rjson,
+    preprocessCore,
+    GenomicRanges,
+    PharmacoGx,
+    org.Hs.eg.db,
+    RColorBrewer,
+    TxDb.Hsapiens.UCSC.hg19.knownGene,
+    AnnotationDbi,
+    scales,
+    Rfast,
+    philentropy,
+    gplots,
+    downloader,
+    plyr
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr

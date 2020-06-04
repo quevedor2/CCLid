@@ -9,11 +9,13 @@ balanceGrps(D.vals)
 \arguments{
 \item{D.vals}{}
 }
-\value{
-
-}
 \description{
 Part of the process needed to balance the groups for a logistic
 regression. It undersamples the non-matching group to be comparable with the
 matching group
+}
+\examples{
+x.dist <- CCLid::similarityMatrix(x.mat, method = metric)
+D.vals <- lapply(list("baf"=x.dist), CCLid::splitConcordanceVals, meta.df=meta.dat)
+balanced <- CCLid::balanceGrps(D.vals)
 }

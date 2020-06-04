@@ -5,7 +5,7 @@
 \title{plot.CCLid
 plot() function for CCLid adjusted DNAcopy segment objects}
 \usage{
-plot.CCLid(
+\method{plot}{CCLid}(
   obj,
   sample.size = 600,
   low.sig.alpha = 0.01,
@@ -25,4 +25,7 @@ plot.CCLid(
 \description{
 plot.CCLid
 plot() function for CCLid adjusted DNAcopy segment objects
+}
+\examples{
+In the works...
 }

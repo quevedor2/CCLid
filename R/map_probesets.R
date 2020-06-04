@@ -196,7 +196,6 @@ mapVcf2Affy <- function(vcfFile){
 #' @param var.dat A list returned by formatRefMat()$var
 #' @param slow.method 
 #'
-#' @return
 #' @export
 mapVariantFeat <- function(vcf.map, var.dat){
   is.bm <- FALSE

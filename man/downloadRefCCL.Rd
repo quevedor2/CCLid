@@ -21,9 +21,6 @@ downloadRefCCL(
 
 \item{verbose}{}
 }
-\value{
-
-}
 \description{
 Downloads the precomputed RDS data structures for reference
 }

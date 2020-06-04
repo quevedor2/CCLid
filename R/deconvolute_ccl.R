@@ -11,7 +11,6 @@
 #' @param M Input matrix
 #' @param M0 Design matrix
 #'
-#' @return
 #' @export
 checkMse <- function(M, M0){
   require(NNLM)

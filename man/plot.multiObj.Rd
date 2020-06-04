@@ -4,7 +4,7 @@
 \alias{plot.multiObj}
 \title{plot.multiObj}
 \usage{
-plot.multiObj(OBJ, add.chr.sep = TRUE, min.z = 2)
+\method{plot}{multiObj}(OBJ, add.chr.sep = TRUE, min.z = 2)
 }
 \arguments{
 \item{OBJ}{A list of CCLid Objects}

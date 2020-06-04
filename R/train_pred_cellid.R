@@ -16,7 +16,6 @@
 #' @param dm 
 #' @param meta.df 
 #'
-#' @return
 #' @export
 splitConcordanceVals <- function(dm, meta.df){
   dr.nm <- dm
@@ -54,7 +53,6 @@ splitConcordanceVals <- function(dm, meta.df){
 #' @description Plots the histogram for matching/non-matching dataset
 #' @param D 
 #'
-#' @return
 #' @export
 plotHist <- function(D){
   nm.vals <- D$NM
@@ -81,10 +79,12 @@ plotHist <- function(D){
 #' 
 #' @param D.vals 
 #'
-#' @return
 #' @export
 #'
 #' @examples
+#' x.dist <- CCLid::similarityMatrix(x.mat, method = metric)
+#' D.vals <- lapply(list("baf"=x.dist), CCLid::splitConcordanceVals, meta.df=meta.dat)
+#' balanced <- CCLid::balanceGrps(D.vals)
 balanceGrps <- function(D.vals){
   m.vals <- Reduce(function(x,y) merge(x,y, by=c("Var1", "Var2")), lapply(D.vals, function(i) i$M))
   nm.vals <- Reduce(function(x,y) merge(x,y, by=c("Var1", "Var2")), lapply(D.vals, function(i) i$NM))
@@ -112,7 +112,6 @@ balanceGrps <- function(D.vals){
 #' @param mat 
 #' @param method Either 'cor', 'jaccard', or 'euclidean'
 #'
-#' @return
 #' @export
 similarityMatrix <- function(mat, method){
   require(Rfast)
@@ -137,10 +136,9 @@ similarityMatrix <- function(mat, method){
 #' @description Creates a melted data-structure designed for predictions,
 #' much in the same vain as the training dataset: Sample X, sample 2, value
 #' 
-#' @param D.vals 
-#' @param known.class 
+#' @param D.vals Group values (M/NM)
+#' @param known.class Default = FALSE, hardcodes a M/NM for demo data
 #'
-#' @return
 #' @export
 assemblePredDat <- function(D.vals, known.class=FALSE){
   pred <- lapply(names(D.vals), function(ana, known.class=FALSE){
@@ -162,7 +160,6 @@ assemblePredDat <- function(D.vals, known.class=FALSE){
 #' @param balanced 
 #' @param ... 
 #'
-#' @return
 #' @export
 trainLogit <- function(balanced, ...){
   fs <- .createFormula(...)
@@ -178,10 +175,21 @@ trainLogit <- function(balanced, ...){
 #' @param pred 
 #' @param models 
 #'
-#' @return
 #' @export
 #'
 #' @examples
+#' ## Generate all by all distance and balance Match and Nonmatch groups
+#' x.dist <- similarityMatrix(x.mat, 'euclidean')
+#' D.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=meta.df)
+#' balanced <- balanceGrps(D.vals)
+#' 
+#' ## Train the Logit model
+#' models <- trainLogit(balanced, predictors=c('baf'))
+#' x.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=NULL)
+#' 
+#' ## Assemble and make predictions of M or NM on the data
+#' pred <- assemblePredDat(x.vals, known.class=FALSE)
+#' pred <- mkPredictions(pred, models)
 mkPredictions <- function(pred, models){
   if(is.null(names(models))){
     names(models) <- sapply(models, function(m){
@@ -286,23 +294,5 @@ mkPredictions <- function(pred, models){
   } 
   
   return(m.d)
-}
-
-#' splitSnpDist
-#'
-#' @param dm 
-#' @param meta.df 
-#'
-#' @return
-#' @export
-#'
-#' @examples
-splitSnpDist <- function(dm, meta.df){
-  dr.nm <- dm
-  m.d <- abs(.genMatchSnpDiff(dr.nm))
-  nm.d <- abs(.genNonmatchSnpDiff(col.len=ncol(m.d), dr.nm))
-  pred.mat <- as.data.frame(t(cbind(m.d, nm.d)))
-  pred.mat$id <- c(rep("M", ncol(m.d)), rep("NM", ncol(nm.d)))
-  return(pred.mat)
 }
 

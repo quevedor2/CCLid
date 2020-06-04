@@ -7,15 +7,21 @@
 genDemoData(data.type = "BAF", n.pop = 10, ...)
 }
 \arguments{
-\item{data.type}{}
+\item{data.type}{Must be "BAF" (default) or "geno" (case-sensitive)}
 
-\item{n.pop}{}
+\item{n.pop}{Number of samples to simulate}
 
 \item{...}{}
 }
 \value{
-
+A list object
+ matrix = A matrix of 'geno' or 'BAFs' for n.pop samples
+ meta = a matrix of all by all sample comparisons
+ prob = a probability matrix used to generate each sample
 }
 \description{
 Generates random demo data to play with
+}
+\examples{
+ genDemoData(data.type='BAF', n.pop=5)
 }

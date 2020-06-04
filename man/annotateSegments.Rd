@@ -28,5 +28,5 @@ Annotated GRanges object with gene ids for the input GRanges
 cnTools: annotate GRanges segments
 }
 \examples{
-annotateSegments(PLTK::genDemoData(), PLTK::getGenes())
+annotateSegments(genDemoData(), getGenes('hg19'))
 }

@@ -11,9 +11,6 @@ checkMse(M, M0)
 
 \item{M0}{Design matrix}
 }
-\value{
-
-}
 \description{
 Finds the MSE for a NMF fit given a rank of 0 to 2.
 If the MSE is lowest for rank 0, then this suggests that the 

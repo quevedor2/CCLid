@@ -7,13 +7,16 @@
 annoDemoMat(sample.ord, demo.mat)
 }
 \arguments{
-\item{sample.ord}{}
+\item{sample.ord}{Sample order}
 
-\item{demo.mat}{}
-}
-\value{
-
+\item{demo.mat}{Matrix of BAF/Geno}
 }
 \description{
 Annotate the demo SNP x Sample matrix to generate meta.df
+$ meta  :'data.frame':	5 obs. of  5 variables:
+..$ ID: Factor w/ 5 levels "S1","S2","S3",..: 1 2 3 4 5
+..$ A : chr [1:5] "S1A" "S2A" "S3A" "S4A" ...
+..$ B : chr [1:5] "S1B" "S2B" "S3B" "S4B" ...
+..$ C : chr [1:5] "S1C" NA "S3C" "S4C" ...
+..$ D : chr [1:5] "S1D" NA NA NA ...
 }

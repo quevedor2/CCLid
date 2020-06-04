@@ -60,7 +60,6 @@
 #' @param ref.ds 
 #' @param alt.ds 
 #'
-#' @return
 #' @export
 multiDriftPlot <- function(seg, chr.size.gr=NULL, 
                            ref.ds=NULL, alt.ds=NULL){
@@ -115,7 +114,6 @@ multiDriftPlot <- function(seg, chr.size.gr=NULL,
 #' @param ref.ds 
 #' @param alt.ds 
 #'
-#' @return
 #' @export
 driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
   require(GenomicRanges)
@@ -169,6 +167,7 @@ driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
 #' @return
 #'
 #' @examples
+#' In the works...
 plot.CCLid <- function (obj, sample.size=600, low.sig.alpha=0.01, 
                         hi.sig.alpha=0.2, add.chr.sep=TRUE, 
                         atype='sd', add.points=TRUE, min.z=3) {

@@ -29,15 +29,12 @@
 #' demoSample
 #' @description Randomize a sample BAF or Geno giving probabilities
 #' 
-#' @param data.type 
+#' @param data.type Must be either "BAF" (default) or "geno" (case-sensitive), 
 #' @param sample.ord 
 #' @param demo.dat 
 #'
 #' @return
-#' @export
-#'
-#' @examples
-demoSample <- function(data.type, sample.ord, demo.dat){
+demoSample <- function(data.type='BAF', sample.ord, demo.dat){
   sapply(sample.ord, function(i){
     switch(data.type,
            "BAF"=rnorm(n=length(demo.dat[[i]]$mus), 
@@ -52,12 +49,15 @@ demoSample <- function(data.type, sample.ord, demo.dat){
 
 #' annoDemoMat
 #' @description Annotate the demo SNP x Sample matrix to generate meta.df
+#' $ meta  :'data.frame':	5 obs. of  5 variables:
+#' ..$ ID: Factor w/ 5 levels "S1","S2","S3",..: 1 2 3 4 5
+#' ..$ A : chr [1:5] "S1A" "S2A" "S3A" "S4A" ...
+#' ..$ B : chr [1:5] "S1B" "S2B" "S3B" "S4B" ...
+#' ..$ C : chr [1:5] "S1C" NA "S3C" "S4C" ...
+#' ..$ D : chr [1:5] "S1D" NA NA NA ...
 #' 
-#' @param sample.ord 
-#' @param demo.mat 
-#'
-#' @return
-#' @export
+#' @param sample.ord Sample order
+#' @param demo.mat Matrix of BAF/Geno
 annoDemoMat <- function(sample.ord, demo.mat){
   require(reshape2)
   s <- rep(1, length(sample.ord))
@@ -80,22 +80,27 @@ annoDemoMat <- function(sample.ord, demo.mat){
 #' genDemoData
 #' @description Generates random demo data to play with
 #'
-#' @param data.type 
-#' @param n.pop 
+#' @param data.type Must be "BAF" (default) or "geno" (case-sensitive)
+#' @param n.pop Number of samples to simulate
 #' @param ... 
 #'
-#' @return
-#' @export
+#' @return A list object
+#'  matrix = A matrix of 'geno' or 'BAFs' for n.pop samples
+#'  meta = a matrix of all by all sample comparisons
+#'  prob = a probability matrix used to generate each sample
+#'
+#' @examples
+#'  genDemoData(data.type='BAF', n.pop=5)
 genDemoData <- function(data.type='BAF', n.pop=10, ...){
   ## Generate demo data matrix
   demo.dat <- .demoP(data.type=data.type, ...) ## probabilities
   sample.ord <- sample(c(1:length(demo.dat)), size=n.pop, replace=T)
   
   ## Create samples from probabilities
-  demo.mat <- demoSample(data.type, sample.ord, demo.dat) 
+  demo.mat <- CCLid:::demoSample(data.type, sample.ord, demo.dat) 
 
   ## Assign column and row annotations
-  demo <- annoDemoMat(sample.ord, demo.mat)
+  demo <- CCLid:::annoDemoMat(sample.ord, demo.mat)
   
   list("matrix"=demo$mat, "meta"=demo$meta, "prob"=demo.dat)
 }
@@ -103,11 +108,12 @@ genDemoData <- function(data.type='BAF', n.pop=10, ...){
 #' combineSamples
 #' @description Combines the BAF or Geno or two or samples given a set proportion
 #' 
-#' @param data.type 
-#' @param sample.mat 
-#' @param prop 
+#' @param data.type 'BAF' or 'geno'
+#' @param sample.mat Input matrix of BAF or geno values by samples
+#' @param prop Proportion to mix the 2+ samples by
 #'
 #' @return
+#' A weighted mean vector of BAF or a probability sampled genotype
 #' @export
 combineSamples <- function(data.type, sample.mat, prop){
   switch(data.type, 
@@ -126,8 +132,8 @@ combineSamples <- function(data.type, sample.mat, prop){
                       n.pop=40, n.loci=1000, seed=1234, sd=0.1)
   
   meta.df <- demo$meta
-  test.sample <- demoSample(data.type, s.idx, demo$prob)
-  test.sample <- annoDemoMat(s.idx, test.sample)$mat
+  test.sample <- CCLid:::demoSample(data.type, s.idx, demo$prob)
+  test.sample <- CCLid:::annoDemoMat(s.idx, test.sample)$mat
   if(length(s.idx) > 1){
     sample.x <- as.matrix(combineSamples(data.type, test.sample, prop=prop))
   } else {
@@ -175,8 +181,8 @@ combineSamples <- function(data.type, sample.mat, prop){
   
   ## Test decomposition via NMF
   s.idx.nmf <- c(1,2,3)
-  M <- demoSample(data.type, s.idx.nmf, demo$prob)
-  M <- annoDemoMat(s.idx.nmf, M)$mat
+  M <- CCLid:::demoSample(data.type, s.idx.nmf, demo$prob)
+  M <- CCLid:::annoDemoMat(s.idx.nmf, M)$mat
   #M <- M[1:50,]
   
   prop.nmf <- c(0.9, 0.09, 0.01)
@@ -244,17 +250,4 @@ combineSamples <- function(data.type, sample.mat, prop){
   list("pred"=pred$pred$M,
        "drift"=bdf$frac[[1]],
        "seg"=bdf$cna.obj[[sample]]$output)
-}
-
-#' test function for denis
-#'
-#' @param a A string
-#'
-#' @return A string
-#' @export
-test <- function(a='NULL'){
-  print("Hello world")
-  print(a)
-  return(list("A"=paste0("hello world - ", a),
-              "B"="hello world"))
 }

@@ -295,7 +295,6 @@ getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df,
 #' readinRnaFileMapping
 #' @description Map the RNA files to the SNP files
 #' using hardcoded metadata
-#' @return
 #' @export
 readinRnaFileMapping <- function(){
   require(CCLid)
@@ -617,8 +616,9 @@ getGenes <- function(genome.build="hg19"){
 #'
 #'
 #' @return Annotated GRanges object with gene ids for the input GRanges
+#' @export
 #' @examples 
-#' annotateSegments(PLTK::genDemoData(), PLTK::getGenes())
+#' annotateSegments(genDemoData(), getGenes('hg19'))
 annotateSegments <- function(cn.data, genes, out.key="SYMBOL", mart=NULL, use.mart=FALSE){
   suppressPackageStartupMessages(require(biomaRt))
   suppressPackageStartupMessages(require(org.Hs.eg.db))

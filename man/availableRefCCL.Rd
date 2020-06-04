@@ -12,14 +12,11 @@ availableRefCCL(
 )
 }
 \arguments{
-\item{saveDir}{}
+\item{saveDir}{Directory to store Ref files}
 
-\item{myfn}{}
+\item{myfn}{Default: "downloadTable.csv"}
 
-\item{verbose}{}
-}
-\value{
-
+\item{verbose}{Default: TRUE}
 }
 \description{
 table describing the different datasets for download
