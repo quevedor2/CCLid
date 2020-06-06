@@ -1,8 +1,10 @@
 ---
-title: "~/git/CCL_authenticator"
+title: "CCLid: A toolkit to authenticate the genotype of cancer cell lines"
+author: "Rene Quevedo"
+date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{~/git/CCL_authenticator}
+  %\VignetteIndexEntry{CCLid: A toolkit to authenticate the genotype of cancer cell lines}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -14,6 +16,35 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup}
-library(CCLid)
+# Introduction
+
+`CCLid` (**C**ancer **C**ell **L**ine **id**entification) is designed as a toolkit to address the lack of a publicly available resource for genotype-based cell line authentication. We developed this resource to allow for genotype-matching of any given cancer cell line to the 1,497 unique cancer cell lines found in the GDSC, CCLE or gCSI datasets. Using the B-allele frequencies (BAFs) for all SNPs found in common between the input and reference datasets, this tool will allow for a genotype matching operation that trains and uses a logistic model to calculate the probability of the best  cell line matches.
+
+If multiple cell lines are found to be genetically similar to the input cell line, there are several conclusions that can be reached: 1) the cell lines in the reference datasets are derivatives/clones of each other or originate from the same patient or 2) the input cell line is cross-contaminated. In the case of cross-contamination, we included a function to use NMF with a prior matrix containing all matching cell line BAFs to deconvolute the relative contribution of each cell line
+
+As BAFs can be viewed as an indirect representation of karyotype (i.e. AB has a 0.5/0.50 BAF,while AAB would have a 0.66/0.33 BAF), we developed this tool to scan for segments of the genome that are significantly different between genotypically "matching" cell lines. This function allows for the inference of karyotypically discordant regions, hence representing what is likely to be genetic drift.
+
+## Installation and Settings
+
+`CCLid` requires that several packages are installed. However, all 
+dependencies are available from CRAN or Bioconductor.
+
+```{r install-pkg, eval=FALSE, results='hide'}
+library(devtools)
+devtools::install_github('quevedor2/CCLid')
 ```
+
+Load `CCLid` into your current workspace:
+
+```{r, eval=FALSE, results='hide'}
+library(PharmacoGx)
+```
+
+## Requirements
+
+`CCLid` has been tested on the Cent OS 6 platforms. The packages 
+uses the core R package `parallel` to preform parallel computations, and 
+therefore if parallelization is desired, the dependencies for the parallel 
+package must be met.
+
+

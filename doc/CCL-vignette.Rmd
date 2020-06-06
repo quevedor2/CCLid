@@ -1,88 +1,26 @@
 ---
-title: 'CCLid: A package for authenticating the identity of cancer cell lines'
-
-author:  
-- name: Rene Quevedo
-  affilnum: 1
-
-- name: Benjamin Haibe-Kains
-  affilation: '1, 2, 3'
-  
-affiliation:
-  
-- affilnum: 1
-  affil: Princess Margaret Cancer Centre, University Health Network, Toronto Canada
-  
-- affilnum: 2
-  affil: Department of Medical Biophysics, University of Toronto, Toronto Canada
-  
-- affilnum: 3
-  affil: Department of Computer Science, University of Toronto, Toronto Canada
-  
-output:
-
-  pdf_document:
-    fig_caption: yes
-    fig_width: 7
-    fig_height: 7
-    keep_tex: yes
-    number_sections: no
-    template: manuscript.latex
-    includes:
-      in_header: header.tex
-
-  html_document: null
-  
-  word_document: null
-
-documentclass: article
-toc: true
-classoption: a4paper
-capsize: normalsize
-geometry: margin=1in
-fontsize: 11pt
-spacing: singlespacing
-footerdate: no
-abstractt: no
-bibliography: no
-csl: ecology.csl
-
+title: "CCLid: A toolkit to authenticate the genotype of cancer cell lines"
+author: "Rene Quevedo"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
 vignette: >
+  %\VignetteIndexEntry{~/git/CCL_authenticator}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
-  %\usepackage[UTF-8]{inputenc}
-  %\VignetteIndexEntry{CCLid: A package for authenticating the identity of cancer cell lines}
 ---
 
-\vspace{5pt}
-\footnotesize
-```{r setup, include=FALSE, cache=FALSE, message = FALSE}
-library("knitr")
-### Chunk options: see http://yihui.name/knitr/options/ ###
-## Text results
-opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE, include = TRUE)
-## Code decoration
-opts_chunk$set(tidy = FALSE, comment = NA, highlight = TRUE)
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
 ```
-
-
-```{r knitcitation, include=FALSE}
-library(knitcitations)
-cleanbib()
-cite_options(citation_format = "pandoc")
-```
-
-\normalsize
-
-\clearpage
-
-
 
 # Introduction
 
 `CCLid` (**C**ancer **C**ell **L**ine **id**entification) is designed as a toolkit to address the lack of a publicly available resource for genotype-based cell line authentication. We developed this resource to allow for genotype-matching of any given cancer cell line to the 1,497 unique cancer cell lines found in the GDSC, CCLE or gCSI datasets. Using the B-allele frequencies (BAFs) for all SNPs found in common between the input and reference datasets, this tool will allow for a genotype matching operation that trains and uses a logistic model to calculate the probability of the best  cell line matches.
 
-If multiple cell lines are found to be genetically similar to the input cell line, there are several conclusions that can be reached: 1) the cell lines in the reference datasets are derivatives/clones of each other or originate from the same patient or 2) the input cell line is cross-contaminated. In the case of cross-contamination, we included a function to use NMF with a prior matrix containing all matching cell line BAFs to deconvolute the relative contribution of each cell line. This allows for inference of the relative fractions of the contaminating cell lines.
+If multiple cell lines are found to be genetically similar to the input cell line, there are several conclusions that can be reached: 1) the cell lines in the reference datasets are derivatives/clones of each other or originate from the same patient or 2) the input cell line is cross-contaminated. In the case of cross-contamination, we included a function to use NMF with a prior matrix containing all matching cell line BAFs to deconvolute the relative contribution of each cell line
 
 As BAFs can be viewed as an indirect representation of karyotype (i.e. AB has a 0.5/0.50 BAF,while AAB would have a 0.66/0.33 BAF), we developed this tool to scan for segments of the genome that are significantly different between genotypically "matching" cell lines. This function allows for the inference of karyotypically discordant regions, hence representing what is likely to be genetic drift.
 
@@ -91,23 +29,22 @@ As BAFs can be viewed as an indirect representation of karyotype (i.e. AB has a 
 `CCLid` requires that several packages are installed. However, all 
 dependencies are available from CRAN or Bioconductor.
 
-\vspace{5pt}
-\footnotesize
 ```{r install-pkg, eval=FALSE, results='hide'}
 library(devtools)
-devtools::install_github("quevedor2/CCLid")
+devtools::install_github('quevedor2/CCLid')
 ```
-\normalsize
 
 Load `CCLid` into your current workspace:
 
-\vspace{5pt}
-\footnotesize
 ```{r, eval=FALSE, results='hide'}
-library(CCLid)
+library(PharmacoGx)
 ```
-\normalsize
 
 ## Requirements
+
+`CCLid` has been tested on the Cent OS 6 platforms. The packages 
+uses the core R package `parallel` to preform parallel computations, and 
+therefore if parallelization is desired, the dependencies for the parallel 
+package must be met.
 
 

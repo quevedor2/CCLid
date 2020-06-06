@@ -10,9 +10,11 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+<meta name="author" content="Rene Quevedo" />
 
+<meta name="date" content="2020-06-06" />
 
-<title>~/git/CCL_authenticator</title>
+<title>CCLid: A toolkit to authenticate the genotype of cancer cell lines</title>
 
 
 
@@ -297,11 +299,30 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 
-<h1 class="title toc-ignore">~/git/CCL_authenticator</h1>
+<h1 class="title toc-ignore">CCLid: A toolkit to authenticate the genotype of cancer cell lines</h1>
+<h4 class="author">Rene Quevedo</h4>
+<h4 class="date">2020-06-06</h4>
 
 
 
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="kw">library</span>(CCLid)</a></code></pre></div>
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p><code>CCLid</code> (<strong>C</strong>ancer <strong>C</strong>ell <strong>L</strong>ine <strong>id</strong>entification) is designed as a toolkit to address the lack of a publicly available resource for genotype-based cell line authentication. We developed this resource to allow for genotype-matching of any given cancer cell line to the 1,497 unique cancer cell lines found in the GDSC, CCLE or gCSI datasets. Using the B-allele frequencies (BAFs) for all SNPs found in common between the input and reference datasets, this tool will allow for a genotype matching operation that trains and uses a logistic model to calculate the probability of the best cell line matches.</p>
+<p>If multiple cell lines are found to be genetically similar to the input cell line, there are several conclusions that can be reached: 1) the cell lines in the reference datasets are derivatives/clones of each other or originate from the same patient or 2) the input cell line is cross-contaminated. In the case of cross-contamination, we included a function to use NMF with a prior matrix containing all matching cell line BAFs to deconvolute the relative contribution of each cell line</p>
+<p>As BAFs can be viewed as an indirect representation of karyotype (i.e. AB has a 0.5/0.50 BAF,while AAB would have a 0.66/0.33 BAF), we developed this tool to scan for segments of the genome that are significantly different between genotypically “matching” cell lines. This function allows for the inference of karyotypically discordant regions, hence representing what is likely to be genetic drift.</p>
+<div id="installation-and-settings" class="section level2">
+<h2>Installation and Settings</h2>
+<p><code>CCLid</code> requires that several packages are installed. However, all dependencies are available from CRAN or Bioconductor.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="kw">library</span>(devtools)</a>
+<a class="sourceLine" id="cb1-2" data-line-number="2">devtools<span class="op">::</span><span class="kw">install_github</span>(<span class="st">'quevedor2/CCLid'</span>)</a></code></pre></div>
+<p>Load <code>CCLid</code> into your current workspace:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1"><span class="kw">library</span>(PharmacoGx)</a></code></pre></div>
+</div>
+<div id="requirements" class="section level2">
+<h2>Requirements</h2>
+<p><code>CCLid</code> has been tested on the Cent OS 6 platforms. The packages uses the core R package <code>parallel</code> to preform parallel computations, and therefore if parallelization is desired, the dependencies for the parallel package must be met.</p>
+</div>
+</div>
 
 
 
