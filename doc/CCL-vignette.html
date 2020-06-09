@@ -14,7 +14,7 @@
 
 <meta name="date" content="2020-06-09" />
 
-<title>CCLid: A toolkit to authenticate the genotype of cancer cell lines</title>
+<title>CCLid: A toolkit to authenticate the genotype and stability of cancer cell lines</title>
 
 
 
@@ -299,7 +299,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 
-<h1 class="title toc-ignore">CCLid: A toolkit to authenticate the genotype of cancer cell lines</h1>
+<h1 class="title toc-ignore">CCLid: A toolkit to authenticate the genotype and stability of cancer cell lines</h1>
 <h4 class="author">Rene Quevedo</h4>
 <h4 class="date">2020-06-09</h4>
 
@@ -322,6 +322,83 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h2>Requirements</h2>
 <p><code>CCLid</code> has been tested on the Cent OS 6 platforms. The packages uses the core R package <code>parallel</code> to preform parallel computations, and therefore if parallelization is desired, the dependencies for the parallel package must be met.</p>
 </div>
+</div>
+<div id="setting-up-datasets" class="section level1">
+<h1>Setting Up Datasets</h1>
+<div id="reference-ccl-matrix" class="section level2">
+<h2>Reference CCL matrix</h2>
+<p>The reference BAF matrix for all cell lines (2,887) and all SNPs (507,452) can be downloaded using the <code>loadRef()</code> function. The RDS file that gets downloaded (<code>bafs-matrix.rds.gz</code>) and extracted from this function requires a total space of <strong>4.1gb</strong> to process, and <strong>1.9gb</strong> once intermediary files are removed. A variance estimate for each SNP in a set <code>[bin.size]</code> will be generated and stored in the same folder for future loadings ``.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" data-line-number="1">refdir &lt;-<span class="st"> '~/cclid'</span></a>
+<a class="sourceLine" id="cb3-2" data-line-number="2">ref_dat &lt;-<span class="st"> </span>CCLid<span class="op">::</span><span class="kw">loadRef</span>(<span class="dt">PDIR=</span>refdir, <span class="dt">analysis=</span><span class="st">'baf'</span>, </a>
+<a class="sourceLine" id="cb3-3" data-line-number="3">                          <span class="dt">bin.size=</span><span class="fl">5e5</span>, <span class="dt">just.var=</span><span class="ot">TRUE</span>)</a></code></pre></div>
+<p>To save on memory, computing resources, and time for future analyses, a pre-computed bigmemory <code>.bin</code> and <code>.desc</code> file can be stored and passed into <code>PDIR</code> argument. These files can either be created using the <strong>bigmemory</strong> package, or downloaded from: XXXXX. The function will use the pre-existing bigmemory objects rather than download and calculate variance estimates.</p>
+</div>
+<div id="input-ccl-data-vcf" class="section level2">
+<h2>Input CCL data (VCF)</h2>
+<p><code>CCLid</code> requires a VCF as the input for all future analyses. An example of the vcf can be downloaded and viewed at <a href="https://pmgenomics.ca/pughlabwiki/lib/exe/fetch.php?media=data:public_data:a549.sample_id.vcf.gz" class="uri">https://pmgenomics.ca/pughlabwiki/lib/exe/fetch.php?media=data:public_data:a549.sample_id.vcf.gz</a> or stored in the CCLid R package folder</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" data-line-number="1">path_to_vcf =<span class="st"> </span><span class="kw">file.path</span>(<span class="kw">system.file</span>(<span class="kw">file.path</span>(<span class="st">&quot;extdata&quot;</span>), <span class="dt">package=</span><span class="st">&quot;CCLid&quot;</span>), <span class="st">&quot;a549.sample_id.vcf&quot;</span>)</a>
+<a class="sourceLine" id="cb4-2" data-line-number="2">vcf_map &lt;-<span class="st"> </span><span class="kw">mapVcf2Affy</span>(path_to_vcf)</a></code></pre></div>
+<p>This <code>vcf_map</code> object will be the main input for all future analysis. Alternatively, wrappers exist that run the entire analyses from start to end using the <code>path_to_vcf</code> variable. Both methods will be shown in their respective sections.</p>
+</div>
+</div>
+<div id="subsetting-for-overlapping-snps" class="section level1">
+<h1>Subsetting for overlapping SNPs</h1>
+<p>The goal of this section is to read in the input VCF file and subset it for SNPs that overlap with the reference datasets. The <code>compareVcf</code> function works by reading in the <code>path_to_vcf</code> variable, mapping the SNPs to the reference dataset matrix, filtering out non-informative SNPs, keeping the Ref/Alt allele consistent with the reference SNP probesets, and finally reducing the dataset to a certain number of SNPs for memory purposes. A <code>max.snps</code> parameter is used to limit the memory footprint of this process and it is recommended that this value is greater than 100 SNPs to maximize detection.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" data-line-number="1">path_to_vcf =<span class="st"> </span><span class="kw">file.path</span>(<span class="kw">system.file</span>(<span class="kw">file.path</span>(<span class="st">&quot;extdata&quot;</span>), <span class="dt">package=</span><span class="st">&quot;CCLid&quot;</span>), <span class="st">&quot;a549.sample_id.vcf&quot;</span>)</a>
+<a class="sourceLine" id="cb5-2" data-line-number="2">vcf_mat &lt;-<span class="st"> </span><span class="kw">compareVcf</span>(path_to_vcf, <span class="dt">var.dat=</span>ref_dat<span class="op">$</span>var, <span class="dt">ref.mat=</span>ref_dat<span class="op">$</span>ref, <span class="dt">max.snps=</span><span class="dv">200</span>)</a></code></pre></div>
+<p>This <code>compareVcf</code> function returns a matrix of BAf values for the SNPs that overlap the input VCF. For example:</p>
+<pre><code>              RNA_varscan2_KMS11  201T 22RV1 GDSC_23132-87 42-MG-BA
+SNP_A-2241506               1.00  0.97  0.99          0.50     0.95
+SNP_A-8383579               0.49 -0.05  0.56          0.60     0.01
+SNP_A-8318107               0.37  1.01  0.01          0.97     0.98
+SNP_A-2206183               0.99  0.05  0.62          1.13     0.52
+SNP_A-8311452               1.00  1.02  0.57          0.47     0.01</code></pre>
+</div>
+<div id="genotype-identification-of-cell-lines" class="section level1">
+<h1>Genotype Identification of Cell Lines</h1>
+<p>The goal of this section is to build a logistic regression model and test the fit of the input VCF. With the newly created <code>vcf_mat</code> matrix, the <code>checkForConcordance</code> function will create a logistic regression model on the reference dataset by splitting the data into cell lines with <strong>M</strong>atching annotations (<strong>M</strong>) and cell lines with <strong>N</strong>on-<strong>M</strong>atching annotations (<strong>NM</strong>). The euclidean distance between the BAFs for SNPs that overlap the input VCF for each pair of cell lines are calculated and used to train the model. Using this trained model, the input sample will be used to predict either <strong>M</strong> or <strong>NM</strong> given the probability of being a <strong>NM</strong>. This function will return a list that is split into these two categories.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" data-line-number="1"><span class="kw">colnames</span>(vcf_mat)[<span class="dv">1</span>] &lt;-<span class="st"> </span>sample_name</a>
+<a class="sourceLine" id="cb7-2" data-line-number="2">pred &lt;-<span class="st"> </span><span class="kw">checkForConcordance</span>(<span class="dt">x.mat=</span>vcf_mat, <span class="dt">sampleID=</span>sample_name, <span class="dt">rm.gcsi =</span> <span class="ot">FALSE</span>)</a></code></pre></div>
+<p>With the results looking as followed:</p>
+<pre><code>## Matching samples
+&gt; head(pred$pred$M)
+                Var1           Var2        baf     baf.fit baf.p.fit         z           p         q
+NM.2627  CCLE_KMS-11 varscan2_KMS11 0.06557439 0.005653928         M -2.924280 0.003452542 0.8503905
+NM.423        KMS-11 varscan2_KMS11 0.10295630 0.007490657         M -2.817130 0.004845484 0.8503905
+
+## Non-matching samples
+&gt; head(pred$pred$NM)
+                  Var1           Var2       baf   baf.fit baf.p.fit          z         p        q
+NM.2649     CCLE_HSC-2 varscan2_KMS11 0.7485987 0.5009832        NM -0.9664978 0.3337952 0.955501
+NM.1845 CCLE_NCI-H2085 varscan2_KMS11 0.7497333 0.5031317        NM -0.9632456 0.3354243 0.955501</code></pre>
+</div>
+<div id="evaluation-of-genetic-drift" class="section level1">
+<h1>Evaluation of genetic drift</h1>
+<p>The goal of this section is to the look for genetic drift segments between the input sample and the matching cell lines from the reference dataset. There are 3 main parts to do this: 1) Isolate for cell lines with the same genotype, 2) Re-assemble the BAF matrix with all possible SNPs, and 3) Scan for genetic drift.</p>
+<ol style="list-style-type: decimal">
+<li>Isolating for cell lines with the same genotype will reduce the number of all-by-all comparisons needed to be done by a drift-analysis. Additionally, comparing segments of BAF drift between non-matching cell lines with be purely noise and completely uninformative.</li>
+</ol>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" data-line-number="1"><span class="co"># Get all isogenic cell line IDs</span></a>
+<a class="sourceLine" id="cb9-2" data-line-number="2">all.ids &lt;-<span class="st"> </span><span class="kw">unique</span>(<span class="kw">unlist</span>(pred<span class="op">$</span>pred<span class="op">$</span>M[,<span class="kw">c</span>(<span class="st">'Var1'</span>, <span class="st">'Var2'</span>)]))</a></code></pre></div>
+<ol style="list-style-type: decimal">
+<li>Similar to the previous sections, we need to create the <code>vcf_mat</code> matrix. However, this time we do not need to worry about memory usage as much so the <code>max.snps</code> parameter is omitted and the default will be to use all matching SNPs. This is needed to increase the density of SNPs across the genome, allowing for a more robust segmentation.</li>
+</ol>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" data-line-number="1"><span class="co"># Subset the VCF matrix for just the cell lines of interest</span></a>
+<a class="sourceLine" id="cb10-2" data-line-number="2">vcf_mat &lt;-<span class="st"> </span><span class="kw">compareVcf</span>(vcfFile, <span class="dt">var.dat=</span>ref.dat<span class="op">$</span>var, </a>
+<a class="sourceLine" id="cb10-3" data-line-number="3">                      <span class="dt">ref.mat=</span>ref.dat<span class="op">$</span>ref, <span class="dt">ids=</span>all.ids)  <span class="co">## starts at 2.5g, ramps up to 6.8Gb</span></a></code></pre></div>
+<ol style="list-style-type: decimal">
+<li>The final step will be to run the <code>bafDrift</code> function which will go through each sample in the <code>vcf_mat</code> matrix, and do an all by all comparison.</li>
+</ol>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb11-1" data-line-number="1"><span class="co"># Drift estimation</span></a>
+<a class="sourceLine" id="cb11-2" data-line-number="2">bdf &lt;-<span class="st"> </span><span class="kw">tryCatch</span>({</a>
+<a class="sourceLine" id="cb11-3" data-line-number="3">  <span class="kw">bafDrift</span>(vcf_mat, <span class="dt">centering=</span><span class="st">'median'</span>)</a>
+<a class="sourceLine" id="cb11-4" data-line-number="4">}, <span class="dt">error=</span><span class="cf">function</span>(e){<span class="ot">NULL</span>})</a></code></pre></div>
+<p>The <code>bafDrift</code> function will return a list containing <code>frac</code> and <code>cna.obj</code> lists. The <code>bdf$frac</code> returns the fraction of the genome found drifted for each value of <code>t</code> The <code>bdf$cna.obj</code> returns a list composed of the SNPs that populate this analysis in the a <code>data</code> dataframe. The <code>output</code> dataframe will contain the segmented BAF-difference where <code>seg.mean</code> is the absolute difference in BAF, and the <code>seg.z</code> is the z-score calculated based on the mean and sd across the entire genome. The <code>t</code> column is a rounded version of the <code>seg.z</code> meant to be used as a threshold.</p>
+<pre><code>$output
+           ID chrom loc.start   loc.end num.mark seg.mean arm seg.sd seg.z  t seg.diff
+1 CCLE_KMS-11  chr6  72899530  72899530        1     0.02   q     NA    NA NA       NA
+2 CCLE_KMS-11 chr14 107142448 107142448        1    -0.02   q     NA    NA NA       NA
+3 CCLE_KMS-11 chr22  17414640  22673639        2     0.00   q  0.021     0  0        0</code></pre>
 </div>
 
 
