@@ -27,6 +27,7 @@ Imports:
     bigmemory,
     biganalytics,
     BSgenome.Hsapiens.UCSC.hg19,
+    copynumber,
     dplyr,
     DNAcopy,
     rjson,

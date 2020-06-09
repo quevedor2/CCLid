@@ -1,8 +1,8 @@
 #' z-statistic
 #'
-#' @param dat 
-#'
-#' @return
+#' @param dat vector of numbers to calculate z stat from
+#' @param p returns p-value instead of z-statistic
+#' 
 .zval <- function(dat, p=FALSE){
   z <- (dat - mean(dat)) / sd(dat)
   if(p) z <- 2*pnorm(-abs(z))
@@ -13,8 +13,8 @@
 #' @description Melts the data structure into Sample 1, Sample 2, concordance
 #' and separates into Match/nonmatch if a reference metadata is given
 #' 
-#' @param dm 
-#' @param meta.df 
+#' @param dm dataframe melt
+#' @param meta.df metadata for the melted dataframe
 #'
 #' @export
 splitConcordanceVals <- function(dm, meta.df){
@@ -51,7 +51,8 @@ splitConcordanceVals <- function(dm, meta.df){
 
 #' plotHist
 #' @description Plots the histogram for matching/non-matching dataset
-#' @param D 
+#'
+#' @param D Returns from predictions, containins $M and $NM as elements of the list
 #'
 #' @export
 plotHist <- function(D){
@@ -77,7 +78,7 @@ plotHist <- function(D){
 #' regression. It undersamples the non-matching group to be comparable with the
 #' matching group
 #' 
-#' @param D.vals 
+#' @param D.vals Contains the matching/nonmatching groups
 #'
 #' @export
 #'
@@ -109,13 +110,11 @@ balanceGrps <- function(D.vals){
 #' @description Creates a similarity/concordance matrix given a
 #' SNP x Sample matrix and a method of concordance
 #' 
-#' @param mat 
+#' @param mat Matrix of BAFs
 #' @param method Either 'cor', 'jaccard', or 'euclidean'
 #'
 #' @export
 similarityMatrix <- function(mat, method){
-  require(Rfast)
-  require(philentropy)
   if(any(is.na(mat))){
     D <- switch(method,
                 "euclidean"=dist(t(mat)),
@@ -157,7 +156,7 @@ assemblePredDat <- function(D.vals, known.class=FALSE){
 #' trainLogit
 #' @description Trains a logistic regression
 #' 
-#' @param balanced 
+#' @param balanced Balanced groups
 #' @param ... 
 #'
 #' @export
@@ -172,8 +171,8 @@ trainLogit <- function(balanced, ...){
 #' mkPredictions
 #' @description Uses a trained model to predict on a pred data structure
 #' 
-#' @param pred 
-#' @param models 
+#' @param pred Prediction data
+#' @param models logistic reression model
 #'
 #' @export
 #'
@@ -225,7 +224,6 @@ mkPredictions <- function(pred, models){
 
 #### Private Functions ####
 .meltDf <- function(m){
-  require(reshape2)
   diag(m) <- m[upper.tri(m)] <- NA
   melt.m <- melt(m)
   melt.m[-which(is.na(melt.m$value)),]
@@ -240,10 +238,8 @@ mkPredictions <- function(pred, models){
 #' .genNonmatchSnpDiff
 #' @description generates a matrix of euclidean distance between probesets of 
 #' sample pairs if the sample id's dont' match (NON-MATCH)
-#' @param col.len 
-#' @param dr.nm 
-#'
-#' @return
+#' @param col.len  Col length
+#' @param dr.nm Nonmatch SNP
 .genNonmatchSnpDiff <- function(col.len, dr.nm){
   ## Initialize a matrix of random pairs
   r.idx <- matrix(sample(1:ncol(dr.nm), col.len*2, replace=TRUE), nrow=2)
@@ -273,7 +269,7 @@ mkPredictions <- function(pred, models){
 #' .genMatchSnpDiff
 #' @description generates a matrix of euclidean distance between probesets of 
 #' sample pairs if the sample id's MATCH
-#' @param dr.nm 
+#' @param dr.nm nonmatch SNP
 #'
 #' @return
 .genMatchSnpDiff <- function(dr.nm){

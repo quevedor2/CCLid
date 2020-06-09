@@ -13,7 +13,6 @@
 #'
 #' @export
 checkMse <- function(M, M0){
-  require(NNLM)
   z.k <- sapply(setNames(0:2, 0:2), function(k){
     z <- NNLM::nnmf(M, k = k, check.k = FALSE, init=list(W0 = M0));
     tail(z$mse,1)

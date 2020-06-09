@@ -1,10 +1,9 @@
 #' .overlapProbeset
 #' @description Overlaps probesets and orders based on chr position
 #' 
-#' @param ref.ids 
-#' @param comp.ids 
-#'
-#' @return
+#' @param ref.ids Reference probeset IDs to match order to
+#' @param comp.ids IDs of the given input, comparator
+#' 
 .overlapProbeset <- function(ref.ids, comp.ids){
   probe.meta <- CCLid::snp6.dat$SNP$Probe_Set_ID
   
@@ -27,19 +26,20 @@
 #' @description parent function that handles how overlaps are done between COMParing 
 #' group and REFerence datasets
 #' 
-#' @param comp 
-#' @param ref 
-#' @param mapping 
+#' @param comp Input comparison data with a $Probe_Set_ID column
+#' @param ref Reference probeset order where rownames are Probe_Set_IDs
+#' @param mapping If "probeset", will using $Probe_Set_ID from comp dataframe.
+#' Else, it will use the rownames of ref as the probe set IDs
 #'
 #' @export
 overlapPos <- function(comp, ref, mapping='probeset'){
   switch(mapping,
          "probeset"={
            if(any(grepl("Probe_Set_ID", colnames(comp)))){
-             CCLid:::.overlapProbeset(ref.ids=rownames(ref), 
+             .overlapProbeset(ref.ids=rownames(ref), 
                                      comp.ids=comp$Probe_Set_ID)
            } else {
-             CCLid:::.overlapProbeset(ref.ids=rownames(ref), 
+             .overlapProbeset(ref.ids=rownames(ref), 
                               comp.ids=rownames(comp))
            }
            })
@@ -49,7 +49,7 @@ overlapPos <- function(comp, ref, mapping='probeset'){
 #' @description Finds indices for cell lines that are found
 #' in multiple datasets
 #' 
-#' @param meta.df 
+#' @param meta.df Metadata containing cell IDs and their dataset mapping
 #' @param dr.nm  matrix where column names are cell lines/datasets
 #' @param ds Dataset (if any) to return (e.g. c('CCLE', 'GDSC'))
 #'

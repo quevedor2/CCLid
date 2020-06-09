@@ -1,6 +1,3 @@
-# library(CCLid)
-# library(optparse)
-# library(VariantAnnotation)
 # 
 # option_list <- list(
 #   make_option(c("-r", "--refdir"), type="character", default='CCLE',

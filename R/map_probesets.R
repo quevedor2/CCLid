@@ -4,8 +4,6 @@
 #' 
 #' @param vcf.gt VariantAnnotation object where the $GT column contains 1/1, 0/1, etc...
 #'
-#' @return
-#'
 #' @examples
 #' .vcf2AffyGT(vcf.affy.gr)
 .vcf2AffyGT <- function(vcf.gt){
@@ -29,8 +27,7 @@
 #' @description Reverse complements the Alleles
 #' 
 #' @param vcf.gt VariantAnnotation ob ject
-#'
-#' @return
+#' @param ret.idx  Boolean, if True, does not reverse complement any alleles
 .revComp <- function(vcf.gt, ret.idx=FALSE){
   complementAllele <- c(A="T", T="A", C="G", G="C")
   neg.strand <- which(vcf.gt$Strand == '-')
@@ -47,10 +44,8 @@
 #' .fixGT
 #' @description Switches the genotype to adjust for the reverse complement switch (0/0 -> 1/1)
 #' 
-#' @param vcf.gt 
-#' @param affy.gt 
-#'
-#' @return
+#' @param vcf.gt VCF genotype (0,1,2)
+#' @param affy.gt Affy6 genotype
 .fixGT <- function(vcf.gt, affy.gt, ret.idx=FALSE){
   complementGenotype <- c('0'='2', 
                           '1'='1', 
@@ -69,9 +64,7 @@
 #' 
 #' @param x BAF vector
 #' @param lower if TRUE, 0-0.5 range, ELSE, 0.5-1 range
-#'
-#' @return
-#'
+#' 
 #' @examples
 #' .normBAF(x=seq(0, 1, by=0.1), lower=F)
 .normBAF <- function(x, lower=T){
@@ -88,7 +81,9 @@
 
 #' jsonToGr
 #' @description converts a JSON object into a VariantAnnotation object
-#' @param json 
+#'
+#' @param from.file 
+#' @param json Json VCF format - OUTDATED
 .jsonToGr <- function(json, from.file=TRUE){
   if(from.file){
     ad <- sapply(json, function(i) i$sampleinfo[[1]]$AD)
@@ -129,12 +124,10 @@
 #' vcfFile <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/denis_id/mutect_GDSC/EGAR00001252191_13305_1/EGAR00001252191_13305_1.vcf"
 #' mapVcf2Affy(vcfFile)
 mapVcf2Affy <- function(vcfFile){
-  require(VariantAnnotation)
   if(class(vcfFile) == 'list'){
     message(paste0("JSON data passed in..."))
     vcf.gr <- .jsonToGr(vcfFile, from.file=FALSE)
   } else if(grepl("\\.json$", vcfFile)){
-    require(rjson)
     message(paste0("Reading in JSON file (", basename(vcfFile), "..."))
     json_data <- fromJSON(file=vcfFile)
     vcf.gr <- .jsonToGr(json_data, from.file=TRUE)
@@ -154,17 +147,17 @@ mapVcf2Affy <- function(vcfFile){
   gc() # Memory: 1.4Gb
   
   ## Add the Affymetrix Genotype Scores (0, 1, 2 from 0/0, 1/0, 0/1, and 1/1)
-  affy.genotype <- CCLid:::.vcf2AffyGT(vcf.affy.gr)  ## e.g., Convert 0/0 -> 0
-  vcf.affy.gr <- CCLid:::.revComp(vcf.affy.gr) ## Reverse complement negative strand alleles
-  vcf.affy.gr$affyGT <- CCLid:::.fixGT(vcf.affy.gr, affy.genotype) ## Fix genotypes for negative strand
+  affy.genotype <- .vcf2AffyGT(vcf.affy.gr)  ## e.g., Convert 0/0 -> 0
+  vcf.affy.gr <- .revComp(vcf.affy.gr) ## Reverse complement negative strand alleles
+  vcf.affy.gr$affyGT <- .fixGT(vcf.affy.gr, affy.genotype) ## Fix genotypes for negative strand
   if(any(vcf.affy.gr$affyGT == -1)) vcf.affy.gr <- vcf.affy.gr[which(vcf.affy.gr$affyGT != -1),]
 
   ## Calculate BAF
   vcf.affy.gr$BAF <- round(altDepth(vcf.affy.gr) / (vcf.affy.gr$tdepth),2)
-  flip.idx <- CCLid:::.fixGT(vcf.affy.gr, affy.genotype, ret.idx=T)
+  flip.idx <- .fixGT(vcf.affy.gr, affy.genotype, ret.idx=T)
   vcf.affy.gr[flip.idx,]$BAF <- (1-vcf.affy.gr[flip.idx,]$BAF)
   #vcf.affy.gr$BAF <- round(altDepth(vcf.affy.gr) / totalDepth(vcf.affy.gr),2)
-  vcf.affy.gr$nBAF <- CCLid:::.normBAF(vcf.affy.gr$BAF)
+  vcf.affy.gr$nBAF <- .normBAF(vcf.affy.gr$BAF)
   gc() # Memory: 1.4Gb
   
   vcf.baf.df <- mcols(vcf.affy.gr)[,c('Probe_Set_ID', 'BAF', 'nBAF', 'tdepth')]
@@ -177,6 +170,7 @@ mapVcf2Affy <- function(vcfFile){
 #' .filt
 #' @description Removes probesets under a certain depth, especially useful
 #' for RNAsequencing vcfs
+#'
 #' @param vcf list from mapVcf2Affy
 #' @param min.depth Default=5
 #'
@@ -194,7 +188,6 @@ mapVcf2Affy <- function(vcfFile){
 #' 
 #' @param vcf.map An object returned by mapVcf2Aff()
 #' @param var.dat A list returned by formatRefMat()$var
-#' @param slow.method 
 #'
 #' @export
 mapVariantFeat <- function(vcf.map, var.dat){

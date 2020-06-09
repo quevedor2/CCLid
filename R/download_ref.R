@@ -1,10 +1,11 @@
 #' downloadRefCCL
 #' @description Downloads the precomputed RDS data structures for reference
 #' 
-#' @param name 
-#' @param saveDir 
-#' @param verbose 
-#' @param refFileName 
+#' @param name Currently only supports "BAF"
+#' @param saveDir Directory containign bigmemory .desc/.bin folder, or where to save new download
+#' @param verbose Verbose (Default=FALSE)
+#' @param refFileName File name to save, or pre-existing rds or .bin file
+#' @param bin.size Genomic size to chunk the SNPs into
 #'
 #' @export
 #'
@@ -26,9 +27,6 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
 
   if(file.exists(file.path(saveDir, paste0("ref_", as.integer(bin.size), ".desc")))){
     ## Looks for pre-existing bigmemory data structure to circumvent loading into memory
-    require(bigmemory)
-    require(biganalytics)
-    
     if(verbose) print("Reading in existing bigmemory object...")
     shared.desc <- dget(file.path(saveDir, paste0("ref_", as.integer(bin.size), ".desc")))
     shared.bigobject <- attach.big.matrix(shared.desc)
@@ -57,6 +55,8 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
 #' @param saveDir Directory to store Ref files 
 #' @param myfn Default: "downloadTable.csv"
 #' @param verbose Default: TRUE
+#' @param tableDir Defaault:NULL, uses CCLids built in table detailing external
+#' data location
 #'
 #' @export
 availableRefCCL <- function (saveDir = file.path(".", "CCLid"), tableDir=NULL,
@@ -82,9 +82,9 @@ availableRefCCL <- function (saveDir = file.path(".", "CCLid"), tableDir=NULL,
 #' @param varFileName RDS containing the variant SNP information
 #' @param saveDir Directory to save/load the variant RDS file to
 #' @param bin.size Default is set to 5e5, a variant file must be created for this bin size
-#' @param just.var 
-#' @param fill.na 
-#' @param verbose 
+#' @param just.var Just runs the variant SNP part of the script, skips subsetting
+#' @param fill.na Fills NA with median (Default=FALSE)
+#' @param verbose Verbose
 #'
 #' @return Returns a list object:
 #' 'ref' = matrix of SNPs by samples for least variant SNPs
@@ -132,7 +132,7 @@ formatRefMat <- function(name, ref.mat, analysis='baf',
   ## Calculate variant features if file doesn't already exist
   if (!file.exists(file.path(saveDir, varFileName))) {
     if(verbose) print("Generate feature variance data")
-    var.feats <- CCLid:::.getVariantFeatures(ref.mat, bin.size)
+    var.feats <- .getVariantFeatures(ref.mat, bin.size)
     saveRDS(var.feats, file.path(saveDir, varFileName))
   } else {
     if(verbose) print("Reading existing variance data")
@@ -147,13 +147,9 @@ formatRefMat <- function(name, ref.mat, analysis='baf',
 #' @description Calculates the features/probesets with the most variance from a 
 #' given matrix (rownames).  Returns equally spaced Variant Probesets
 #' 
-#' @param ref.mat 
-#' @param bin.size 
-#'
-#' @return
+#' @param ref.mat Reference matrix of Samples by Probesets
+#' @param bin.size Bin size, Default=1e6
 .getVariantFeatures <- function(ref.mat, bin.size=1e6){
-  require(BSgenome.Hsapiens.UCSC.hg19)
-  
   ## Gets variance of matrix
   ref.vars <- apply(ref.mat, 1, var, na.rm=TRUE)
   ref.vars <- setNames(round(ref.vars,3), rownames(ref.mat))

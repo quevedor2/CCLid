@@ -1,29 +1,21 @@
 #### Private Functions ####
 ###########################
 #' .blankGr
-#'
-#' @return
 .blankGr <- function(){
-  require(GenomicRanges)
   makeGRangesFromDataFrame(data.frame("chr"='chrZ', "start"=1,  "end"=1))
 }
 
 #' .grepNA
 #'
-#' @param pattern 
-#' @param x 
-#'
-#' @return
+#' @param pattern pattern to grep
+#' @param x vector to grep
 .grepNA <- function(pattern, x){
   idx <- grep(pattern, x)
   if(length(idx) > 0) idx else NA
 }
 
 #' .getChrLength
-#'
-#' @return
 .getChrLength <- function(){
-  require(BSgenome.Hsapiens.UCSC.hg19)
   chr.lengths = seqlengths(Hsapiens)[1:24]
   chr.len.gr <- makeGRangesFromDataFrame(data.frame("chrom"=names(chr.lengths),
                                                     "loc.start"=rep(1, length(chr.lengths)),
@@ -35,9 +27,10 @@
 }
 
 #' .addCumPos
-#' @param dat 
-#' @param ref 
-#' @param dat.type 
+#'
+#' @param dat Data containing $chrom, $pos, $loc.start, $loc.end
+#' @param ref GRanges object containing $cum.start
+#' @param dat.type Either "data" or "seg"
 .addCumPos <- function(dat, ref, dat.type){
   m.row.idx <- match(as.character(dat$chrom), as.character(seqnames(ref)))
   if(dat.type=='data'){
@@ -53,14 +46,12 @@
 
 #### Main Functions ####
 ########################
-#' multiDriftPlot
+#' multiDriftPlot OUTDATED
 #'
-#' @param seg 
-#' @param chr.size.gr 
-#' @param ref.ds 
-#' @param alt.ds 
-#'
-#' @export
+#' @param seg  Seg data
+#' @param chr.size.gr NULL
+#' @param ref.ds NULL
+#' @param alt.ds NULL
 multiDriftPlot <- function(seg, chr.size.gr=NULL, 
                            ref.ds=NULL, alt.ds=NULL){
   if(is.null(ref.ds)) stop("Requires input of ref.ds (GDSC or CCLE)")
@@ -110,13 +101,12 @@ multiDriftPlot <- function(seg, chr.size.gr=NULL,
 
 #' driftOverlap
 #'
-#' @param seg 
-#' @param ref.ds 
-#' @param alt.ds 
+#' @param seg Seg data
+#' @param ref.ds Reference dataset
+#' @param alt.ds Alternate dataset
 #'
 #' @export
 driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
-  require(GenomicRanges)
   if(is.null(ref.ds)) stop("Requires input of ref.ds (GDSC or CCLE)")
   if(is.null(alt.ds)) stop("Requires input of alt.ds (GDSC or CCLE)")
   
@@ -126,17 +116,17 @@ driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
     return(list(na.mat, na.mat, na.mat))
   }
   grl <- as(unlist(seg), "GRangesList")
-  grl.idx <- setNames(c(CCLid:::.grepNA(paste0(ref.ds, "_.*", alt.ds), names(grl)),
-                        CCLid:::.grepNA(paste0("RNA_.*", alt.ds), names(grl)),
-                        CCLid:::.grepNA(paste0("RNA_.*", ref.ds), names(grl))),
+  grl.idx <- setNames(c(.grepNA(paste0(ref.ds, "_.*", alt.ds), names(grl)),
+                        .grepNA(paste0("RNA_.*", alt.ds), names(grl)),
+                        .grepNA(paste0("RNA_.*", ref.ds), names(grl))),
                       c(paste0(ref.ds, "/", alt.ds),
                         paste0("RNA/", alt.ds),
                         paste0("RNA/", ref.ds)))
   
   drift.ov <- apply(combn(x=1:3, m=2), 2, function(i){
     # i <- unlist(cs[,2])
-    gr1 <- if(is.na(grl.idx[i[1]]))  CCLid:::.blankGr() else grl[[grl.idx[i[1]]]]
-    gr2 <- if(is.na(grl.idx[i[2]]))  CCLid:::.blankGr() else grl[[grl.idx[i[2]]]]
+    gr1 <- if(is.na(grl.idx[i[1]]))  .blankGr() else grl[[grl.idx[i[1]]]]
+    gr2 <- if(is.na(grl.idx[i[2]]))  .blankGr() else grl[[grl.idx[i[2]]]]
     grI <- intersect(gr1, gr2)
     
     wI <- sum(width(grI))
@@ -162,9 +152,14 @@ driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
 #' plot.CCLid
 #' plot() function for CCLid adjusted DNAcopy segment objects
 #' 
-#' @param obj 
-#'
-#' @return
+#' @param obj CCLid object returned from bafDrift()
+#' @param sample.size Number of points to plot to allow for quicker plotting
+#' @param low.sig.alpha low-confident drift regions alpha value for red
+#' @param hi.sig.alpha high-confident drift regions alpha value for red
+#' @param add.chr.sep Adds lines to delimit chromosomes
+#' @param atype default=sd
+#' @param add.points Adds points to the segments
+#' @param min.z minimum z to report a drift change
 #'
 #' @examples
 #' In the works...
@@ -177,10 +172,8 @@ plot.CCLid <- function (obj, sample.size=600, low.sig.alpha=0.01,
   # sample.size=600
   # add.points=TRUE
   # atype='sd'
-  require(scales)
   chroms <- paste0("chr", c(1:22, "X", "Y"))
   if(any(grepl("(23)|(24)$", obj$data$chrom))){
-    require(dplyr)
     obj$data$chrom <- gsub("23$", "X", obj$data$chrom) %>%
       gsub("24$", "Y", .)
     obj$output$chrom <- gsub("23$", "X", obj$output$chrom) %>%
@@ -191,10 +184,10 @@ plot.CCLid <- function (obj, sample.size=600, low.sig.alpha=0.01,
     obj$output$chrom <- paste0("chr", obj$output$chrom)
   }
   
-  chr.size.dat <- CCLid:::.getChrLength()
+  chr.size.dat <- .getChrLength()
   
-  chr.data <- CCLid:::.addCumPos(obj$data, chr.size.dat, dat.type='data')
-  chr.seg <- CCLid:::.addCumPos(obj$output, chr.size.dat, dat.type='seg')
+  chr.data <- .addCumPos(obj$data, chr.size.dat, dat.type='data')
+  chr.seg <- .addCumPos(obj$output, chr.size.dat, dat.type='seg')
   samples <- colnames(obj$data)[-c(1:2)]
   chr.cols <- c('black', 'green')
   seg.col <- 'orange'
@@ -250,16 +243,14 @@ plot.CCLid <- function (obj, sample.size=600, low.sig.alpha=0.01,
 }
 
 
-#' plot.SimpleCCLid
+#' plot.SimpleCCLid - OUTDATED
 #'
-#' @param obj 
-#' @param add.chr.sep 
-#' @param min.z 
+#' @param obj CCLid object
+#' @param add.chr.sep Adds chromosome separator
+#' @param min.z Minimum Z for drift changes
 plot.SimpleCCLid <- function(obj, add.chr.sep=TRUE, min.z=2){
-  require(scales)
   chroms <- paste0("chr", c(1:22, "X", "Y"))
   if(any(grepl("(23)|(24)$", obj$data$chrom))){
-    require(dplyr)
     obj$data$chrom <- gsub("23$", "X", obj$data$chrom) %>%
       gsub("24$", "Y", .)
     obj$output$chrom <- gsub("23$", "X", obj$output$chrom) %>%
@@ -270,8 +261,8 @@ plot.SimpleCCLid <- function(obj, add.chr.sep=TRUE, min.z=2){
     obj$output$chrom <- paste0("chr", obj$output$chrom)
   }
   
-  chr.size.dat <- CCLid:::.getChrLength()
-  chr.seg <- CCLid:::.addCumPos(dat=obj$output, ref=chr.size.dat, dat.type='seg') #CCLid:::
+  chr.size.dat <- .getChrLength()
+  chr.seg <- .addCumPos(dat=obj$output, ref=chr.size.dat, dat.type='seg') #CCLid:::
   
   seg.col <- c('gray80', 'gray60')
   sig.col <- 'red'
@@ -319,11 +310,11 @@ plot.SimpleCCLid <- function(obj, add.chr.sep=TRUE, min.z=2){
 }
 
 
-#' plot.multiObj
+#' plot.multiObj OUTDATED
 #'
 #' @param OBJ A list of CCLid Objects
-#' @param add.chr.sep 
-#' @param min.z 
+#' @param add.chr.sep Adds chromosome separator
+#' @param min.z Z threshold to report drift change
 #'
 #' @export
 plot.multiObj <- function(OBJ, add.chr.sep=TRUE, min.z=2){

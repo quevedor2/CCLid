@@ -1,10 +1,13 @@
 #' segmentDrift
 #' @description Segments a matrix (D) given a set of genomic coordinates
 #' stored in fdat using either CBS or PCF
+#'
 #' @param segmenter either CBS or PCF (Default: PCF)
 #' @param fdat Genomic data-frame where first two columns are "chrom" and "pos"
 #' @param D Matrix corresponding to fdat containing distances to plot, samples in 
 #' columns, rows are the genomic pos
+#' @param kmin Minimum number of SNPs to consider (default = 5)
+#' @param rm.homo  Remove homozygous SNPs (Default = FALSE)
 #'
 #' @return CNA object
 #' @export
@@ -23,7 +26,6 @@ segmentDrift <- function(segmenter='PCF', fdat, D, kmin=5, rm.homo=FALSE){
   }
   CNAo <- switch(segmenter,
                  "PCF"={
-                   require(dplyr)
                    CNdata <- with(fdat, cbind(as.factor(chrom), pos, D))
                    CNdata <- as.data.frame(CNdata)
                    pcf.dat <- copynumber::pcf(CNdata, pos.unit = "bp", kmin = kmin, 
@@ -47,15 +49,14 @@ segmentDrift <- function(segmenter='PCF', fdat, D, kmin=5, rm.homo=FALSE){
                    pcf.CNAo
                  },
                  "CBS"={
-                   require(DNAcopy)
                    CNAo <- with(fdat, #[names(ra.lm$residuals),],
-                                CNA(genomdat=D,
+                                DNAcopy::CNA(genomdat=D,
                                     chrom=as.factor(chrom),
                                     maploc=pos,
                                     data.type="logratio",
                                     sampleid=colnames(D)))
-                   smoothed.CNAo <- smooth.CNA(CNAo)
-                   seg.CNAo <- segment(smoothed.CNAo,alpha = 0.01, eta=0.05, verbose=1, min.width=5)
+                   smoothed.CNAo <- DNAcopy::smooth.CNA(CNAo)
+                   seg.CNAo <- DNAcopy::segment(smoothed.CNAo,alpha = 0.01, eta=0.05, verbose=1, min.width=5)
                    seg.CNAo
                  })
   return(CNAo)
@@ -65,15 +66,19 @@ segmentDrift <- function(segmenter='PCF', fdat, D, kmin=5, rm.homo=FALSE){
 #' bafDrift
 #' @description Calcualtes the amount of genetic drift in a sample
 #' 
-#' @param sample.mat 
+#' @param sample.mat Input sample matrix
+#' @param centering Centering the metric on median, none, or mean
+#' @param norm.baf Boolean to normalize BAF (Default =TRUE)
+#' @param hom.filt.val Homozygous filtering threshold (Default = 0.07)
+#' @param ... 
 #' @param debug should be set to FALSE and only changed when debugging
+#'
 #' @export
 bafDrift <- function(sample.mat, debug=FALSE, centering='none', 
                      norm.baf=TRUE, hom.filt.val=0.07, ...){
-  require(DNAcopy)
   data(snp6.dat)
   ## Get pairwise distance between loci
-  M <- if(norm.baf) CCLid:::.normBAF(sample.mat) else sample.mat
+  M <- if(norm.baf) .normBAF(sample.mat) else sample.mat
   hom.filt.idx <- (rowSums(M) <= (hom.filt.val * ncol(M)))
   if(any(na.omit(hom.filt.idx))) M <- M[-which(hom.filt.idx),]
   #M <- M[-which(apply(M, 1, median, na.rm=TRUE) == 0),]
@@ -119,12 +124,12 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
   cna.drift <- lapply(D.l, function(D, ...){
     # seg.CNAo <- CCLid::segmentDrift(fdat = as.data.frame(g.loci), D=D[,-1],
     #                                 rm.homo=FALSE, segmenter=segmenter)
-    # seg.CNAo$output <- CCLid:::.addSegSd(seg.CNAo, winsorize.data=TRUE)
-    # seg.drift <- CCLid:::.estimateDrift(seg.CNAo, z.cutoff=NULL)
+    # seg.CNAo$output <- .addSegSd(seg.CNAo, winsorize.data=TRUE)
+    # seg.drift <- .estimateDrift(seg.CNAo, z.cutoff=NULL)
     seg.CNAo <- CCLid::segmentDrift(fdat = as.data.frame(g.loci), D=D[,-1], 
                              rm.homo=FALSE, ...)
     seg.CNAo$output <- .addSegSd(seg.CNAo, ...)
-    seg.drift <- CCLid:::.estimateDrift(seg.CNAo, ...) #z.cutoff=c(0:5) [I suggest NULL]
+    seg.drift <- .estimateDrift(seg.CNAo, ...) #z.cutoff=c(0:5) [I suggest NULL]
     
     seg.CNAo$output <- seg.drift$seg
     class(seg.CNAo) <- 'CCLid'
@@ -152,6 +157,8 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' @description Adds segment SD to CBS segment objects
 #'
 #' @param seg.obj an object returned from DNAcopy::segment()
+#' @param winsor Winsorization threshold (Default = 0.95)
+#' @param ... 
 #'
 #' @return
 .addSegSd <- function(seg.obj, winsor=0.95, ...){
@@ -202,7 +209,9 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' .compSegs
 #' @description compare the difference between BAF profiles between pairwise
 #' samples using a t-test of the raw probeset data
+#'
 #' @param seg.obj A seg obj
+#' @param verbose Verbose (Default = FALSE)
 #'
 #' @return A list of seg objects
 .compSegs <- function(seg.obj, verbose=FALSE){
@@ -269,8 +278,8 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' @description Estimates genetic drift given an SD adjusted DNAcopy::segment()
 #' object.  Estimates this based on a t-statistic
 #' 
+#' @param ... 
 #' @param seg.obj DNAcopy::segment() object
-#' @param z.cutoff Default set to 1:4;  Finds segments higher than those t-statistic away from 0
 #'
 #' @return
 #'
@@ -319,7 +328,10 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' @description Creates a theoreticla framework for difference
 #' between BAFs, and then compares the observed z-differences
 #' against the theoretical diff to look for differences
+#'
 #' @param seg an output dataframe from a CNA object
+#' @param data.type Data type, supports only 'baf' at this time
+#' @param verbose Verbose, default = FALSE
 #'
 #' @return Returned seg with $t and $seg.diff
 .estimateZcutoff <- function(seg, data.type='baf', verbose=FALSE){
@@ -358,13 +370,13 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' @returns GRanges object of significant BAF drift (z > 3)
 #' for a cna.obj returned by bafDrift$cna.obj
 #' 
-#' @param each.sample 
-#' @param sig.es 
+#' @param each.sample Each sample
 #'
 #' @export
-sigDiffBaf <- function(each.sample, sig.es=NULL){
+sigDiffBaf <- function(each.sample){
   es <- each.sample$output
   sig.idx <- which(es$t >= 3)
+  sig.es=NULL
   if(length(sig.idx) > 0){
     es <- es[sig.idx,] 
     sig.es <- lapply(split(es, es$ID), makeGRangesFromDataFrame, keep.extra.columns=TRUE)
@@ -376,8 +388,8 @@ sigDiffBaf <- function(each.sample, sig.es=NULL){
 #' @description Returns the genomic fraction of drift for significant
 #' regions (z>3)
 #' 
-#' @param i 
-#' @param idx 
+#' @param i List object returned from bafDrift()
+#' @param idx Index to return (1 = input compared to all matching cell lines, 2 = reference cell lines to all others)
 #'
 #' @return
 .getDrift <- function(i, idx=1){

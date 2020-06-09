@@ -30,8 +30,8 @@
 #' @description Randomize a sample BAF or Geno giving probabilities
 #' 
 #' @param data.type Must be either "BAF" (default) or "geno" (case-sensitive), 
-#' @param sample.ord 
-#' @param demo.dat 
+#' @param sample.ord Order
+#' @param demo.dat Demo data
 #'
 #' @return
 demoSample <- function(data.type='BAF', sample.ord, demo.dat){
@@ -59,7 +59,6 @@ demoSample <- function(data.type='BAF', sample.ord, demo.dat){
 #' @param sample.ord Sample order
 #' @param demo.mat Matrix of BAF/Geno
 annoDemoMat <- function(sample.ord, demo.mat){
-  require(reshape2)
   s <- rep(1, length(sample.ord))
   while(any(duplicated(paste0(sample.ord, s)))){
     s <- s + duplicated(paste0(sample.ord, s))
@@ -97,10 +96,10 @@ genDemoData <- function(data.type='BAF', n.pop=10, ...){
   sample.ord <- sample(c(1:length(demo.dat)), size=n.pop, replace=T)
   
   ## Create samples from probabilities
-  demo.mat <- CCLid:::demoSample(data.type, sample.ord, demo.dat) 
+  demo.mat <- demoSample(data.type, sample.ord, demo.dat) 
 
   ## Assign column and row annotations
-  demo <- CCLid:::annoDemoMat(sample.ord, demo.mat)
+  demo <- annoDemoMat(sample.ord, demo.mat)
   
   list("matrix"=demo$mat, "meta"=demo$meta, "prob"=demo.dat)
 }
@@ -122,7 +121,6 @@ combineSamples <- function(data.type, sample.mat, prop){
 }
 
 .demo <- function(){
-  library(CCLid)
   data.type <- 'geno'
   data.type <- 'BAF'
   s.idx <- c(1,5)
@@ -132,8 +130,8 @@ combineSamples <- function(data.type, sample.mat, prop){
                       n.pop=40, n.loci=1000, seed=1234, sd=0.1)
   
   meta.df <- demo$meta
-  test.sample <- CCLid:::demoSample(data.type, s.idx, demo$prob)
-  test.sample <- CCLid:::annoDemoMat(s.idx, test.sample)$mat
+  test.sample <- demoSample(data.type, s.idx, demo$prob)
+  test.sample <- annoDemoMat(s.idx, test.sample)$mat
   if(length(s.idx) > 1){
     sample.x <- as.matrix(combineSamples(data.type, test.sample, prop=prop))
   } else {
@@ -181,8 +179,8 @@ combineSamples <- function(data.type, sample.mat, prop){
   
   ## Test decomposition via NMF
   s.idx.nmf <- c(1,2,3)
-  M <- CCLid:::demoSample(data.type, s.idx.nmf, demo$prob)
-  M <- CCLid:::annoDemoMat(s.idx.nmf, M)$mat
+  M <- demoSample(data.type, s.idx.nmf, demo$prob)
+  M <- annoDemoMat(s.idx.nmf, M)$mat
   #M <- M[1:50,]
   
   prop.nmf <- c(0.9, 0.09, 0.01)
@@ -225,8 +223,6 @@ combineSamples <- function(data.type, sample.mat, prop){
 }
 
 .demoRna <- function(){
-  library(CCLid)
-  require(VariantAnnotation)
 
   ## Load in Ref mat file
   PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
@@ -244,7 +240,6 @@ combineSamples <- function(data.type, sample.mat, prop){
   ## Look for drift
   all.ids <- unique(unlist(pred$pred$M[,c('Var1', 'Var2')]))
   bdf <- bafDrift(vcf.mat[,c(sample, all.ids[grep(sample, all.ids, invert = TRUE)])])
-  #CCLid:::plot.CCLid(bdf$cna.obj[[2]])
   
   ## Return finished object for WebApp
   list("pred"=pred$pred$M,

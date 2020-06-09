@@ -25,7 +25,7 @@ addSegDat <- function(ids, CNAo, ...){
   gr.Draw <- makeGRangesFromDataFrame(CNAo$data, start.field = "pos", end.field="pos", keep.extra.columns = TRUE)
   gr.seg <- makeGRangesFromDataFrame(CNAo$output, keep.extra.columns = TRUE)
   ids <- colnames(mcols(gr.Draw))
-  std.errs <- sapply(split(gr.seg, gr.seg$ID)[ids], CCLid:::getSegSD, gr.Draw=gr.Draw, ...)
+  std.errs <- sapply(split(gr.seg, gr.seg$ID)[ids], getSegSD, gr.Draw=gr.Draw, ...)
   
   CNAo$output$seg.sd <- as.numeric(unlist(std.errs[ids]))
   return(CNAo)
@@ -34,10 +34,12 @@ addSegDat <- function(ids, CNAo, ...){
 #' getBafDrifts
 #' @description Gets the drift GRanges and genomic fraction of drift
 #' for any pair of cell lines from different datasets given
+#'
 #' @param cl.pairs Vector of indices for cell line pairs in x.mat
 #' @param x.mat Input matrix containing probeset BAF data
 #' @param ref.ds Reference dataset (e.g. CCLE)
 #' @param alt.ds Comparing dataset (e.g. GDSC)
+#' @param ... 
 #'
 #' @return Drift object
 #' @export
@@ -65,10 +67,15 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
 #' getCnDrifts
 #' @description Gets the drift GRanges and genomic fraction of drift
 #' for any pair of cell lines from different datasets given L2R data
+#'
 #' @param ref.l2r Matrix of L2R data of genomic bins by samples for reference dataset
 #' @param alt.l2r Matrix of L2R data of genomic bins by samples for comparison dataset
+#' @param fdat segment data 
+#' @param seg.id element ID of ref.l2r that specifies the segment L2Rs
+#' @param raw.id element ID of ref.l2r that specifies the raw probeset L2Rs
+#' @param verbose Verbose
+#' @param ... 
 #' @param cell.ids All cell line IDs to compare drift between
-#' @param segmenter Segmentation algorithm, either 'PCF' (fast) or 'CBS' (slow)
 #'
 #' @return CN drift object
 #' @export
@@ -97,7 +104,6 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, verbose
     raw.data <- cbind(ref.l2r[[raw.id]][,ref.idx,drop=FALSE], alt.l2r[[raw.id]][,alt.idx,drop=FALSE])
     
     if(quantnorm){
-      require(preprocessCore)
       seg.data <- normalize.quantiles(seg.data)
       raw.data <- normalize.quantiles(raw.data)
     }
@@ -146,8 +152,8 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, verbose
   sd.CNAo$data <- cbind(sd.CNAo$data[,1:2], Draw)
   
   rm(D, Draw); gc()
-  sd.CNAo$output <- CCLid:::.addSegSd(sd.CNAo, winsorize.data=TRUE)
-  seg.drift <- CCLid:::.estimateDrift(sd.CNAo, data.type='lrr')
+  sd.CNAo$output <- .addSegSd(sd.CNAo, winsorize.data=TRUE)
+  seg.drift <- .estimateDrift(sd.CNAo, data.type='lrr')
   sd.CNAo$output <- seg.drift$seg
   class(sd.CNAo) <- 'CCLid'
   
@@ -167,6 +173,9 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, verbose
 #' @param gr.cn GRangesList of cell lines an their CN-drifted regions
 #' @param ov.frac overlap fraction cutoff: (Default: seq(0, 1, by=0.01))
 #' @param cell.ids Vector of cell line names to check drift of
+#' @param baf.z z threshold for BAF difference
+#' @param cn.z z threshold for L2R difference
+#' @param cn.gtruth if TRUE, isolates BAF for only CN drifted regions
 #'
 #' @return List containing the following elements:
 #' "model" = non-linear least-square model fitted to concordance and sensitvity
@@ -176,7 +185,6 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, verbose
 #' @export
 driftOverlapMetric <- function(gr.baf, gr.cn, cell.ids, ov.frac=seq(0, 1, by=0.01),
                                baf.z=4, cn.z=2, cn.gtruth=FALSE){
-  require(GenomicRanges)
   ## calculate genomic overlap metric with different concordance-thresholds
   ov.dat <- sapply(cell.ids, function(cid){
     if(!is.null(gr.cn[[cid]])){
@@ -249,8 +257,12 @@ driftOverlapMetric <- function(gr.baf, gr.cn, cell.ids, ov.frac=seq(0, 1, by=0.0
 #' getVcfDrifts
 #' @description Check the drift of a given VCF file and all matching
 #' cell line names based on the meta-data matched IDs
+#'
 #' @param vcfFile path to vcf file
 #' @param rna.meta.df Meta file linking RNA files to cell names
+#' @param ref.dat Refrence data containing Reference matrix and variance
+#' @param min.depth Minimum depth to consider for SNPs
+#' @param centering Centering of data method to be passed into bafDrift() function
 #'
 #' @return A list containing the fraction of genome drifted,
 #' as well the significantly drifted regions CNAo
@@ -297,7 +309,6 @@ getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df,
 #' using hardcoded metadata
 #' @export
 readinRnaFileMapping <- function(){
-  require(CCLid)
   data(rna.meta.df)
   data(meta.df)
   
@@ -308,10 +319,12 @@ readinRnaFileMapping <- function(){
 #' summarizeFracDrift
 #' @description Summarizes the $frac from the baf.drifts and cn.drifts
 #' given a cutoff for cn or baf
-#' @param cn.drifts 
-#' @param cn.z 
-#' @param baf.drifts 
-#' @param baf.z 
+#'
+#' @param cn.drifts CN drifts - paper function
+#' @param cn.z L2R z threshold
+#' @param baf.drifts  BAF drifts
+#' @param baf.z BAF z threshold
+#' @param include.id include the IDs in the analysis
 #'
 #' @return list of BAF and CN summary frac
 #' @export
@@ -354,7 +367,8 @@ summarizeFracDrift <- function(cn.drifts, cn.z, baf.drifts,
 
 #' plotFracDrift
 #'
-#' @param summ.frac 
+#' @param summ.frac summ frac list to plot, contains $baf and $cn 
+#'
 #' @export
 plotFracDrift <- function(summ.frac){
   cn.baf.frac <- merge(summ.frac$baf, summ.frac$cn, by="ID", all=TRUE)
@@ -429,12 +443,12 @@ genErrBp <- function(p.m.nm){
 #' @description Uses the assembled "prediction" matrix with CVCL ids attributed ot each
 #' cell line to check whether the two cell line pairs are known to match in the 
 #' Cellosaurus database
+#'
 #' @param mat A matrix containing "cvclA" and "cvclB" columns for cellosaurus IDs of cell lines
 #'
 #' @return Character vector of OI (originating in), SS (synonymous), SI (sample from), 
 #' and PCL (problematic)
 checkAgainst <- function(mat){
-  require(Rcellosaurus)
   .getAcr <- function(A, B, fp){
     B.mat <- B == fp
     row.A <- apply(A == fp, 1, any)
@@ -469,7 +483,9 @@ checkAgainst <- function(mat){
 #### drug_it.R Support ####
 ###########################
 #' loadInPSets
-#' @param drug.pset 
+#'
+#' @param drug.pset PSets path from pharmacoGX downloads
+#'
 #' @export
 loadInPSets <- function(drug.pset){
   # drug.pset <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/PSets'
@@ -480,12 +496,13 @@ loadInPSets <- function(drug.pset){
 }
 
 #' getCinScore
-#' @param psets 
-#' @param cin.metric 
+#'
+#' @param psets PSets from pharmacoGX
+#' @param cin.metric sum or mean to compute CIN70 score
+#'
 #' @return a CIN list
 #' @export
 getCinScore <- function(psets, cin.metric='sum'){
-  require(PharmacoGx)
   data(cin70)
   
   rna <- lapply(psets, function(pset, mDataType='rnaseq'){
@@ -503,12 +520,13 @@ getCinScore <- function(psets, cin.metric='sum'){
 }
 
 #' getGeneExpr
-#' @param psets 
-#' @param gene.id 
+#'
+#' @param psets PSets from pharmacoGX
+#' @param in.key for mapping gene IDs, type of Gene (Default=SYMBOL)
+#' @param gene.id Gene ID to map to Ensembl IDs
+#'
 #' @export
 getGeneExpr <- function(psets, gene.id, in.key='SYMBOL'){
-  require(PharmacoGx)
-  require("org.Hs.eg.db")
   
   if(in.key != 'ENSEMBL'){
     ensids <- mapIds(org.Hs.eg.db, keys = gene.id, keytype = in.key, column="ENSEMBL")
@@ -537,12 +555,14 @@ getGeneExpr <- function(psets, gene.id, in.key='SYMBOL'){
 
 #' corWithDrug
 #' @description IN DEVELOPMENT
-#' @param dat.d 
-#' @param col.idx 
+#'
+#' @param dat.d Data D containg $tCIN
+#' @param title titleof plot
+#' @param text.thresh  text.threshold of 0.50
+#' @param col.idx column index
+#'
 #' @export
 corWithDrug <- function(dat.d, col.idx, title='', text.thresh=0.5){
-  require(RColorBrewer)
-  
   dat.d.abc <- do.call(rbind, apply(dat.d[,-col.idx], 2, function(i){
     # plot(i, cn.d$tCIN)
     # plot(i, cn.d$drift)
@@ -588,6 +608,9 @@ corWithDrug <- function(dat.d, col.idx, title='', text.thresh=0.5){
 #### PLTK Functions ####
 ########################
 #' cnTools: get Genes in TxDb.Hsapiens.UCSC.hg19.knownGene
+#'
+#' @param genome.build Genome build, only supports 'hg19'
+#'
 #' @description Gets the genes from UCSC hg19 TxDb knownGene
 #'
 #' @return A Granges object containing strand-specific genes with EntrezIDs
@@ -595,7 +618,6 @@ corWithDrug <- function(dat.d, col.idx, title='', text.thresh=0.5){
 getGenes <- function(genome.build="hg19"){
   switch(genome.build,
          hg19={ 
-           require(TxDb.Hsapiens.UCSC.hg19.knownGene)
            package <- TxDb.Hsapiens.UCSC.hg19.knownGene 
           },
          stop("genome must be hg18, hg19, or hg38"))
@@ -614,16 +636,13 @@ getGenes <- function(genome.build="hg19"){
 #' @param mart [object]: A biomart object if you want to annotate missed genes with ensembl
 #' @param use.mart [boolean]: If no mart is given, it will load in a biomart object
 #'
+#' @param out.key Gene out.key, default is SYMBOL
 #'
 #' @return Annotated GRanges object with gene ids for the input GRanges
 #' @export
 #' @examples 
 #' annotateSegments(genDemoData(), getGenes('hg19'))
 annotateSegments <- function(cn.data, genes, out.key="SYMBOL", mart=NULL, use.mart=FALSE){
-  suppressPackageStartupMessages(require(biomaRt))
-  suppressPackageStartupMessages(require(org.Hs.eg.db))
-  suppressPackageStartupMessages(require(GenomicRanges))
-  suppressPackageStartupMessages(require(AnnotationDbi))
   if(use.mart & is.null(mart)){
     mart <- useMart("ENSEMBL_MART_ENSEMBL")
     mart <- useDataset("hsapiens_gene_ensembl", mart)

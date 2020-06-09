@@ -1,9 +1,13 @@
 #' loadRef
 #' @description Wrapper to load in all the reference matrices
 #' and annotate them with groups, as well as calculate variance
-#' @param pdir Path to directory containing or to download reference data
+#'
 #' @param analysis Only support BAF at the moment
 #' @param ... bin.size to group variance data
+#' @param PDIR Directory for download data
+#' @param rm.gne Remove gCSI from the analysis (default=FALSE)
+#' @param bin.size Bin size (default=1e6)
+#' @param verbose Verbose
 #' 
 #' @return List containing "ref"=reference BAF matrix
 #' and "var"=list containing variance for bin-sizes
@@ -60,9 +64,9 @@ loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE, bin.size=1e6, verbo
 #' @param vcfFile Path to VCF file to check against reference datasets
 #' @param var.dat Variance data (list)
 #' @param ref.mat Reference matrix (matrix)
-#' @param max.snps 
-#' @param ids 
-#' @param sampletype 
+#' @param max.snps Max number of SNPs to reduce 
+#' @param ids IDs
+#' @param sampletype Strictly for labelling purposes
 #' @param ... 
 #'
 #' @return Matrix: Containing reference matrix subsetted to common SNPs as 
@@ -78,7 +82,7 @@ loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE, bin.size=1e6, verbo
 compareVcf <- function(vcfFile, var.dat, ref.mat, 
                        max.snps=1e6, ids=NULL, sampletype='RNA', ...){
   vcf.map <- CCLid::mapVcf2Affy(vcfFile)
-  vcf.map <- CCLid:::.filt(vcf.map, ...) ## Memory: up to 1.8Gb 
+  vcf.map <- .filt(vcf.map, ...) ## Memory: up to 1.8Gb 
   
   ## Combine matrices and reduce features
   ## Find the overlap between the COMParator and the REFerence
@@ -122,7 +126,7 @@ compareVcf <- function(vcfFile, var.dat, ref.mat,
 #' @param fill.na Fill NA's in the input matrix with median value (Default=TRUE)
 #' @param rm.gcsi Remove GNE samples from the input matrix (Default=TRUE)
 #' @param sampleID Sample ID (Default='Sample')
-#' @param verbose 
+#' @param verbose Verbose
 #'
 #' @return A list containing Distance Matrix and list of Predictions (M/NM)
 #' @export
