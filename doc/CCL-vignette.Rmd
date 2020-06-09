@@ -1,10 +1,10 @@
 ---
-title: "CCLid: A toolkit to authenticate the genotype and stability of cancer cell lines"
+title: "CCLid: A toolkit to authenticate the genotype of cancer cell lines"
 author: "Rene Quevedo"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{~/git/CCL_authenticator}
+  %\VignetteIndexEntry{CCLid: A toolkit to authenticate the genotype of cancer cell lines}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -47,101 +47,4 @@ uses the core R package `parallel` to preform parallel computations, and
 therefore if parallelization is desired, the dependencies for the parallel 
 package must be met.
 
-# Setting Up Datasets
-## Reference CCL matrix
-The reference BAF matrix for all cell lines (2,887) and all SNPs (507,452) can be downloaded using the `loadRef()` function. The RDS file that gets downloaded (`bafs-matrix.rds.gz`) and extracted from this function requires a total space of **4.1gb** to process, and **1.9gb** once intermediary files are removed. A variance estimate for each SNP in a set `[bin.size]` will be generated and stored in the same folder for future loadings ``.
 
-```{r download-dataset, eval=FALSE, results='hide'}
-refdir <- '~/cclid'
-ref_dat <- CCLid::loadRef(PDIR=refdir, analysis='baf', 
-                          bin.size=5e5, just.var=TRUE)
-```
-
-To save on memory, computing resources, and time for future analyses, a pre-computed bigmemory `.bin` and `.desc` file can be stored and passed into `PDIR` argument. These files can either be created using the **bigmemory** package, or downloaded from: XXXXX. The function will use the pre-existing bigmemory objects rather than download and calculate variance estimates.
-
-## Input CCL data (VCF)
-`CCLid` requires a VCF as the input for all future analyses. An example of the vcf can be downloaded and viewed at <https://pmgenomics.ca/pughlabwiki/lib/exe/fetch.php?media=data:public_data:a549.sample_id.vcf.gz> or stored in the CCLid R package folder
-
-```{r load-vcf, eval=FALSE, results='hide'}
-path_to_vcf = file.path(system.file(file.path("extdata"), package="CCLid"), "a549.sample_id.vcf")
-vcf_map <- mapVcf2Affy(path_to_vcf)
-```
-
-This `vcf_map` object will be the main input for all future analysis. Alternatively, wrappers exist that run the entire analyses from start to end using the `path_to_vcf` variable. Both methods will be shown in their respective sections.
-
-# Subsetting for overlapping SNPs
-The goal of this section is to read in the input VCF file and subset it for SNPs that overlap with the reference datasets. The `compareVcf` function works by reading in the `path_to_vcf` variable, mapping the SNPs to the reference dataset matrix, filtering out non-informative SNPs, keeping the Ref/Alt allele consistent with the reference SNP probesets, and finally reducing the dataset to a certain number of SNPs for memory purposes. A `max.snps` parameter is used to limit the memory footprint of this process and it is recommended that this value is greater than 100 SNPs to maximize detection.
-```{r map-vcf, eval=FALSE, results='hide'}
-path_to_vcf = file.path(system.file(file.path("extdata"), package="CCLid"), "a549.sample_id.vcf")
-vcf_mat <- compareVcf(path_to_vcf, var.dat=ref_dat$var, ref.mat=ref_dat$ref, max.snps=200)
-```
-
-This `compareVcf` function returns a matrix of BAf values for the SNPs that overlap the input VCF. For example:
-```
-              RNA_varscan2_KMS11  201T 22RV1 GDSC_23132-87 42-MG-BA
-SNP_A-2241506               1.00  0.97  0.99          0.50     0.95
-SNP_A-8383579               0.49 -0.05  0.56          0.60     0.01
-SNP_A-8318107               0.37  1.01  0.01          0.97     0.98
-SNP_A-2206183               0.99  0.05  0.62          1.13     0.52
-SNP_A-8311452               1.00  1.02  0.57          0.47     0.01
-```
-
-# Genotype Identification of Cell Lines
-The goal of this section is to build a logistic regression model and test the fit of the input VCF. With the newly created `vcf_mat` matrix, the `checkForConcordance` function will create a logistic regression model on the reference dataset by splitting the data into cell lines with **M**atching annotations (**M**) and cell lines with **N**on-**M**atching annotations (**NM**). The euclidean distance between the BAFs for SNPs that overlap the input VCF for each pair of cell lines are calculated and used to train the model. Using this trained model, the input sample will be used to predict either **M** or **NM** given the probability of being a **NM**.  This function will return a list that is split into these two categories.
-
-```{r match-it, eval=FALSE, results='hide'}
-colnames(vcf_mat)[1] <- sample_name
-pred <- checkForConcordance(x.mat=vcf_mat, sampleID=sample_name, rm.gcsi = FALSE)
-```
-
-With the results looking as followed:
-
-```
-## Matching samples
-> head(pred$pred$M)
-                Var1           Var2        baf     baf.fit baf.p.fit         z           p         q
-NM.2627  CCLE_KMS-11 varscan2_KMS11 0.06557439 0.005653928         M -2.924280 0.003452542 0.8503905
-NM.423        KMS-11 varscan2_KMS11 0.10295630 0.007490657         M -2.817130 0.004845484 0.8503905
-
-## Non-matching samples
-> head(pred$pred$NM)
-                  Var1           Var2       baf   baf.fit baf.p.fit          z         p        q
-NM.2649     CCLE_HSC-2 varscan2_KMS11 0.7485987 0.5009832        NM -0.9664978 0.3337952 0.955501
-NM.1845 CCLE_NCI-H2085 varscan2_KMS11 0.7497333 0.5031317        NM -0.9632456 0.3354243 0.955501
-```
-
-# Evaluation of genetic drift
-The goal of this section is to the look for genetic drift segments between the input sample and the matching cell lines from the reference dataset. There are 3 main parts to do this: 1) Isolate for cell lines with the same genotype, 2) Re-assemble the BAF matrix with all possible SNPs, and 3) Scan for genetic drift.
-
-1. Isolating for cell lines with the same genotype will reduce the number of all-by-all comparisons needed to be done by a drift-analysis. Additionally, comparing segments of BAF drift between non-matching cell lines with be purely noise and completely uninformative.
-```{r match-it-`, eval=FALSE, results='hide'}
-# Get all isogenic cell line IDs
-all.ids <- unique(unlist(pred$pred$M[,c('Var1', 'Var2')]))
-```
-
-1. Similar to the previous sections, we need to create the `vcf_mat` matrix.  However, this time we do not need to worry about memory usage as much so the `max.snps` parameter is omitted and the default will be to use all matching SNPs. This is needed to increase the density of SNPs across the genome, allowing for a more robust segmentation.
-
-```{r match-it-2, eval=FALSE, results='hide'}
-# Subset the VCF matrix for just the cell lines of interest
-vcf_mat <- compareVcf(vcfFile, var.dat=ref.dat$var, 
-                      ref.mat=ref.dat$ref, ids=all.ids)  ## starts at 2.5g, ramps up to 6.8Gb
-```
-
-1. The final step will be to run the `bafDrift` function which will go through each sample in the `vcf_mat` matrix, and do an all by all comparison.
-```{r match-it-3, eval=FALSE, results='hide'}
-# Drift estimation
-bdf <- tryCatch({
-  bafDrift(vcf_mat, centering='median')
-}, error=function(e){NULL})
-```
-
-The `bafDrift` function will return a list containing `frac` and `cna.obj` lists. 
-The `bdf$frac` returns the fraction of the genome found drifted for each value of `t`
-The `bdf$cna.obj` returns a list composed of the SNPs that populate this analysis in the a `data` dataframe. The `output` dataframe will contain the segmented BAF-difference where `seg.mean` is the absolute difference in BAF, and the `seg.z` is the z-score calculated based on the mean and sd across the entire genome. The `t` column is a rounded version of the `seg.z` meant to be used as a threshold.
-```
-$output
-           ID chrom loc.start   loc.end num.mark seg.mean arm seg.sd seg.z  t seg.diff
-1 CCLE_KMS-11  chr6  72899530  72899530        1     0.02   q     NA    NA NA       NA
-2 CCLE_KMS-11 chr14 107142448 107142448        1    -0.02   q     NA    NA NA       NA
-3 CCLE_KMS-11 chr22  17414640  22673639        2     0.00   q  0.021     0  0        0
-```
