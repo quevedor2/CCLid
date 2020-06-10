@@ -241,94 +241,94 @@ plot.CCLid <- function (obj, sample.size=600, low.sig.alpha=0.01,
 }
 
 
-#' plot.SimpleCCLid - OUTDATED
-#'
-#' @param obj CCLid object
-#' @param add.chr.sep Adds chromosome separator
-#' @param min.z Minimum Z for drift changes
-plot.SimpleCCLid <- function(obj, add.chr.sep=TRUE, min.z=2){
-  chroms <- paste0("chr", c(1:22, "X", "Y"))
-  if(any(grepl("(23)|(24)$", obj$data$chrom))){
-    obj$data$chrom <- gsub("23$", "X", obj$data$chrom) %>%
-      gsub("24$", "Y", .)
-    obj$output$chrom <- gsub("23$", "X", obj$output$chrom) %>%
-      gsub("24$", "Y", .)
-  }
-  if(any(!grepl("^chr", obj$data$chrom))){
-    obj$data$chrom <- paste0("chr", obj$data$chrom)
-    obj$output$chrom <- paste0("chr", obj$output$chrom)
-  }
-  
-  chr.size.dat <- .getChrLength()
-  chr.seg <- .addCumPos(dat=obj$output, ref=chr.size.dat, dat.type='seg') #CCLid:::
-  
-  seg.col <- c('gray80', 'gray60')
-  sig.col <- 'red'
-  
-  seg.spl <- split(chr.seg, chr.seg$ID)
-  
-  ### Viz begins!
-  ## Create blank canvas to map the brilliance!
-  plot(x = 0, type='n', xlab='', ylab='', 
-       pch=16, ylim=c(0, length(seg.spl)), xlim=c(1, max(chr.size.dat$cum.end)), 
-       yaxt='n', xaxt='n', axes=FALSE, cex=0.6)
-  abline(h = 0)
-  if(add.chr.sep) abline(v = chr.size.dat$cum.end, lwd=0.5, col='grey')
-  
-  ## Adds chr labels
-  axis(side=1, at = chr.size.dat$cum.mid[c(TRUE, FALSE)], 
-       labels = gsub("^chr", "", as.character(seqnames(chr.size.dat)))[c(TRUE, FALSE)], 
-       las=1,  tick=FALSE, lwd = 0, line=-1, cex.axis=0.6)
-  axis(side=1, at = chr.size.dat$cum.mid[c(FALSE, TRUE)], 
-       labels = gsub("^chr", "", as.character(seqnames(chr.size.dat)))[c(FALSE, TRUE)], 
-       las=1,  tick=FALSE, lwd = 0, line=0, cex.axis=0.6)
-  axis(side = 2, at=(c(1:length(seg.spl)) - 0.5), labels=names(seg.spl), 
-       las=1, cex.axis=0.8)
-  
-  for(s in names(seg.spl)){
-    ssid <- seg.spl[[s]]
-    ssid[is.na(ssid)] <- 0
-    
-    ssid$max.t <- ssid$t
-    if(any(ssid$max.t > 5)) ssid[ssid$max.t > 5,]$max.t <- 5
-    y.idx <- match(s, names(seg.spl))
-    
-    ## Add rectangles for the multiplots
-    rect(xleft = ssid$cloc.start, ybottom = (y.idx - 0.8), 
-         xright = ssid$cloc.end, ytop = (y.idx - 0.5 + ssid$max.t/10), 
-         col=seg.col[ssid$chr.stat], border = NA)
-    if(any(ssid$t >= min.z)){
-      ss.sig <- ssid[which(ssid$t >= min.z),]
-      rect(xleft = ss.sig$cloc.start, ybottom = (y.idx - 0.8), 
-           xright = ss.sig$cloc.end, ytop = (y.idx - 0.5 + ss.sig$max.t/10), 
-           col=sig.col, border = NA)
-    }
-  }
-  
-}
+#' #' plot.SimpleCCLid - OUTDATED
+#' #'
+#' #' @param obj CCLid object
+#' #' @param add.chr.sep Adds chromosome separator
+#' #' @param min.z Minimum Z for drift changes
+#' plot.SimpleCCLid <- function(obj, add.chr.sep=TRUE, min.z=2){
+#'   chroms <- paste0("chr", c(1:22, "X", "Y"))
+#'   if(any(grepl("(23)|(24)$", obj$data$chrom))){
+#'     obj$data$chrom <- gsub("23$", "X", obj$data$chrom) %>%
+#'       gsub("24$", "Y", .)
+#'     obj$output$chrom <- gsub("23$", "X", obj$output$chrom) %>%
+#'       gsub("24$", "Y", .)
+#'   }
+#'   if(any(!grepl("^chr", obj$data$chrom))){
+#'     obj$data$chrom <- paste0("chr", obj$data$chrom)
+#'     obj$output$chrom <- paste0("chr", obj$output$chrom)
+#'   }
+#'   
+#'   chr.size.dat <- .getChrLength()
+#'   chr.seg <- .addCumPos(dat=obj$output, ref=chr.size.dat, dat.type='seg') #CCLid:::
+#'   
+#'   seg.col <- c('gray80', 'gray60')
+#'   sig.col <- 'red'
+#'   
+#'   seg.spl <- split(chr.seg, chr.seg$ID)
+#'   
+#'   ### Viz begins!
+#'   ## Create blank canvas to map the brilliance!
+#'   plot(x = 0, type='n', xlab='', ylab='', 
+#'        pch=16, ylim=c(0, length(seg.spl)), xlim=c(1, max(chr.size.dat$cum.end)), 
+#'        yaxt='n', xaxt='n', axes=FALSE, cex=0.6)
+#'   abline(h = 0)
+#'   if(add.chr.sep) abline(v = chr.size.dat$cum.end, lwd=0.5, col='grey')
+#'   
+#'   ## Adds chr labels
+#'   axis(side=1, at = chr.size.dat$cum.mid[c(TRUE, FALSE)], 
+#'        labels = gsub("^chr", "", as.character(seqnames(chr.size.dat)))[c(TRUE, FALSE)], 
+#'        las=1,  tick=FALSE, lwd = 0, line=-1, cex.axis=0.6)
+#'   axis(side=1, at = chr.size.dat$cum.mid[c(FALSE, TRUE)], 
+#'        labels = gsub("^chr", "", as.character(seqnames(chr.size.dat)))[c(FALSE, TRUE)], 
+#'        las=1,  tick=FALSE, lwd = 0, line=0, cex.axis=0.6)
+#'   axis(side = 2, at=(c(1:length(seg.spl)) - 0.5), labels=names(seg.spl), 
+#'        las=1, cex.axis=0.8)
+#'   
+#'   for(s in names(seg.spl)){
+#'     ssid <- seg.spl[[s]]
+#'     ssid[is.na(ssid)] <- 0
+#'     
+#'     ssid$max.t <- ssid$t
+#'     if(any(ssid$max.t > 5)) ssid[ssid$max.t > 5,]$max.t <- 5
+#'     y.idx <- match(s, names(seg.spl))
+#'     
+#'     ## Add rectangles for the multiplots
+#'     rect(xleft = ssid$cloc.start, ybottom = (y.idx - 0.8), 
+#'          xright = ssid$cloc.end, ytop = (y.idx - 0.5 + ssid$max.t/10), 
+#'          col=seg.col[ssid$chr.stat], border = NA)
+#'     if(any(ssid$t >= min.z)){
+#'       ss.sig <- ssid[which(ssid$t >= min.z),]
+#'       rect(xleft = ss.sig$cloc.start, ybottom = (y.idx - 0.8), 
+#'            xright = ss.sig$cloc.end, ytop = (y.idx - 0.5 + ss.sig$max.t/10), 
+#'            col=sig.col, border = NA)
+#'     }
+#'   }
+#'   
+#' }
 
 
 #' plot.multiObj OUTDATED
-#'
+#' 
 #' @param OBJ A list of CCLid Objects
 #' @param add.chr.sep Adds chromosome separator
 #' @param min.z Z threshold to report drift change
-#'
+#' 
 #' @export
-plot.multiObj <- function(OBJ, add.chr.sep=TRUE, min.z=2){
-  if(class(OBJ) == 'list'){
-    par(mfrow=c(length(OBJ), 1), mar=c(3, 8, 3, 2))
-    
-    if(length(min.z) > 1){
-      if(length(min.z) != length(OBJ)) stop("min.z length does not equal input length of CCLid objects")
-      lapply(seq_along(OBJ), function(idx){
-        plot.SimpleCCLid(OBJ[[idx]], min.z[idx], add.chr.sep=add.chr.sep)
-      })
-    } else {
-      lapply(OBJ, plot.SimpleCCLid, min.z=min.z, add.chr.sep=add.chr.sep)
-    }
-  } else if(class(OBJ)=='CCLid'){
-    par(mar=c(3, 8, 3, 2))
-    plot.SimpleCCLid(OBJ, min.z=min.z, add.chr.sep=add.chr.sep)
-  }
-}
+# plot.multiObj <- function(OBJ, add.chr.sep=TRUE, min.z=2){
+#   if(class(OBJ) == 'list'){
+#     par(mfrow=c(length(OBJ), 1), mar=c(3, 8, 3, 2))
+#     
+#     if(length(min.z) > 1){
+#       if(length(min.z) != length(OBJ)) stop("min.z length does not equal input length of CCLid objects")
+#       lapply(seq_along(OBJ), function(idx){
+#         plot.SimpleCCLid(OBJ[[idx]], min.z[idx], add.chr.sep=add.chr.sep)
+#       })
+#     } else {
+#       lapply(OBJ, plot.SimpleCCLid, min.z=min.z, add.chr.sep=add.chr.sep)
+#     }
+#   } else if(class(OBJ)=='CCLid'){
+#     par(mar=c(3, 8, 3, 2))
+#     plot.SimpleCCLid(OBJ, min.z=min.z, add.chr.sep=add.chr.sep)
+#   }
+# }
