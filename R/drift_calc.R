@@ -70,7 +70,7 @@ segmentDrift <- function(segmenter='PCF', fdat, D, kmin=5, rm.homo=FALSE){
 #' @param centering Centering the metric on median, none, or mean
 #' @param norm.baf Boolean to normalize BAF (Default =TRUE)
 #' @param hom.filt.val Homozygous filtering threshold (Default = 0.07)
-#' @param ... 
+#' @param ... Extra param
 #' @param debug should be set to FALSE and only changed when debugging
 #'
 #' @export
@@ -158,7 +158,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #'
 #' @param seg.obj an object returned from DNAcopy::segment()
 #' @param winsor Winsorization threshold (Default = 0.95)
-#' @param ... 
+#' @param ... Extra param
 #'
 #' @return
 .addSegSd <- function(seg.obj, winsor=0.95, ...){
@@ -278,7 +278,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' @description Estimates genetic drift given an SD adjusted DNAcopy::segment()
 #' object.  Estimates this based on a t-statistic
 #' 
-#' @param ... 
+#' @param ... Extra param
 #' @param seg.obj DNAcopy::segment() object
 #'
 #' @return

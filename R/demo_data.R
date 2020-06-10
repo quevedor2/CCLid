@@ -81,7 +81,7 @@ annoDemoMat <- function(sample.ord, demo.mat){
 #'
 #' @param data.type Must be "BAF" (default) or "geno" (case-sensitive)
 #' @param n.pop Number of samples to simulate
-#' @param ... 
+#' @param ... Pass in
 #'
 #' @return A list object
 #'  matrix = A matrix of 'geno' or 'BAFs' for n.pop samples

@@ -46,6 +46,7 @@
 #' 
 #' @param vcf.gt VCF genotype (0,1,2)
 #' @param affy.gt Affy6 genotype
+#' @param ret.idx Returns the index of matching instead of genotype fix
 .fixGT <- function(vcf.gt, affy.gt, ret.idx=FALSE){
   complementGenotype <- c('0'='2', 
                           '1'='1', 
@@ -121,7 +122,7 @@
 #' @export
 #'
 #' @examples
-#' vcfFile <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/denis_id/mutect_GDSC/EGAR00001252191_13305_1/EGAR00001252191_13305_1.vcf"
+#' vcfFile <- "/path/to/Sample_ID.vcf"
 #' mapVcf2Affy(vcfFile)
 mapVcf2Affy <- function(vcfFile){
   if(class(vcfFile) == 'list'){

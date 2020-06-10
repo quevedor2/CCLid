@@ -157,7 +157,7 @@ assemblePredDat <- function(D.vals, known.class=FALSE){
 #' @description Trains a logistic regression
 #' 
 #' @param balanced Balanced groups
-#' @param ... 
+#' @param ... Extra param for .createFormula()
 #'
 #' @export
 trainLogit <- function(balanced, ...){

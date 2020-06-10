@@ -39,7 +39,7 @@ addSegDat <- function(ids, CNAo, ...){
 #' @param x.mat Input matrix containing probeset BAF data
 #' @param ref.ds Reference dataset (e.g. CCLE)
 #' @param alt.ds Comparing dataset (e.g. GDSC)
-#' @param ... 
+#' @param ... Extra param
 #'
 #' @return Drift object
 #' @export
@@ -74,7 +74,7 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
 #' @param seg.id element ID of ref.l2r that specifies the segment L2Rs
 #' @param raw.id element ID of ref.l2r that specifies the raw probeset L2Rs
 #' @param verbose Verbose
-#' @param ... 
+#' @param ... Extra param
 #' @param cell.ids All cell line IDs to compare drift between
 #'
 #' @return CN drift object
@@ -614,7 +614,8 @@ corWithDrug <- function(dat.d, col.idx, title='', text.thresh=0.5){
 #' @description Gets the genes from UCSC hg19 TxDb knownGene
 #'
 #' @return A Granges object containing strand-specific genes with EntrezIDs
-#' @examples getGenes()
+#' @examples 
+#' getGenes()
 getGenes <- function(genome.build="hg19"){
   switch(genome.build,
          hg19={ 
@@ -641,7 +642,7 @@ getGenes <- function(genome.build="hg19"){
 #' @return Annotated GRanges object with gene ids for the input GRanges
 #' @export
 #' @examples 
-#' annotateSegments(genDemoData(), getGenes('hg19'))
+#' annotateSegments(CCLid:::genDemoData(), getGenes('hg19'))
 annotateSegments <- function(cn.data, genes, out.key="SYMBOL", mart=NULL, use.mart=FALSE){
   if(use.mart & is.null(mart)){
     mart <- useMart("ENSEMBL_MART_ENSEMBL")

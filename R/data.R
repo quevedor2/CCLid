@@ -83,3 +83,15 @@
 #'   ...
 #' }
 "rna.meta.df"
+
+#' Metadata mapping together all pharmacogenomic datasets and their RNA IDs
+#' @docType data
+#'
+#' @usage data(meta.df)
+#' @keywords datasets
+#' 
+#' @format A data.frame structure
+#' \describe{
+#'   ...
+#' }
+"meta.df"

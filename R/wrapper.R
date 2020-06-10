@@ -3,7 +3,7 @@
 #' and annotate them with groups, as well as calculate variance
 #'
 #' @param analysis Only support BAF at the moment
-#' @param ... bin.size to group variance data
+#' @param ... Extra param
 #' @param PDIR Directory for download data
 #' @param rm.gne Remove gCSI from the analysis (default=FALSE)
 #' @param bin.size Bin size (default=1e6)
@@ -67,7 +67,7 @@ loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE, bin.size=1e6, verbo
 #' @param max.snps Max number of SNPs to reduce 
 #' @param ids IDs
 #' @param sampletype Strictly for labelling purposes
-#' @param ... 
+#' @param ... Extra param
 #'
 #' @return Matrix: Containing reference matrix subsetted to common SNPs as 
 #' the input VCF, as well as a left-joined VCF data

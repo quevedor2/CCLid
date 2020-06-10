@@ -161,8 +161,6 @@ driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
 #' @param add.points Adds points to the segments
 #' @param min.z minimum z to report a drift change
 #'
-#' @examples
-#' In the works...
 plot.CCLid <- function (obj, sample.size=600, low.sig.alpha=0.01, 
                         hi.sig.alpha=0.2, add.chr.sep=TRUE, 
                         atype='sd', add.points=TRUE, min.z=3) {
