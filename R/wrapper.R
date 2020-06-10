@@ -13,9 +13,6 @@
 #' and "var"=list containing variance for bin-sizes
 #' @export
 #'
-#' @examples
-#' PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
-#' loadRef(PDIR, 'baf', bin.size=5e5)
 loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE, bin.size=1e6, verbose=FALSE, ...){
   # if(verbose) print("Checking for existing reference data...")
   # ref.data.exists <- any(grepl(paste0(as.integer(bin.size), ".", toupper(analysis)), list.files(PDIR)))
@@ -73,12 +70,6 @@ loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE, bin.size=1e6, verbo
 #' the input VCF, as well as a left-joined VCF data
 #' @export
 #'
-#' @examples
-#'   ref.dat <- CCLid::loadRef(PDIR, 'baf', bin.size=5e5)
-#'   ref.mat <- ref.dat$ref
-#'   var.dat <- ref.dat$var
-#'   vcfFile <- '/mnt/work1/users/home2/quever/xfer/A549.sample_id.vcf' ## A549 WES
-#'   vcf.mat <- compareVcf(vcfFile, var.dat=ref.dat$var, ref.mat=ref.dat$ref)
 compareVcf <- function(vcfFile, var.dat, ref.mat, 
                        max.snps=1e6, ids=NULL, sampletype='RNA', ...){
   vcf.map <- CCLid::mapVcf2Affy(vcfFile)
@@ -131,13 +122,6 @@ compareVcf <- function(vcfFile, var.dat, ref.mat,
 #' @return A list containing Distance Matrix and list of Predictions (M/NM)
 #' @export
 #'
-#' @examples
-#'   ref.dat <- CCLid::loadRef(PDIR, 'baf', bin.size=5e5)
-#'   ref.mat <- ref.dat$ref
-#'   var.dat <- ref.dat$var
-#'   vcfFile <- '/mnt/work1/users/home2/quever/xfer/A549.sample_id.vcf' ## A549 WES
-#'   vcf.mat <- compareVcf(vcfFile, var.dat=ref.dat$var, ref.mat=ref.dat$ref)
-#'   checkForConcordance(vcf.mat)
 checkForConcordance <- function(x.mat, metric='euclidean', 
                                 meta.dat=NULL, verbose=FALSE,
                                 return.matrix=FALSE, return.pred=TRUE,

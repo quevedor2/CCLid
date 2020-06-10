@@ -9,8 +9,6 @@
 #'
 #' @export
 #'
-#' @examples
-#' downloadRefCCL(name="BAF")
 downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"), 
                             refFileName = NULL, verbose = FALSE, bin.size=NULL) {
   ccl.table <- CCLid::availableRefCCL(saveDir = saveDir)
@@ -91,13 +89,6 @@ availableRefCCL <- function (saveDir = file.path(".", "CCLid"), tableDir=NULL,
 #' 'var' = list of each 'bin size' and the SNPs and their BAF that populate it
 #' @export
 #'
-#' @examples
-#' refdir <- '/mnt/work1/users/home2/quever/git/CCLid-web/extdata/tmp'
-#' analysis = 'baf'
-#' 
-#' ref.mat <- downloadRefCCL(toupper(analysis), saveDir = refdir, bin.size=5e5, verbose=TRUE)
-#' format.dat <- formatRefMat(name=toupper(analysis), ref.mat=ref.mat, saveDir = refdir,
-#' analysis=tolower(analysis), bin.size=bin.size) #bin.size=5e5
 formatRefMat <- function(name, ref.mat, analysis='baf', 
                          varFileName=NULL, saveDir = file.path(".", "CCLid"), 
                          bin.size=1e6, just.var=FALSE, fill.na=FALSE, verbose=FALSE){

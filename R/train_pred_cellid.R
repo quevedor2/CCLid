@@ -82,10 +82,6 @@ plotHist <- function(D){
 #'
 #' @export
 #'
-#' @examples
-#' x.dist <- CCLid::similarityMatrix(x.mat, method = metric)
-#' D.vals <- lapply(list("baf"=x.dist), CCLid::splitConcordanceVals, meta.df=meta.dat)
-#' balanced <- CCLid::balanceGrps(D.vals)
 balanceGrps <- function(D.vals){
   m.vals <- Reduce(function(x,y) merge(x,y, by=c("Var1", "Var2")), lapply(D.vals, function(i) i$M))
   nm.vals <- Reduce(function(x,y) merge(x,y, by=c("Var1", "Var2")), lapply(D.vals, function(i) i$NM))
@@ -176,19 +172,6 @@ trainLogit <- function(balanced, ...){
 #'
 #' @export
 #'
-#' @examples
-#' ## Generate all by all distance and balance Match and Nonmatch groups
-#' x.dist <- similarityMatrix(x.mat, 'euclidean')
-#' D.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=meta.df)
-#' balanced <- balanceGrps(D.vals)
-#' 
-#' ## Train the Logit model
-#' models <- trainLogit(balanced, predictors=c('baf'))
-#' x.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=NULL)
-#' 
-#' ## Assemble and make predictions of M or NM on the data
-#' pred <- assemblePredDat(x.vals, known.class=FALSE)
-#' pred <- mkPredictions(pred, models)
 mkPredictions <- function(pred, models){
   if(is.null(names(models))){
     names(models) <- sapply(models, function(m){

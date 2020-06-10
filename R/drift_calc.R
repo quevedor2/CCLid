@@ -283,8 +283,6 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #'
 #' @return
 #'
-#' @examples
-#' .estimateDrift(seg.CNAo, z.cutoff=1:3)
 .estimateDrift <- function(seg.obj, ...){
   seg.gr <- makeGRangesFromDataFrame(seg.obj$output, keep.extra.columns = TRUE)
   drift.dat <- lapply(split(seg.gr, seg.gr$ID), function(seg, z.cutoff=NULL, ...){

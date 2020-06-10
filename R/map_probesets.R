@@ -4,8 +4,6 @@
 #' 
 #' @param vcf.gt VariantAnnotation object where the $GT column contains 1/1, 0/1, etc...
 #'
-#' @examples
-#' .vcf2AffyGT(vcf.affy.gr)
 .vcf2AffyGT <- function(vcf.gt){
   vcf.affy.map <- c('1/1'=2, 
                     '0/1'=1,
@@ -66,8 +64,6 @@
 #' @param x BAF vector
 #' @param lower if TRUE, 0-0.5 range, ELSE, 0.5-1 range
 #' 
-#' @examples
-#' .normBAF(x=seq(0, 1, by=0.1), lower=F)
 .normBAF <- function(x, lower=T){
   #x <- seq(0, 1, by=0.1)
   x[x>1] <- 1; x[x<0] <- 0
@@ -80,10 +76,10 @@
   nBAF
 }
 
-#' jsonToGr
+#' .jsonToGr
 #' @description converts a JSON object into a VariantAnnotation object
 #'
-#' @param from.file 
+#' @param from.file Boolean to say whether it comes from a file or passed in object
 #' @param json Json VCF format - OUTDATED
 .jsonToGr <- function(json, from.file=TRUE){
   if(from.file){
@@ -121,9 +117,6 @@
 #' @return List composed of two dataframes, BAF and GT
 #' @export
 #'
-#' @examples
-#' vcfFile <- "/path/to/Sample_ID.vcf"
-#' mapVcf2Affy(vcfFile)
 mapVcf2Affy <- function(vcfFile){
   if(class(vcfFile) == 'list'){
     message(paste0("JSON data passed in..."))
