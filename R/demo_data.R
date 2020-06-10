@@ -88,8 +88,6 @@ annoDemoMat <- function(sample.ord, demo.mat){
 #'  meta = a matrix of all by all sample comparisons
 #'  prob = a probability matrix used to generate each sample
 #'
-#' @examples
-#'  genDemoData(data.type='BAF', n.pop=5)
 genDemoData <- function(data.type='BAF', n.pop=10, ...){
   ## Generate demo data matrix
   demo.dat <- .demoP(data.type=data.type, ...) ## probabilities
