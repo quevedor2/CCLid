@@ -45,6 +45,7 @@
 #' @param vcf.gt VCF genotype (0,1,2)
 #' @param affy.gt Affy6 genotype
 #' @param ret.idx Returns the index of matching instead of genotype fix
+#' @importFrom VariantAnnotation alt
 .fixGT <- function(vcf.gt, affy.gt, ret.idx=FALSE){
   complementGenotype <- c('0'='2', 
                           '1'='1', 
@@ -81,6 +82,9 @@
 #'
 #' @param from.file Boolean to say whether it comes from a file or passed in object
 #' @param json Json VCF format - OUTDATED
+#' @importFrom VariantAnnotation VRanges
+#' @importFrom IRanges IRanges
+#' 
 .jsonToGr <- function(json, from.file=TRUE){
   if(from.file){
     ad <- sapply(json, function(i) i$sampleinfo[[1]]$AD)
@@ -113,7 +117,16 @@
 #' Finally, it will reutnr the BAFs and normalized BAFs for each of the overlapping probesets.
 #' 
 #' @param vcfFile Absolute path to VCF file
-#'
+#' @importFrom rjson fromJSON
+#' @importFrom VariantAnnotation readVcfAsVRanges
+#' @importFrom VariantAnnotation refDepth
+#' @importFrom VariantAnnotation altDepth
+#' @importFrom GenomicRanges seqlevelsStyle
+#' @importFrom GenomicRanges findOverlaps
+#' @importFrom GenomicRanges queryHits
+#' @importFrom GenomicRanges mcols
+#' @importFrom GenomicRanges subjectHits
+#' 
 #' @return List composed of two dataframes, BAF and GT
 #' @export
 #'

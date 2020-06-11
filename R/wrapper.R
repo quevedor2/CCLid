@@ -65,13 +65,14 @@ loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE, bin.size=1e6, verbo
 #' @param ids IDs
 #' @param sampletype Strictly for labelling purposes
 #' @param ... Extra param
+#' @param all.ids IDs to subset to
 #'
 #' @return Matrix: Containing reference matrix subsetted to common SNPs as 
 #' the input VCF, as well as a left-joined VCF data
 #' @export
 #'
 compareVcf <- function(vcfFile, var.dat, ref.mat, 
-                       max.snps=1e6, ids=NULL, sampletype='RNA', ...){
+                       max.snps=1e6, ids=NULL, sampletype='RNA', all.ids=NULL, ...){
   vcf.map <- CCLid::mapVcf2Affy(vcfFile)
   vcf.map <- .filt(vcf.map, ...) ## Memory: up to 1.8Gb 
   
@@ -118,7 +119,9 @@ compareVcf <- function(vcfFile, var.dat, ref.mat,
 #' @param rm.gcsi Remove GNE samples from the input matrix (Default=TRUE)
 #' @param sampleID Sample ID (Default='Sample')
 #' @param verbose Verbose
-#'
+#' @importFrom stats median
+#' @importFrom utils data
+#' 
 #' @return A list containing Distance Matrix and list of Predictions (M/NM)
 #' @export
 #'

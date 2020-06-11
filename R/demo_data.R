@@ -32,7 +32,8 @@
 #' @param data.type Must be either "BAF" (default) or "geno" (case-sensitive), 
 #' @param sample.ord Order
 #' @param demo.dat Demo data
-#'
+#' @importFrom stats rnorm
+#' 
 #' @return
 demoSample <- function(data.type='BAF', sample.ord, demo.dat){
   sapply(sample.ord, function(i){
@@ -108,7 +109,8 @@ genDemoData <- function(data.type='BAF', n.pop=10, ...){
 #' @param data.type 'BAF' or 'geno'
 #' @param sample.mat Input matrix of BAF or geno values by samples
 #' @param prop Proportion to mix the 2+ samples by
-#'
+#' @importFrom stats weighted.mean
+#' 
 #' @return
 #' A weighted mean vector of BAF or a probability sampled genotype
 #' @export
@@ -118,6 +120,10 @@ combineSamples <- function(data.type, sample.mat, prop){
          'geno'=apply(sample.mat, 1, sample, size=1, prob=prop))
 }
 
+
+#' Demo
+#' @importFrom ggplot2 ggplot
+#' @importFrom ggplot2 aes
 .demo <- function(){
   data.type <- 'geno'
   data.type <- 'BAF'
@@ -150,7 +156,7 @@ combineSamples <- function(data.type, sample.mat, prop){
   pred <- mkPredictions(pred, models)
   
   ## Viz
-  head(pred[order(pred$baf.fit),])
+  # head(pred[order(pred$baf.fit),])
   ggplot(pred,aes(x=baf,y=baf.fit)) + stat_binhex()
   
   
@@ -172,9 +178,8 @@ combineSamples <- function(data.type, sample.mat, prop){
                     cexRow = 0.4, cexCol=0.4, key = FALSE)
 }
 
+#' Title
 .demoDeconvolution <- function(){
-  
-  
   ## Test decomposition via NMF
   s.idx.nmf <- c(1,2,3)
   M <- demoSample(data.type, s.idx.nmf, demo$prob)

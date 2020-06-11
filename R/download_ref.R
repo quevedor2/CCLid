@@ -6,7 +6,8 @@
 #' @param verbose Verbose (Default=FALSE)
 #' @param refFileName File name to save, or pre-existing rds or .bin file
 #' @param bin.size Genomic size to chunk the SNPs into
-#'
+#' @importFrom bigmemory attach.big.matrix
+#' 
 #' @export
 #'
 downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"), 
@@ -55,7 +56,7 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
 #' @param verbose Default: TRUE
 #' @param tableDir Defaault:NULL, uses CCLids built in table detailing external
 #' data location
-#'
+#' @importFrom utils read.csv
 #' @export
 availableRefCCL <- function (saveDir = file.path(".", "CCLid"), tableDir=NULL,
                              myfn = "downloadTable.csv", verbose = TRUE) {
@@ -83,7 +84,8 @@ availableRefCCL <- function (saveDir = file.path(".", "CCLid"), tableDir=NULL,
 #' @param just.var Just runs the variant SNP part of the script, skips subsetting
 #' @param fill.na Fills NA with median (Default=FALSE)
 #' @param verbose Verbose
-#'
+#' @importFrom stats median
+#' 
 #' @return Returns a list object:
 #' 'ref' = matrix of SNPs by samples for least variant SNPs
 #' 'var' = list of each 'bin size' and the SNPs and their BAF that populate it
@@ -140,6 +142,17 @@ formatRefMat <- function(name, ref.mat, analysis='baf',
 #' 
 #' @param ref.mat Reference matrix of Samples by Probesets
 #' @param bin.size Bin size, Default=1e6
+#' @importFrom stats var
+#' @importFrom stats setNames
+#' @importFrom GenomicRanges makeGRangesFromDataFrame
+#' @importFrom GenomicRanges seqlengths
+#' @importFrom BSgenome.Hsapiens.UCSC.hg19 Hsapiens
+#' @importFrom GenomicRanges tileGenome
+#' @importFrom GenomicRanges seqlevelsStyle
+#' @importFrom GenomicRanges findOverlaps
+#' @importFrom GenomicRanges queryHits
+#' @importFrom GenomicRanges subjectHits
+#' 
 .getVariantFeatures <- function(ref.mat, bin.size=1e6){
   ## Gets variance of matrix
   ref.vars <- apply(ref.mat, 1, var, na.rm=TRUE)

@@ -1,6 +1,7 @@
 #### Private Functions ####
 ###########################
 #' .blankGr
+#' @importFrom GenomicRanges makeGRangesFromDataFrame
 .blankGr <- function(){
   makeGRangesFromDataFrame(data.frame("chr"='chrZ', "start"=1,  "end"=1))
 }
@@ -15,6 +16,10 @@
 }
 
 #' .getChrLength
+#' @importFrom BSgenome.Hsapiens.UCSC.hg19 Hsapiens
+#' @importFrom GenomicRanges makeGRangesFromDataFrame
+#' @importFrom GenomicRanges seqlengths
+#' @importFrom GenomicRanges end
 .getChrLength <- function(){
   chr.lengths = seqlengths(Hsapiens)[1:24]
   chr.len.gr <- makeGRangesFromDataFrame(data.frame("chrom"=names(chr.lengths),
@@ -31,6 +36,7 @@
 #' @param dat Data containing $chrom, $pos, $loc.start, $loc.end
 #' @param ref GRanges object containing $cum.start
 #' @param dat.type Either "data" or "seg"
+#' @importFrom GenomicRanges seqnames
 .addCumPos <- function(dat, ref, dat.type){
   m.row.idx <- match(as.character(dat$chrom), as.character(seqnames(ref)))
   if(dat.type=='data'){
@@ -52,6 +58,17 @@
 #' @param chr.size.gr NULL
 #' @param ref.ds NULL
 #' @param alt.ds NULL
+#' @importFrom methods as
+#' @importFrom GenomicRanges seqnames
+#' @importFrom GenomicRanges findOverlaps
+#' @importFrom GenomicRanges start
+#' @importFrom GenomicRanges end
+#' @importFrom GenomicRanges queryHits
+#' @importFrom GenomicRanges subjectHits
+#' @importFrom graphics plot
+#' @importFrom graphics axis
+#' @importFrom graphics rect
+#' 
 multiDriftPlot <- function(seg, chr.size.gr=NULL, 
                            ref.ds=NULL, alt.ds=NULL){
   if(is.null(ref.ds)) stop("Requires input of ref.ds (GDSC or CCLE)")
@@ -104,7 +121,11 @@ multiDriftPlot <- function(seg, chr.size.gr=NULL,
 #' @param seg Seg data
 #' @param ref.ds Reference dataset
 #' @param alt.ds Alternate dataset
-#'
+#' @importFrom methods as
+#' @importFrom utils setNames
+#' @importFrom utils combn
+#' @importFrom GenomicRanges width
+#' @importFrom GenomicRanges seqnames
 #' @export
 driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
   if(is.null(ref.ds)) stop("Requires input of ref.ds (GDSC or CCLE)")
@@ -160,7 +181,14 @@ driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
 #' @param atype default=sd
 #' @param add.points Adds points to the segments
 #' @param min.z minimum z to report a drift change
-#'
+#' @importFrom dplyr %>%
+#' @importFrom dplyr .
+#' @importFrom graphics plot
+#' @importFrom graphics abline
+#' @importFrom graphics axis
+#' @importFrom GenomicRanges seqnames
+#' @importFrom stats na.omit
+#' 
 plot.CCLid <- function (obj, sample.size=600, low.sig.alpha=0.01, 
                         hi.sig.alpha=0.2, add.chr.sep=TRUE, 
                         atype='sd', add.points=TRUE, min.z=3) {

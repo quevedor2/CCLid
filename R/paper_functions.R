@@ -2,6 +2,13 @@
 #### drift_it.R Support ####
 ############################
 ### Functions for CN - BAF drift overlap
+#' get Seg SD
+#' @importFrom GenomicRanges mcols
+#' @importFrom GenomicRanges findOverlaps
+#' @importFrom GenomicRanges subjectHits
+#' @importFrom GenomicRanges queryHits
+#' @importFrom stats quantile
+#' @importFrom stats sd
 getSegSD <- function(gr.D, gr.Draw, winsorize.data=FALSE, winsor=0.95, n.scale=1){
   idx <- grep(paste0("^X?", unique(gr.D$ID), "$"), colnames(mcols(gr.Draw)))
   ov <- findOverlaps(gr.D, gr.Draw)
@@ -21,6 +28,10 @@ getSegSD <- function(gr.D, gr.Draw, winsorize.data=FALSE, winsor=0.95, n.scale=1
   return(round(std.err, 3))
 }
 
+#' Title
+#' @importFrom GenomicRanges makeGRangesFromDataFrame
+#' @importFrom GenomicRanges mcols
+#' 
 addSegDat <- function(ids, CNAo, ...){
   gr.Draw <- makeGRangesFromDataFrame(CNAo$data, start.field = "pos", end.field="pos", keep.extra.columns = TRUE)
   gr.seg <- makeGRangesFromDataFrame(CNAo$output, keep.extra.columns = TRUE)
@@ -76,10 +87,15 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
 #' @param verbose Verbose
 #' @param ... Extra param
 #' @param cell.ids All cell line IDs to compare drift between
-#'
+#' @importFrom utils data
+#' @importFrom preprocessCore normalize.quantiles
+#' @importFrom matrixStats rowDiffs
+#' @importFrom stats median
+#' @importFrom 
 #' @return CN drift object
 #' @export
 getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, verbose=TRUE, ...){
+  data(meta.df)
   ## Index matching cell line pairs for the CN PSets
   ref.bin.ids <- assignGrpIDs(ref.l2r[[seg.id]], meta.df)
   alt.bin.ids <- assignGrpIDs(alt.l2r[[seg.id]], meta.df)
@@ -141,7 +157,7 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, verbose
   Draw = do.call(cbind, lapply(cn.drift, function(i) i$raw))
   colnames(D) <- colnames(Draw) <- alt.ref.idx$id
   # save(D, Draw, alt.ref.idx, fdat, file="~/D2.rda")
-  rm(ref.l2r, alt.l2r, bins); gc()
+  rm(ref.l2r, alt.l2r); gc()
   
   ## Segment and find discordant regions
   # CNAo <- CCLid::segmentDrift(fdat = fdat, D=D, segmenter=segmenter)
@@ -177,6 +193,12 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, verbose
 #' @param cn.z z threshold for L2R difference
 #' @param cn.gtruth if TRUE, isolates BAF for only CN drifted regions
 #'
+#' @importFrom GenomicRanges findOverlapPairs
+#' @importFrom GenomicRanges pintersect
+#' @importFrom GenomicRanges mcols
+#' @importFrom GenomicRanges width
+#' @importFrom utils setNames
+#' 
 #' @return List containing the following elements:
 #' "model" = non-linear least-square model fitted to concordance and sensitvity
 #' "saturation"=Matrix of total saturation and concordance cutoff
@@ -262,13 +284,16 @@ driftOverlapMetric <- function(gr.baf, gr.cn, cell.ids, ov.frac=seq(0, 1, by=0.0
 #' @param rna.meta.df Meta file linking RNA files to cell names
 #' @param ref.dat Refrence data containing Reference matrix and variance
 #' @param min.depth Minimum depth to consider for SNPs
+#' @param dataset Either 'CCLE', 'GDSC', ro 'GNE'
 #' @param centering Centering of data method to be passed into bafDrift() function
 #'
+#' @importFrom 
 #' @return A list containing the fraction of genome drifted,
 #' as well the significantly drifted regions CNAo
 #' @export
-getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df, 
-                         min.depth=5, centering='extreme'){
+getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df,  
+                         min.depth=5, centering='extreme',
+                         dataset='GDSC'){
   vcf <- basename(vcfFile)
   cat(basename(vcf), "...\n")
   ## Load in VCF data and leftjoin to existing ref.mat
@@ -307,6 +332,8 @@ getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df,
 #' readinRnaFileMapping
 #' @description Map the RNA files to the SNP files
 #' using hardcoded metadata
+#' @importFrom utils data
+#' 
 #' @export
 readinRnaFileMapping <- function(){
   data(rna.meta.df)
@@ -368,7 +395,14 @@ summarizeFracDrift <- function(cn.drifts, cn.z, baf.drifts,
 #' plotFracDrift
 #'
 #' @param summ.frac summ frac list to plot, contains $baf and $cn 
-#'
+#' @importFrom utils head
+#' @importFrom utils tail
+#' @importFrom graphics abline
+#' @importFrom graphics par
+#' @importFrom graphics axis
+#' @importFrom graphics polygon
+#' @importFrom stats density
+#' 
 #' @export
 plotFracDrift <- function(summ.frac){
   cn.baf.frac <- merge(summ.frac$baf, summ.frac$cn, by="ID", all=TRUE)
@@ -445,7 +479,8 @@ genErrBp <- function(p.m.nm){
 #' Cellosaurus database
 #'
 #' @param mat A matrix containing "cvclA" and "cvclB" columns for cellosaurus IDs of cell lines
-#'
+#' @importFrom PharmacoGx fullpull
+#' 
 #' @return Character vector of OI (originating in), SS (synonymous), SI (sample from), 
 #' and PCL (problematic)
 checkAgainst <- function(mat){
@@ -499,7 +534,9 @@ loadInPSets <- function(drug.pset){
 #'
 #' @param psets PSets from pharmacoGX
 #' @param cin.metric sum or mean to compute CIN70 score
-#'
+#' @importFrom utils data
+#' @importFrom PharmacoGx molecularProfiles
+#' 
 #' @return a CIN list
 #' @export
 getCinScore <- function(psets, cin.metric='sum'){
@@ -524,7 +561,10 @@ getCinScore <- function(psets, cin.metric='sum'){
 #' @param psets PSets from pharmacoGX
 #' @param in.key for mapping gene IDs, type of Gene (Default=SYMBOL)
 #' @param gene.id Gene ID to map to Ensembl IDs
-#'
+#' @importFrom AnnotationDbi mapIds
+#' @importFrom org.Hs.eg.db org.Hs.eg.db
+#' @importFrom PharmacoGx molecularProfiles
+#' 
 #' @export
 getGeneExpr <- function(psets, gene.id, in.key='SYMBOL'){
   
@@ -559,10 +599,19 @@ getGeneExpr <- function(psets, gene.id, in.key='SYMBOL'){
 #' @param dat.d Data D containg $tCIN
 #' @param title titleof plot
 #' @param text.thresh  text.threshold of 0.50
+#' @param genes List of genes
 #' @param col.idx column index
 #'
+#' @importFrom stats cor
+#' @importFrom stats cor.test
+#' @importFrom stats p.adjust
+#' @importFrom utils setNames
+#' @importFrom graphics abline
+#' @importFrom graphics legend
+#' @importFrom RColorBrewer brewer.pal
+#' 
 #' @export
-corWithDrug <- function(dat.d, col.idx, title='', text.thresh=0.5){
+corWithDrug <- function(dat.d, col.idx, title='', text.thresh=0.5, genes=NULL){
   dat.d.abc <- do.call(rbind, apply(dat.d[,-col.idx], 2, function(i){
     # plot(i, cn.d$tCIN)
     # plot(i, cn.d$drift)
@@ -612,7 +661,9 @@ corWithDrug <- function(dat.d, col.idx, title='', text.thresh=0.5){
 #' @param genome.build Genome build, only supports 'hg19'
 #'
 #' @description Gets the genes from UCSC hg19 TxDb knownGene
-#'
+#' @importFrom TxDb.Hsapiens.UCSC.hg19.knownGene TxDb.Hsapiens.UCSC.hg19.knownGene
+#' @importFrom IRanges elementNROWS
+#' @importFrom GenomicRanges granges
 #' @return A Granges object containing strand-specific genes with EntrezIDs
 getGenes <- function(genome.build="hg19"){
   switch(genome.build,
@@ -637,6 +688,19 @@ getGenes <- function(genome.build="hg19"){
 #'
 #' @param out.key Gene out.key, default is SYMBOL
 #'
+#' @importFrom biomaRt useMart
+#' @importFrom biomaRt useDataset
+#' @importFrom biomaRt getBM
+#' @importFrom GenomicRanges makeGRangesFromDataFrame
+#' @importFrom GenomicRanges seqlevelsStyle
+#' @importFrom GenomicRanges findOverlaps
+#' @importFrom GenomicRanges subjectHits
+#' @importFrom GenomicRanges queryHits
+#' @importFrom GenomicRanges subjectLength
+#' @importFrom IRanges splitAsList 
+#' @importFrom AnnotationDbi mapIds
+#' @importFrom org.Hs.eg.db org.Hs.eg.db
+#' 
 #' @return Annotated GRanges object with gene ids for the input GRanges
 #' @export
 annotateSegments <- function(cn.data, genes, out.key="SYMBOL", mart=NULL, use.mart=FALSE){

@@ -8,7 +8,12 @@
 #' columns, rows are the genomic pos
 #' @param kmin Minimum number of SNPs to consider (default = 5)
 #' @param rm.homo  Remove homozygous SNPs (Default = FALSE)
-#'
+#' @importFrom stats median
+#' @importFrom dplyr %>%
+#' @importFrom dplyr .
+#' @importFrom DNAcopy smooth.CNA
+#' @importFrom DNAcopy segment
+#' 
 #' @return CNA object
 #' @export
 segmentDrift <- function(segmenter='PCF', fdat, D, kmin=5, rm.homo=FALSE){
@@ -72,7 +77,10 @@ segmentDrift <- function(segmenter='PCF', fdat, D, kmin=5, rm.homo=FALSE){
 #' @param hom.filt.val Homozygous filtering threshold (Default = 0.07)
 #' @param ... Extra param
 #' @param debug should be set to FALSE and only changed when debugging
-#'
+#' @importFrom utils data
+#' @importFrom stats na.omit
+#' @importFrom stats median
+#' 
 #' @export
 bafDrift <- function(sample.mat, debug=FALSE, centering='none', 
                      norm.baf=TRUE, hom.filt.val=0.07, ...){
@@ -159,9 +167,17 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' @param seg.obj an object returned from DNAcopy::segment()
 #' @param winsor Winsorization threshold (Default = 0.95)
 #' @param ... Extra param
-#'
+#' @importFrom GenomicRanges makeGRangesFromDataFrame
+#' @importFrom GenomicRanges seqlevelsStyle
+#' @importFrom GenomicRanges findOverlaps
+#' @importFrom GenomicRanges mcols
+#' @importFrom GenomicRanges subjectHits
+#' @importFrom GenomicRanges queryHits
+#' @importFrom stats quantile
+#' @importFrom stats sd
+#' 
 #' @return
-.addSegSd <- function(seg.obj, winsor=0.95, ...){
+.addSegSd <- function(seg.obj, winsor=0.95, verbose=FALSE, ...){
   adj.segs <- lapply(split(seg.obj$output, f=seg.obj$output$ID), function(seg){
     if (verbose) print(paste0(unique(seg$ID), "..."))
     seg.dat <- as.data.frame(seg.obj$data)
@@ -212,6 +228,15 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #'
 #' @param seg.obj A seg obj
 #' @param verbose Verbose (Default = FALSE)
+#' @importFrom GenomicRanges makeGRangesFromDataFrame
+#' @importFrom GenomicRanges mcols
+#' @importFrom GenomicRanges seqlevelsStyle
+#' @importFrom GenomicRanges findOverlapPairs
+#' @importFrom GenomicRanges pintersect
+#' @importFrom GenomicRanges findOverlaps
+#' @importFrom GenomicRanges subjectHits
+#' @importFrom GenomicRanges queryHits
+#' @importFrom stats t.test
 #'
 #' @return A list of seg objects
 .compSegs <- function(seg.obj, verbose=FALSE){
@@ -281,6 +306,12 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' @param ... Extra param
 #' @param seg.obj DNAcopy::segment() object
 #'
+#' @importFrom GenomicRanges makeGRangesFromDataFrame
+#' @importFrom GenomicRanges mcols
+#' @importFrom GenomicRanges width
+#' @importFrom stats setNames
+#' @importFrom stats as
+#' 
 #' @return
 #'
 .estimateDrift <- function(seg.obj, ...){
@@ -360,7 +391,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
   t.mat <- (sweep(theor.cutoff, 1, as.matrix(abs(seg$seg.z))) <= 0)
   seg$t <-  rowSums(t.mat) - 1
   seg$seg.diff <- delta.frac[seg$t+1]
-  head(as.data.frame(seg), 30)
+  # head(as.data.frame(seg), 30)
   return(seg)
 }
 
@@ -369,7 +400,8 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' for a cna.obj returned by bafDrift$cna.obj
 #' 
 #' @param each.sample Each sample
-#'
+#' @importFrom GenomicRanges makeGRangesFromDataFrame
+#' 
 #' @export
 sigDiffBaf <- function(each.sample){
   es <- each.sample$output

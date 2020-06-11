@@ -2,7 +2,8 @@
 #'
 #' @param dat vector of numbers to calculate z stat from
 #' @param p returns p-value instead of z-statistic
-#' 
+#' @importFrom stats sd
+#' @importFrom stats pnorm
 .zval <- function(dat, p=FALSE){
   z <- (dat - mean(dat)) / sd(dat)
   if(p) z <- 2*pnorm(-abs(z))
@@ -53,7 +54,12 @@ splitConcordanceVals <- function(dm, meta.df){
 #' @description Plots the histogram for matching/non-matching dataset
 #'
 #' @param D Returns from predictions, containins $M and $NM as elements of the list
-#'
+#' @importFrom stats quantile
+#' @importFrom graphics hist
+#' @importFrom graphics lines
+#' @importFrom stats density
+#' @importFrom scales alpha
+#' 
 #' @export
 plotHist <- function(D){
   nm.vals <- D$NM
@@ -108,7 +114,9 @@ balanceGrps <- function(D.vals){
 #' 
 #' @param mat Matrix of BAFs
 #' @param method Either 'cor', 'jaccard', or 'euclidean'
-#'
+#' @importFrom stats dist
+#' @importFrom stats cor
+#' 
 #' @export
 similarityMatrix <- function(mat, method){
   if(any(is.na(mat))){
@@ -154,7 +162,9 @@ assemblePredDat <- function(D.vals, known.class=FALSE){
 #' 
 #' @param balanced Balanced groups
 #' @param ... Extra param for .createFormula()
-#'
+#' @importFrom stats as.formula
+#' @importFrom stats glm
+#' @importFrom stats binomial
 #' @export
 trainLogit <- function(balanced, ...){
   fs <- .createFormula(...)
@@ -169,7 +179,9 @@ trainLogit <- function(balanced, ...){
 #' 
 #' @param pred Prediction data
 #' @param models logistic reression model
-#'
+#' @importFrom utils setNames
+#' @importFrom stats predict
+#' @importFrom stats p.adjust
 #' @export
 #'
 mkPredictions <- function(pred, models){
@@ -206,6 +218,9 @@ mkPredictions <- function(pred, models){
 }
 
 #### Private Functions ####
+#' Melts dataframe
+#' @importFrom reshape2 melt
+#'
 .meltDf <- function(m){
   diag(m) <- m[upper.tri(m)] <- NA
   melt.m <- melt(m)
@@ -223,6 +238,7 @@ mkPredictions <- function(pred, models){
 #' sample pairs if the sample id's dont' match (NON-MATCH)
 #' @param col.len  Col length
 #' @param dr.nm Nonmatch SNP
+#' @importFrom matrixStats rowDiffs
 .genNonmatchSnpDiff <- function(col.len, dr.nm){
   ## Initialize a matrix of random pairs
   r.idx <- matrix(sample(1:ncol(dr.nm), col.len*2, replace=TRUE), nrow=2)
@@ -253,9 +269,11 @@ mkPredictions <- function(pred, models){
 #' @description generates a matrix of euclidean distance between probesets of 
 #' sample pairs if the sample id's MATCH
 #' @param dr.nm nonmatch SNP
-#'
+#' @importFrom utils combn
+#' @importFrom matrixStats rowDiffs
 #' @return
 .genMatchSnpDiff <- function(dr.nm){
+  data(meta.df)
   m.d <- sapply(meta.df$ID, function(i){
     idx <- grep(paste0("_", i, "$"), colnames(dr.nm))
     if(length(idx) > 1){
