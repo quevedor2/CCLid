@@ -477,11 +477,11 @@ genErrBp <- function(p.m.nm){
 #' Cellosaurus database
 #'
 #' @param mat A matrix containing "cvclA" and "cvclB" columns for cellosaurus IDs of cell lines
-#' @importFrom Rcellosaurus fullpull
-#' 
+#' @importFrom utils data
 #' @return Character vector of OI (originating in), SS (synonymous), SI (sample from), 
 #' and PCL (problematic)
 checkAgainst <- function(mat){
+  data(melt.cells)
   .getAcr <- function(A, B, fp){
     B.mat <- B == fp
     row.A <- apply(A == fp, 1, any)

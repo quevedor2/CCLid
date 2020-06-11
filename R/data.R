@@ -95,3 +95,15 @@
 #'   ...
 #' }
 "meta.df"
+
+#' Mapping of cellosaurus CVCL IDs to the cell line name and their OI/SS/MSI/PCL classification
+#' @docType data
+#'
+#' @usage data(melt.cells)
+#' @keywords datasets
+#' 
+#' @format A data.frame structure
+#' \describe{
+#'   ...
+#' }
+"melt.cells"
