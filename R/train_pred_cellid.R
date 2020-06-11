@@ -179,7 +179,7 @@ trainLogit <- function(balanced, ...){
 #' 
 #' @param pred Prediction data
 #' @param models logistic reression model
-#' @importFrom utils setNames
+#' @importFrom stats setNames
 #' @importFrom stats predict
 #' @importFrom stats p.adjust
 #' @export

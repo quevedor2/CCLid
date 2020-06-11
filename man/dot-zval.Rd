@@ -7,10 +7,9 @@
 .zval(dat, p = FALSE)
 }
 \arguments{
-\item{dat}{}
-}
-\value{
+\item{dat}{vector of numbers to calculate z stat from}
 
+\item{p}{returns p-value instead of z-statistic}
 }
 \description{
 z-statistic

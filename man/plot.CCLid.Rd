@@ -17,15 +17,23 @@ plot() function for CCLid adjusted DNAcopy segment objects}
 )
 }
 \arguments{
-\item{obj}{}
-}
-\value{
+\item{obj}{CCLid object returned from bafDrift()}
 
+\item{sample.size}{Number of points to plot to allow for quicker plotting}
+
+\item{low.sig.alpha}{low-confident drift regions alpha value for red}
+
+\item{hi.sig.alpha}{high-confident drift regions alpha value for red}
+
+\item{add.chr.sep}{Adds lines to delimit chromosomes}
+
+\item{atype}{default=sd}
+
+\item{add.points}{Adds points to the segments}
+
+\item{min.z}{minimum z to report a drift change}
 }
 \description{
 plot.CCLid
 plot() function for CCLid adjusted DNAcopy segment objects
-}
-\examples{
-In the works...
 }

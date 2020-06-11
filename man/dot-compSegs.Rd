@@ -8,6 +8,8 @@
 }
 \arguments{
 \item{seg.obj}{A seg obj}
+
+\item{verbose}{Verbose (Default = FALSE)}
 }
 \value{
 A list of seg objects

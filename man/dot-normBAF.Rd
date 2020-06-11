@@ -11,12 +11,6 @@
 
 \item{lower}{if TRUE, 0-0.5 range, ELSE, 0.5-1 range}
 }
-\value{
-
-}
 \description{
 rescales the BAF from a 0-1 scale to a 0-0.5
-}
-\examples{
-.normBAF(x=seq(0, 1, by=0.1), lower=F)
 }

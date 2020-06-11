@@ -7,7 +7,7 @@
 similarityMatrix(mat, method)
 }
 \arguments{
-\item{mat}{}
+\item{mat}{Matrix of BAFs}
 
 \item{method}{Either 'cor', 'jaccard', or 'euclidean'}
 }

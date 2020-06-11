@@ -7,11 +7,12 @@
 overlapPos(comp, ref, mapping = "probeset")
 }
 \arguments{
-\item{comp}{}
+\item{comp}{Input comparison data with a $Probe_Set_ID column}
 
-\item{ref}{}
+\item{ref}{Reference probeset order where rownames are Probe_Set_IDs}
 
-\item{mapping}{}
+\item{mapping}{If "probeset", will using $Probe_Set_ID from comp dataframe.
+Else, it will use the rownames of ref as the probe set IDs}
 }
 \description{
 parent function that handles how overlaps are done between COMParing 

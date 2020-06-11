@@ -11,6 +11,7 @@ compareVcf(
   max.snps = 1e+06,
   ids = NULL,
   sampletype = "RNA",
+  all.ids = NULL,
   ...
 )
 }
@@ -21,13 +22,15 @@ compareVcf(
 
 \item{ref.mat}{Reference matrix (matrix)}
 
-\item{max.snps}{}
+\item{max.snps}{Max number of SNPs to reduce}
 
-\item{ids}{}
+\item{ids}{IDs}
 
-\item{sampletype}{}
+\item{sampletype}{Strictly for labelling purposes}
 
-\item{...}{}
+\item{all.ids}{IDs to subset to}
+
+\item{...}{Extra param}
 }
 \value{
 Matrix: Containing reference matrix subsetted to common SNPs as 
@@ -36,11 +39,4 @@ the input VCF, as well as a left-joined VCF data
 \description{
 Checks a VCF file(s) against reference dataset
 to look for similarity to any known cell lines
-}
-\examples{
-  ref.dat <- CCLid::loadRef(PDIR, 'baf', bin.size=5e5)
-  ref.mat <- ref.dat$ref
-  var.dat <- ref.dat$var
-  vcfFile <- '/mnt/work1/users/home2/quever/xfer/A549.sample_id.vcf' ## A549 WES
-  vcf.mat <- compareVcf(vcfFile, var.dat=ref.dat$var, ref.mat=ref.dat$ref)
 }

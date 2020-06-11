@@ -8,9 +8,8 @@
 }
 \arguments{
 \item{vcf.gt}{VariantAnnotation ob ject}
-}
-\value{
 
+\item{ret.idx}{Boolean, if True, does not reverse complement any alleles}
 }
 \description{
 Reverse complements the Alleles

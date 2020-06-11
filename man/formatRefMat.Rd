@@ -30,11 +30,11 @@ typically obtained from the downloadRefCCL() function}
 
 \item{bin.size}{Default is set to 5e5, a variant file must be created for this bin size}
 
-\item{just.var}{}
+\item{just.var}{Just runs the variant SNP part of the script, skips subsetting}
 
-\item{fill.na}{}
+\item{fill.na}{Fills NA with median (Default=FALSE)}
 
-\item{verbose}{}
+\item{verbose}{Verbose}
 }
 \value{
 Returns a list object:
@@ -44,12 +44,4 @@ Returns a list object:
 \description{
 Pre-processes the input data into a matrix of BAF values and 
 the least/most variant SNPs within that cohort
-}
-\examples{
-refdir <- '/mnt/work1/users/home2/quever/git/CCLid-web/extdata/tmp'
-analysis = 'baf'
-
-ref.mat <- downloadRefCCL(toupper(analysis), saveDir = refdir, bin.size=5e5, verbose=TRUE)
-format.dat <- formatRefMat(name=toupper(analysis), ref.mat=ref.mat, saveDir = refdir,
-analysis=tolower(analysis), bin.size=bin.size) #bin.size=5e5
 }

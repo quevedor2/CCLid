@@ -7,11 +7,11 @@
 .addCumPos(dat, ref, dat.type)
 }
 \arguments{
-\item{dat}{}
+\item{dat}{Data containing $chrom, $pos, $loc.start, $loc.end}
 
-\item{ref}{}
+\item{ref}{GRanges object containing $cum.start}
 
-\item{dat.type}{}
+\item{dat.type}{Either "data" or "seg"}
 }
 \description{
 .addCumPos

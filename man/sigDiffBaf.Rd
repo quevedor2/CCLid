@@ -4,12 +4,10 @@
 \alias{sigDiffBaf}
 \title{sigDiffBaf}
 \usage{
-sigDiffBaf(each.sample, sig.es = NULL)
+sigDiffBaf(each.sample)
 }
 \arguments{
-\item{each.sample}{}
-
-\item{sig.es}{}
+\item{each.sample}{Each sample}
 }
 \value{
 GRanges object of significant BAF drift (z > 3)

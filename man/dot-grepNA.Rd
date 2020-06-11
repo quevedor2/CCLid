@@ -7,12 +7,9 @@
 .grepNA(pattern, x)
 }
 \arguments{
-\item{pattern}{}
+\item{pattern}{pattern to grep}
 
-\item{x}{}
-}
-\value{
-
+\item{x}{vector to grep}
 }
 \description{
 .grepNA

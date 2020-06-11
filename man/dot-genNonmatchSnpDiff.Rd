@@ -7,12 +7,9 @@
 .genNonmatchSnpDiff(col.len, dr.nm)
 }
 \arguments{
-\item{col.len}{}
+\item{col.len}{Col length}
 
-\item{dr.nm}{}
-}
-\value{
-
+\item{dr.nm}{Nonmatch SNP}
 }
 \description{
 generates a matrix of euclidean distance between probesets of 

@@ -4,12 +4,18 @@
 \alias{corWithDrug}
 \title{corWithDrug}
 \usage{
-corWithDrug(dat.d, col.idx, title = "", text.thresh = 0.5)
+corWithDrug(dat.d, col.idx, title = "", text.thresh = 0.5, genes = NULL)
 }
 \arguments{
-\item{dat.d}{}
+\item{dat.d}{Data D containg $tCIN}
 
-\item{col.idx}{}
+\item{col.idx}{column index}
+
+\item{title}{titleof plot}
+
+\item{text.thresh}{text.threshold of 0.50}
+
+\item{genes}{List of genes}
 }
 \description{
 IN DEVELOPMENT

@@ -1,12 +1,12 @@
 ############################
-#### drift_it.R Support ####
+#### drift_it.R Support ###
 ############################
 ### Functions for CN - BAF drift overlap
 #' get Seg SD
 #' @importFrom GenomicRanges mcols
 #' @importFrom GenomicRanges findOverlaps
-#' @importFrom GenomicRanges subjectHits
-#' @importFrom GenomicRanges queryHits
+#' @importFrom IRanges subjectHits
+#' @importFrom IRanges queryHits
 #' @importFrom stats quantile
 #' @importFrom stats sd
 getSegSD <- function(gr.D, gr.Draw, winsorize.data=FALSE, winsor=0.95, n.scale=1){
@@ -91,7 +91,6 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
 #' @importFrom preprocessCore normalize.quantiles
 #' @importFrom matrixStats rowDiffs
 #' @importFrom stats median
-#' @importFrom 
 #' @return CN drift object
 #' @export
 getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, verbose=TRUE, ...){
@@ -193,11 +192,11 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, verbose
 #' @param cn.z z threshold for L2R difference
 #' @param cn.gtruth if TRUE, isolates BAF for only CN drifted regions
 #'
-#' @importFrom GenomicRanges findOverlapPairs
+#' @importFrom IRanges findOverlapPairs
 #' @importFrom GenomicRanges pintersect
 #' @importFrom GenomicRanges mcols
 #' @importFrom GenomicRanges width
-#' @importFrom utils setNames
+#' @importFrom stats setNames
 #' 
 #' @return List containing the following elements:
 #' "model" = non-linear least-square model fitted to concordance and sensitvity
@@ -287,7 +286,6 @@ driftOverlapMetric <- function(gr.baf, gr.cn, cell.ids, ov.frac=seq(0, 1, by=0.0
 #' @param dataset Either 'CCLE', 'GDSC', ro 'GNE'
 #' @param centering Centering of data method to be passed into bafDrift() function
 #'
-#' @importFrom 
 #' @return A list containing the fraction of genome drifted,
 #' as well the significantly drifted regions CNAo
 #' @export
@@ -479,7 +477,7 @@ genErrBp <- function(p.m.nm){
 #' Cellosaurus database
 #'
 #' @param mat A matrix containing "cvclA" and "cvclB" columns for cellosaurus IDs of cell lines
-#' @importFrom PharmacoGx fullpull
+#' @importFrom Rcellosaurus fullpull
 #' 
 #' @return Character vector of OI (originating in), SS (synonymous), SI (sample from), 
 #' and PCL (problematic)
@@ -605,7 +603,7 @@ getGeneExpr <- function(psets, gene.id, in.key='SYMBOL'){
 #' @importFrom stats cor
 #' @importFrom stats cor.test
 #' @importFrom stats p.adjust
-#' @importFrom utils setNames
+#' @importFrom stats setNames
 #' @importFrom graphics abline
 #' @importFrom graphics legend
 #' @importFrom RColorBrewer brewer.pal
@@ -692,11 +690,11 @@ getGenes <- function(genome.build="hg19"){
 #' @importFrom biomaRt useDataset
 #' @importFrom biomaRt getBM
 #' @importFrom GenomicRanges makeGRangesFromDataFrame
-#' @importFrom GenomicRanges seqlevelsStyle
+#' @importFrom IRanges seqlevelsStyle
 #' @importFrom GenomicRanges findOverlaps
-#' @importFrom GenomicRanges subjectHits
-#' @importFrom GenomicRanges queryHits
-#' @importFrom GenomicRanges subjectLength
+#' @importFrom IRanges subjectHits
+#' @importFrom IRanges queryHits
+#' @importFrom IRanges subjectLength
 #' @importFrom IRanges splitAsList 
 #' @importFrom AnnotationDbi mapIds
 #' @importFrom org.Hs.eg.db org.Hs.eg.db

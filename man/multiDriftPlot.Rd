@@ -2,19 +2,19 @@
 % Please edit documentation in R/plot_drift.R
 \name{multiDriftPlot}
 \alias{multiDriftPlot}
-\title{multiDriftPlot}
+\title{multiDriftPlot OUTDATED}
 \usage{
 multiDriftPlot(seg, chr.size.gr = NULL, ref.ds = NULL, alt.ds = NULL)
 }
 \arguments{
-\item{seg}{}
+\item{seg}{Seg data}
 
-\item{chr.size.gr}{}
+\item{chr.size.gr}{NULL}
 
-\item{ref.ds}{}
+\item{ref.ds}{NULL}
 
-\item{alt.ds}{}
+\item{alt.ds}{NULL}
 }
 \description{
-multiDriftPlot
+multiDriftPlot OUTDATED
 }

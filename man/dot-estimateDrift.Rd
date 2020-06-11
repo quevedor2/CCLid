@@ -9,7 +9,7 @@
 \arguments{
 \item{seg.obj}{DNAcopy::segment() object}
 
-\item{z.cutoff}{Default set to 1:4;  Finds segments higher than those t-statistic away from 0}
+\item{...}{Extra param}
 }
 \value{
 
@@ -17,7 +17,4 @@
 \description{
 Estimates genetic drift given an SD adjusted DNAcopy::segment()
 object.  Estimates this based on a t-statistic
-}
-\examples{
-.estimateDrift(seg.CNAo, z.cutoff=1:3)
 }

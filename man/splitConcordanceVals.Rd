@@ -7,9 +7,9 @@
 splitConcordanceVals(dm, meta.df)
 }
 \arguments{
-\item{dm}{}
+\item{dm}{dataframe melt}
 
-\item{meta.df}{}
+\item{meta.df}{metadata for the melted dataframe}
 }
 \description{
 Melts the data structure into Sample 1, Sample 2, concordance

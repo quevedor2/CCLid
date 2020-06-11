@@ -7,13 +7,15 @@
 summarizeFracDrift(cn.drifts, cn.z, baf.drifts, baf.z, include.id = FALSE)
 }
 \arguments{
-\item{cn.drifts}{}
+\item{cn.drifts}{CN drifts - paper function}
 
-\item{cn.z}{}
+\item{cn.z}{L2R z threshold}
 
-\item{baf.drifts}{}
+\item{baf.drifts}{BAF drifts}
 
-\item{baf.z}{}
+\item{baf.z}{BAF z threshold}
+
+\item{include.id}{include the IDs in the analysis}
 }
 \value{
 list of BAF and CN summary frac

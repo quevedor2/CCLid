@@ -7,9 +7,9 @@
 .getDrift(i, idx = 1)
 }
 \arguments{
-\item{i}{}
+\item{i}{List object returned from bafDrift()}
 
-\item{idx}{}
+\item{idx}{Index to return (1 = input compared to all matching cell lines, 2 = reference cell lines to all others)}
 }
 \value{
 

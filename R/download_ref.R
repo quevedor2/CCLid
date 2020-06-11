@@ -145,13 +145,13 @@ formatRefMat <- function(name, ref.mat, analysis='baf',
 #' @importFrom stats var
 #' @importFrom stats setNames
 #' @importFrom GenomicRanges makeGRangesFromDataFrame
-#' @importFrom GenomicRanges seqlengths
+#' @importFrom IRanges seqlengths
 #' @importFrom BSgenome.Hsapiens.UCSC.hg19 Hsapiens
 #' @importFrom GenomicRanges tileGenome
-#' @importFrom GenomicRanges seqlevelsStyle
+#' @importFrom IRanges seqlevelsStyle
 #' @importFrom GenomicRanges findOverlaps
-#' @importFrom GenomicRanges queryHits
-#' @importFrom GenomicRanges subjectHits
+#' @importFrom IRanges queryHits
+#' @importFrom IRanges subjectHits
 #' 
 .getVariantFeatures <- function(ref.mat, bin.size=1e6){
   ## Gets variance of matrix

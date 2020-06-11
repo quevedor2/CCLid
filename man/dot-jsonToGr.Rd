@@ -2,12 +2,14 @@
 % Please edit documentation in R/map_probesets.R
 \name{.jsonToGr}
 \alias{.jsonToGr}
-\title{jsonToGr}
+\title{.jsonToGr}
 \usage{
 .jsonToGr(json, from.file = TRUE)
 }
 \arguments{
-\item{json}{}
+\item{json}{Json VCF format - OUTDATED}
+
+\item{from.file}{Boolean to say whether it comes from a file or passed in object}
 }
 \description{
 converts a JSON object into a VariantAnnotation object

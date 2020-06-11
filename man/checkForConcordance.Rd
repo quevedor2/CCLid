@@ -23,7 +23,7 @@ checkForConcordance(
 
 \item{meta.dat}{Metadata, defaults to meta.df if left NULL (default:NULL)}
 
-\item{verbose}{}
+\item{verbose}{Verbose}
 
 \item{return.matrix}{Return distance matrix (Default: FALSE)}
 
@@ -41,12 +41,4 @@ A list containing Distance Matrix and list of Predictions (M/NM)
 \description{
 Checks for concordance between sample in first column of
 input matrix and the rest of the reference matrix
-}
-\examples{
-  ref.dat <- CCLid::loadRef(PDIR, 'baf', bin.size=5e5)
-  ref.mat <- ref.dat$ref
-  var.dat <- ref.dat$var
-  vcfFile <- '/mnt/work1/users/home2/quever/xfer/A549.sample_id.vcf' ## A549 WES
-  vcf.mat <- compareVcf(vcfFile, var.dat=ref.dat$var, ref.mat=ref.dat$ref)
-  checkForConcordance(vcf.mat)
 }

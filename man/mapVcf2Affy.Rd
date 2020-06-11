@@ -17,7 +17,3 @@ Takes a VCF files and reads it into VariantAnnotation package to overlap with
 GRanges probeset dataset of snp6.dat.  It willc onvert the 0/0, 0/1, etc.. genotypes to 0,1,2.
 Finally, it will reutnr the BAFs and normalized BAFs for each of the overlapping probesets.
 }
-\examples{
-vcfFile <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/denis_id/mutect_GDSC/EGAR00001252191_13305_1/EGAR00001252191_13305_1.vcf"
-mapVcf2Affy(vcfFile)
-}

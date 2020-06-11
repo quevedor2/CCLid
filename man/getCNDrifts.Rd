@@ -20,9 +20,17 @@ getCNDrifts(
 
 \item{alt.l2r}{Matrix of L2R data of genomic bins by samples for comparison dataset}
 
+\item{fdat}{segment data}
+
+\item{seg.id}{element ID of ref.l2r that specifies the segment L2Rs}
+
+\item{raw.id}{element ID of ref.l2r that specifies the raw probeset L2Rs}
+
 \item{cell.ids}{All cell line IDs to compare drift between}
 
-\item{segmenter}{Segmentation algorithm, either 'PCF' (fast) or 'CBS' (slow)}
+\item{verbose}{Verbose}
+
+\item{...}{Extra param}
 }
 \value{
 CN drift object

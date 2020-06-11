@@ -7,9 +7,9 @@
 trainLogit(balanced, ...)
 }
 \arguments{
-\item{balanced}{}
+\item{balanced}{Balanced groups}
 
-\item{...}{}
+\item{...}{Extra param for .createFormula()}
 }
 \description{
 Trains a logistic regression

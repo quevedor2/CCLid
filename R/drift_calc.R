@@ -168,11 +168,11 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' @param winsor Winsorization threshold (Default = 0.95)
 #' @param ... Extra param
 #' @importFrom GenomicRanges makeGRangesFromDataFrame
-#' @importFrom GenomicRanges seqlevelsStyle
+#' @importFrom IRanges seqlevelsStyle
 #' @importFrom GenomicRanges findOverlaps
 #' @importFrom GenomicRanges mcols
-#' @importFrom GenomicRanges subjectHits
-#' @importFrom GenomicRanges queryHits
+#' @importFrom IRanges subjectHits
+#' @importFrom IRanges queryHits
 #' @importFrom stats quantile
 #' @importFrom stats sd
 #' 
@@ -230,12 +230,12 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' @param verbose Verbose (Default = FALSE)
 #' @importFrom GenomicRanges makeGRangesFromDataFrame
 #' @importFrom GenomicRanges mcols
-#' @importFrom GenomicRanges seqlevelsStyle
-#' @importFrom GenomicRanges findOverlapPairs
+#' @importFrom IRanges seqlevelsStyle
+#' @importFrom IRanges findOverlapPairs
 #' @importFrom GenomicRanges pintersect
 #' @importFrom GenomicRanges findOverlaps
-#' @importFrom GenomicRanges subjectHits
-#' @importFrom GenomicRanges queryHits
+#' @importFrom IRanges subjectHits
+#' @importFrom IRanges queryHits
 #' @importFrom stats t.test
 #'
 #' @return A list of seg objects
@@ -310,7 +310,7 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' @importFrom GenomicRanges mcols
 #' @importFrom GenomicRanges width
 #' @importFrom stats setNames
-#' @importFrom stats as
+#' @importFrom methods as
 #' 
 #' @return
 #'

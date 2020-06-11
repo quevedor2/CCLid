@@ -14,9 +14,17 @@ bafDrift(
 )
 }
 \arguments{
-\item{sample.mat}{}
+\item{sample.mat}{Input sample matrix}
 
 \item{debug}{should be set to FALSE and only changed when debugging}
+
+\item{centering}{Centering the metric on median, none, or mean}
+
+\item{norm.baf}{Boolean to normalize BAF (Default =TRUE)}
+
+\item{hom.filt.val}{Homozygous filtering threshold (Default = 0.07)}
+
+\item{...}{Extra param}
 }
 \description{
 Calcualtes the amount of genetic drift in a sample

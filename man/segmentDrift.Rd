@@ -13,6 +13,10 @@ segmentDrift(segmenter = "PCF", fdat, D, kmin = 5, rm.homo = FALSE)
 
 \item{D}{Matrix corresponding to fdat containing distances to plot, samples in 
 columns, rows are the genomic pos}
+
+\item{kmin}{Minimum number of SNPs to consider (default = 5)}
+
+\item{rm.homo}{Remove homozygous SNPs (Default = FALSE)}
 }
 \value{
 CNA object

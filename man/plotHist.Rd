@@ -7,7 +7,7 @@
 plotHist(D)
 }
 \arguments{
-\item{D}{}
+\item{D}{Returns from predictions, containins $M and $NM as elements of the list}
 }
 \description{
 Plots the histogram for matching/non-matching dataset

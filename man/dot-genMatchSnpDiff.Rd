@@ -7,7 +7,7 @@
 .genMatchSnpDiff(dr.nm)
 }
 \arguments{
-\item{dr.nm}{}
+\item{dr.nm}{nonmatch SNP}
 }
 \value{
 

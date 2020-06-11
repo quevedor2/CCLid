@@ -14,6 +14,8 @@ getBafDrifts(cl.pairs, x.mat, ref.ds = NULL, alt.ds = NULL, ...)
 \item{ref.ds}{Reference dataset (e.g. CCLE)}
 
 \item{alt.ds}{Comparing dataset (e.g. GDSC)}
+
+\item{...}{Extra param}
 }
 \value{
 Drift object

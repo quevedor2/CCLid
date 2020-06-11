@@ -7,9 +7,11 @@
 getGeneExpr(psets, gene.id, in.key = "SYMBOL")
 }
 \arguments{
-\item{psets}{}
+\item{psets}{PSets from pharmacoGX}
 
-\item{gene.id}{}
+\item{gene.id}{Gene ID to map to Ensembl IDs}
+
+\item{in.key}{for mapping gene IDs, type of Gene (Default=SYMBOL)}
 }
 \description{
 getGeneExpr

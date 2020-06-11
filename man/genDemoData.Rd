@@ -11,7 +11,7 @@ genDemoData(data.type = "BAF", n.pop = 10, ...)
 
 \item{n.pop}{Number of samples to simulate}
 
-\item{...}{}
+\item{...}{Pass in}
 }
 \value{
 A list object
@@ -21,7 +21,4 @@ A list object
 }
 \description{
 Generates random demo data to play with
-}
-\examples{
- genDemoData(data.type='BAF', n.pop=5)
 }

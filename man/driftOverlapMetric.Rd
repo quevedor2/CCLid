@@ -22,6 +22,12 @@ driftOverlapMetric(
 \item{cell.ids}{Vector of cell line names to check drift of}
 
 \item{ov.frac}{overlap fraction cutoff: (Default: seq(0, 1, by=0.01))}
+
+\item{baf.z}{z threshold for BAF difference}
+
+\item{cn.z}{z threshold for L2R difference}
+
+\item{cn.gtruth}{if TRUE, isolates BAF for only CN drifted regions}
 }
 \value{
 List containing the following elements:

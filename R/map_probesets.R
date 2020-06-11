@@ -121,11 +121,11 @@
 #' @importFrom VariantAnnotation readVcfAsVRanges
 #' @importFrom VariantAnnotation refDepth
 #' @importFrom VariantAnnotation altDepth
-#' @importFrom GenomicRanges seqlevelsStyle
+#' @importFrom IRanges seqlevelsStyle
 #' @importFrom GenomicRanges findOverlaps
-#' @importFrom GenomicRanges queryHits
+#' @importFrom IRanges queryHits
 #' @importFrom GenomicRanges mcols
-#' @importFrom GenomicRanges subjectHits
+#' @importFrom IRanges subjectHits
 #' 
 #' @return List composed of two dataframes, BAF and GT
 #' @export

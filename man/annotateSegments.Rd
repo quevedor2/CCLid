@@ -17,6 +17,8 @@ annotateSegments(
 
 \item{genes}{[GRanges]: A GRanges object of genes with gene_ids housing annotation data. Easiest as the output from getGenes()}
 
+\item{out.key}{Gene out.key, default is SYMBOL}
+
 \item{mart}{[object]: A biomart object if you want to annotate missed genes with ensembl}
 
 \item{use.mart}{[boolean]: If no mart is given, it will load in a biomart object}
@@ -26,7 +28,4 @@ Annotated GRanges object with gene ids for the input GRanges
 }
 \description{
 cnTools: annotate GRanges segments
-}
-\examples{
-annotateSegments(genDemoData(), getGenes('hg19'))
 }

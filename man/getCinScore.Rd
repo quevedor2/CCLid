@@ -7,9 +7,9 @@
 getCinScore(psets, cin.metric = "sum")
 }
 \arguments{
-\item{psets}{}
+\item{psets}{PSets from pharmacoGX}
 
-\item{cin.metric}{}
+\item{cin.metric}{sum or mean to compute CIN70 score}
 }
 \value{
 a CIN list

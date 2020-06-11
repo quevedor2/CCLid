@@ -18,7 +18,7 @@
 #' .getChrLength
 #' @importFrom BSgenome.Hsapiens.UCSC.hg19 Hsapiens
 #' @importFrom GenomicRanges makeGRangesFromDataFrame
-#' @importFrom GenomicRanges seqlengths
+#' @importFrom IRanges seqlengths
 #' @importFrom GenomicRanges end
 .getChrLength <- function(){
   chr.lengths = seqlengths(Hsapiens)[1:24]
@@ -63,8 +63,8 @@
 #' @importFrom GenomicRanges findOverlaps
 #' @importFrom GenomicRanges start
 #' @importFrom GenomicRanges end
-#' @importFrom GenomicRanges queryHits
-#' @importFrom GenomicRanges subjectHits
+#' @importFrom IRanges queryHits
+#' @importFrom IRanges subjectHits
 #' @importFrom graphics plot
 #' @importFrom graphics axis
 #' @importFrom graphics rect
@@ -122,7 +122,7 @@ multiDriftPlot <- function(seg, chr.size.gr=NULL,
 #' @param ref.ds Reference dataset
 #' @param alt.ds Alternate dataset
 #' @importFrom methods as
-#' @importFrom utils setNames
+#' @importFrom stats setNames
 #' @importFrom utils combn
 #' @importFrom GenomicRanges width
 #' @importFrom GenomicRanges seqnames

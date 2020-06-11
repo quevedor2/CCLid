@@ -7,12 +7,11 @@
 .fixGT(vcf.gt, affy.gt, ret.idx = FALSE)
 }
 \arguments{
-\item{vcf.gt}{}
+\item{vcf.gt}{VCF genotype (0,1,2)}
 
-\item{affy.gt}{}
-}
-\value{
+\item{affy.gt}{Affy6 genotype}
 
+\item{ret.idx}{Returns the index of matching instead of genotype fix}
 }
 \description{
 Switches the genotype to adjust for the reverse complement switch (0/0 -> 1/1)

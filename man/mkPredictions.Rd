@@ -7,24 +7,10 @@
 mkPredictions(pred, models)
 }
 \arguments{
-\item{pred}{}
+\item{pred}{Prediction data}
 
-\item{models}{}
+\item{models}{logistic reression model}
 }
 \description{
 Uses a trained model to predict on a pred data structure
-}
-\examples{
-## Generate all by all distance and balance Match and Nonmatch groups
-x.dist <- similarityMatrix(x.mat, 'euclidean')
-D.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=meta.df)
-balanced <- balanceGrps(D.vals)
-
-## Train the Logit model
-models <- trainLogit(balanced, predictors=c('baf'))
-x.vals <- lapply(list("baf"=x.dist), splitConcordanceVals, meta.df=NULL)
-
-## Assemble and make predictions of M or NM on the data
-pred <- assemblePredDat(x.vals, known.class=FALSE)
-pred <- mkPredictions(pred, models)
 }

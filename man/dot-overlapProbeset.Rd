@@ -7,12 +7,9 @@
 .overlapProbeset(ref.ids, comp.ids)
 }
 \arguments{
-\item{ref.ids}{}
+\item{ref.ids}{Reference probeset IDs to match order to}
 
-\item{comp.ids}{}
-}
-\value{
-
+\item{comp.ids}{IDs of the given input, comparator}
 }
 \description{
 Overlaps probesets and orders based on chr position

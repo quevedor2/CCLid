@@ -9,13 +9,7 @@
 \arguments{
 \item{vcf.gt}{VariantAnnotation object where the $GT column contains 1/1, 0/1, etc...}
 }
-\value{
-
-}
 \description{
 Maps Genotypes called from VCFs (0/0, 0/1, 1/0, 1/1) to the Affymetrix
 standard of 0, 1, 2 genotypes
-}
-\examples{
-.vcf2AffyGT(vcf.affy.gr)
 }

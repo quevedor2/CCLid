@@ -14,11 +14,17 @@ loadRef(
 )
 }
 \arguments{
+\item{PDIR}{Directory for download data}
+
 \item{analysis}{Only support BAF at the moment}
 
-\item{...}{bin.size to group variance data}
+\item{rm.gne}{Remove gCSI from the analysis (default=FALSE)}
 
-\item{pdir}{Path to directory containing or to download reference data}
+\item{bin.size}{Bin size (default=1e6)}
+
+\item{verbose}{Verbose}
+
+\item{...}{Extra param}
 }
 \value{
 List containing "ref"=reference BAF matrix
@@ -27,8 +33,4 @@ and "var"=list containing variance for bin-sizes
 \description{
 Wrapper to load in all the reference matrices
 and annotate them with groups, as well as calculate variance
-}
-\examples{
-PDIR <- "/mnt/work1/users/pughlab/projects/cancer_cell_lines/CCL_paper/CCLid/CCLid"
-loadRef(PDIR, 'baf', bin.size=5e5)
 }

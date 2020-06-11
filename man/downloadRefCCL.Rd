@@ -13,17 +13,16 @@ downloadRefCCL(
 )
 }
 \arguments{
-\item{name}{}
+\item{name}{Currently only supports "BAF"}
 
-\item{saveDir}{}
+\item{saveDir}{Directory containign bigmemory .desc/.bin folder, or where to save new download}
 
-\item{refFileName}{}
+\item{refFileName}{File name to save, or pre-existing rds or .bin file}
 
-\item{verbose}{}
+\item{verbose}{Verbose (Default=FALSE)}
+
+\item{bin.size}{Genomic size to chunk the SNPs into}
 }
 \description{
 Downloads the precomputed RDS data structures for reference
-}
-\examples{
-downloadRefCCL(name="BAF")
 }

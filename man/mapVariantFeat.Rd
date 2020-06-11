@@ -10,8 +10,6 @@ mapVariantFeat(vcf.map, var.dat)
 \item{vcf.map}{An object returned by mapVcf2Aff()}
 
 \item{var.dat}{A list returned by formatRefMat()$var}
-
-\item{slow.method}{}
 }
 \description{
 Selects only the features with the highest variance

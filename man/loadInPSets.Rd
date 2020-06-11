@@ -7,7 +7,7 @@
 loadInPSets(drug.pset)
 }
 \arguments{
-\item{drug.pset}{}
+\item{drug.pset}{PSets path from pharmacoGX downloads}
 }
 \description{
 loadInPSets

@@ -7,7 +7,7 @@
 findCclPairs(meta.df, dr.nm, ds = NULL)
 }
 \arguments{
-\item{meta.df}{}
+\item{meta.df}{Metadata containing cell IDs and their dataset mapping}
 
 \item{dr.nm}{matrix where column names are cell lines/datasets}
 

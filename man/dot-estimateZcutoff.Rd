@@ -8,6 +8,10 @@
 }
 \arguments{
 \item{seg}{an output dataframe from a CNA object}
+
+\item{data.type}{Data type, supports only 'baf' at this time}
+
+\item{verbose}{Verbose, default = FALSE}
 }
 \value{
 Returned seg with $t and $seg.diff

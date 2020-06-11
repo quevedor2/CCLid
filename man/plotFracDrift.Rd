@@ -7,7 +7,7 @@
 plotFracDrift(summ.frac)
 }
 \arguments{
-\item{summ.frac}{}
+\item{summ.frac}{summ frac list to plot, contains $baf and $cn}
 }
 \description{
 plotFracDrift

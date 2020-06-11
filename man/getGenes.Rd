@@ -6,12 +6,12 @@
 \usage{
 getGenes(genome.build = "hg19")
 }
+\arguments{
+\item{genome.build}{Genome build, only supports 'hg19'}
+}
 \value{
 A Granges object containing strand-specific genes with EntrezIDs
 }
 \description{
 Gets the genes from UCSC hg19 TxDb knownGene
-}
-\examples{
-getGenes()
 }

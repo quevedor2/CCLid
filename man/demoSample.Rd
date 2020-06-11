@@ -9,9 +9,9 @@ demoSample(data.type = "BAF", sample.ord, demo.dat)
 \arguments{
 \item{data.type}{Must be either "BAF" (default) or "geno" (case-sensitive),}
 
-\item{sample.ord}{}
+\item{sample.ord}{Order}
 
-\item{demo.dat}{}
+\item{demo.dat}{Demo data}
 }
 \value{
 

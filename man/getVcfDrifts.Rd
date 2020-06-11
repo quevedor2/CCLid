@@ -9,13 +9,22 @@ getVcfDrifts(
   ref.dat,
   rna.meta.df,
   min.depth = 5,
-  centering = "extreme"
+  centering = "extreme",
+  dataset = "GDSC"
 )
 }
 \arguments{
 \item{vcfFile}{path to vcf file}
 
+\item{ref.dat}{Refrence data containing Reference matrix and variance}
+
 \item{rna.meta.df}{Meta file linking RNA files to cell names}
+
+\item{min.depth}{Minimum depth to consider for SNPs}
+
+\item{centering}{Centering of data method to be passed into bafDrift() function}
+
+\item{dataset}{Either 'CCLE', 'GDSC', ro 'GNE'}
 }
 \value{
 A list containing the fraction of genome drifted,

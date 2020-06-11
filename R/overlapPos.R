@@ -52,7 +52,7 @@ overlapPos <- function(comp, ref, mapping='probeset'){
 #' @param meta.df Metadata containing cell IDs and their dataset mapping
 #' @param dr.nm  matrix where column names are cell lines/datasets
 #' @param ds Dataset (if any) to return (e.g. c('CCLE', 'GDSC'))
-#' @importFrom utils setNames
+#' @importFrom stats setNames
 #' 
 #' @return A list of indices indicating pair of cell lines for the data matrix
 #' @export

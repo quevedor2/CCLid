@@ -7,12 +7,9 @@
 .getVariantFeatures(ref.mat, bin.size = 1e+06)
 }
 \arguments{
-\item{ref.mat}{}
+\item{ref.mat}{Reference matrix of Samples by Probesets}
 
-\item{bin.size}{}
-}
-\value{
-
+\item{bin.size}{Bin size, Default=1e6}
 }
 \description{
 Calculates the features/probesets with the most variance from a 

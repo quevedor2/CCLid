@@ -14,6 +14,9 @@ availableRefCCL(
 \arguments{
 \item{saveDir}{Directory to store Ref files}
 
+\item{tableDir}{Defaault:NULL, uses CCLids built in table detailing external
+data location}
+
 \item{myfn}{Default: "downloadTable.csv"}
 
 \item{verbose}{Default: TRUE}

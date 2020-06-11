@@ -7,11 +7,11 @@
 driftOverlap(seg, ref.ds = NULL, alt.ds = NULL)
 }
 \arguments{
-\item{seg}{}
+\item{seg}{Seg data}
 
-\item{ref.ds}{}
+\item{ref.ds}{Reference dataset}
 
-\item{alt.ds}{}
+\item{alt.ds}{Alternate dataset}
 }
 \description{
 driftOverlap

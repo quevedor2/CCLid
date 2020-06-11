@@ -4,10 +4,14 @@
 \alias{.addSegSd}
 \title{addSegSd}
 \usage{
-.addSegSd(seg.obj, winsor = 0.95, ...)
+.addSegSd(seg.obj, winsor = 0.95, verbose = FALSE, ...)
 }
 \arguments{
 \item{seg.obj}{an object returned from DNAcopy::segment()}
+
+\item{winsor}{Winsorization threshold (Default = 0.95)}
+
+\item{...}{Extra param}
 }
 \value{
 
