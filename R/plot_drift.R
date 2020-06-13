@@ -18,7 +18,7 @@
 #' .getChrLength
 #' @importFrom BSgenome.Hsapiens.UCSC.hg19 Hsapiens
 #' @importFrom GenomicRanges makeGRangesFromDataFrame
-#' @importFrom IRanges seqlengths
+#' @importFrom GenomeInfoDb seqlengths
 #' @importFrom GenomicRanges end
 .getChrLength <- function(){
   chr.lengths = seqlengths(Hsapiens)[1:24]
@@ -63,8 +63,8 @@
 #' @importFrom GenomicRanges findOverlaps
 #' @importFrom GenomicRanges start
 #' @importFrom GenomicRanges end
-#' @importFrom IRanges queryHits
-#' @importFrom IRanges subjectHits
+#' @importFrom S4Vectors queryHits
+#' @importFrom S4Vectors subjectHits
 #' @importFrom graphics plot
 #' @importFrom graphics axis
 #' @importFrom graphics rect
@@ -182,7 +182,7 @@ driftOverlap <- function(seg, ref.ds=NULL, alt.ds=NULL){
 #' @param add.points Adds points to the segments
 #' @param min.z minimum z to report a drift change
 #' @importFrom dplyr %>%
-#' @importFrom dplyr .
+#' @import magrittr
 #' @importFrom graphics plot
 #' @importFrom graphics abline
 #' @importFrom graphics axis

@@ -3,10 +3,15 @@
 ############################
 ### Functions for CN - BAF drift overlap
 #' get Seg SD
+#' @param gr.D genomic ranges of segment distances
+#' @param gr.Draw GenomicRanges of raw probeset distances
+#' @param winsorize.data Winsorize data boolean (Default=FALSE)
+#' @param winsor winsorization threshold (Default=0.95)
+#' @param n.scale Scaling factor for denominator
 #' @importFrom GenomicRanges mcols
 #' @importFrom GenomicRanges findOverlaps
-#' @importFrom IRanges subjectHits
-#' @importFrom IRanges queryHits
+#' @importFrom S4Vectors subjectHits
+#' @importFrom S4Vectors queryHits
 #' @importFrom stats quantile
 #' @importFrom stats sd
 getSegSD <- function(gr.D, gr.Draw, winsorize.data=FALSE, winsor=0.95, n.scale=1){
@@ -28,11 +33,13 @@ getSegSD <- function(gr.D, gr.Draw, winsorize.data=FALSE, winsor=0.95, n.scale=1
   return(round(std.err, 3))
 }
 
-#' Title
+#' addSegDat
+#' @param CNAo DNAcopy object
+#' @param ... extra params
 #' @importFrom GenomicRanges makeGRangesFromDataFrame
 #' @importFrom GenomicRanges mcols
 #' 
-addSegDat <- function(ids, CNAo, ...){
+addSegDat <- function(CNAo, ...){
   gr.Draw <- makeGRangesFromDataFrame(CNAo$data, start.field = "pos", end.field="pos", keep.extra.columns = TRUE)
   gr.seg <- makeGRangesFromDataFrame(CNAo$output, keep.extra.columns = TRUE)
   ids <- colnames(mcols(gr.Draw))
@@ -94,7 +101,7 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
 #' @return CN drift object
 #' @export
 getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, verbose=TRUE, ...){
-  data(meta.df)
+  #data(meta.df)
   ## Index matching cell line pairs for the CN PSets
   ref.bin.ids <- assignGrpIDs(ref.l2r[[seg.id]], meta.df)
   alt.bin.ids <- assignGrpIDs(alt.l2r[[seg.id]], meta.df)
@@ -195,6 +202,7 @@ getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, verbose
 #' @importFrom IRanges findOverlapPairs
 #' @importFrom GenomicRanges pintersect
 #' @importFrom GenomicRanges mcols
+#' @importFrom GenomicRanges mcols<-
 #' @importFrom GenomicRanges width
 #' @importFrom stats setNames
 #' 
@@ -334,8 +342,8 @@ getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df,
 #' 
 #' @export
 readinRnaFileMapping <- function(){
-  data(rna.meta.df)
-  data(meta.df)
+  #data(rna.meta.df)
+  #data(meta.df)
   
   all.meta.df <- merge(rna.meta.df, meta.df, by="ID", all.x=TRUE)
   return(all.meta.df)
@@ -481,7 +489,7 @@ genErrBp <- function(p.m.nm){
 #' @return Character vector of OI (originating in), SS (synonymous), SI (sample from), 
 #' and PCL (problematic)
 checkAgainst <- function(mat){
-  data(melt.cells)
+  #data(melt.cells)
   .getAcr <- function(A, B, fp){
     B.mat <- B == fp
     row.A <- apply(A == fp, 1, any)
@@ -492,8 +500,8 @@ checkAgainst <- function(mat){
     return(if(length(acr) ==0) 0 else acr)
   }
   map <- apply(mat, 1, function(i){
-    fpA <- fullpull(i['cvclA'], melt.cells)
-    fpB <- fullpull(i['cvclB'], melt.cells)
+    fpA <- fullpull(i['cvclA'])
+    fpB <- fullpull(i['cvclB'])
     if(!is.null(fpA) & !is.null(fpB)){
       A=.getAcr(i['cvclA'], i['cvclB'], fpA)
       B=.getAcr(i['cvclB'], i['cvclA'], fpB)
@@ -538,7 +546,7 @@ loadInPSets <- function(drug.pset){
 #' @return a CIN list
 #' @export
 getCinScore <- function(psets, cin.metric='sum'){
-  data(cin70)
+  #data(cin70)
   
   rna <- lapply(psets, function(pset, mDataType='rnaseq'){
     mdat <- molecularProfiles(pset, mDataType)
@@ -690,11 +698,12 @@ getGenes <- function(genome.build="hg19"){
 #' @importFrom biomaRt useDataset
 #' @importFrom biomaRt getBM
 #' @importFrom GenomicRanges makeGRangesFromDataFrame
-#' @importFrom IRanges seqlevelsStyle
+#' @importFrom GenomeInfoDb seqlevelsStyle
+#' @importFrom GenomeInfoDb seqlevelsStyle<-
 #' @importFrom GenomicRanges findOverlaps
-#' @importFrom IRanges subjectHits
-#' @importFrom IRanges queryHits
-#' @importFrom IRanges subjectLength
+#' @importFrom S4Vectors subjectHits
+#' @importFrom S4Vectors queryHits
+#' @importFrom S4Vectors subjectLength
 #' @importFrom IRanges splitAsList 
 #' @importFrom AnnotationDbi mapIds
 #' @importFrom org.Hs.eg.db org.Hs.eg.db
@@ -729,7 +738,7 @@ annotateSegments <- function(cn.data, genes, out.key="SYMBOL", mart=NULL, use.ma
           ens[which(is.na(ens))] <- getBM(
             mart=mart,
             attributes="external_gene_name",
-            filter="entrezgene",
+            filters="entrezgene",
             values=names(ens[which(is.na(ens))]),
             uniqueRows=TRUE)
         }

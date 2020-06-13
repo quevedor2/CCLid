@@ -11,10 +11,9 @@
 
 \item{winsor}{Winsorization threshold (Default = 0.95)}
 
-\item{...}{Extra param}
-}
-\value{
+\item{verbose}{Default = FALSE}
 
+\item{...}{Extra para}
 }
 \description{
 Adds segment SD to CBS segment objects

@@ -11,9 +11,6 @@
 
 \item{idx}{Index to return (1 = input compared to all matching cell lines, 2 = reference cell lines to all others)}
 }
-\value{
-
-}
 \description{
 Returns the genomic fraction of drift for significant
 regions (z>3)

@@ -23,14 +23,20 @@ Imports:
     AnnotationDbi,
     bigmemory,
     biganalytics,
+    biomaRt,
     BSgenome.Hsapiens.UCSC.hg19,
     copynumber,
     DNAcopy,
     downloader,
     dplyr,
+    GenomeInfoDb,
     GenomicRanges,
     gplots,
+    ggplot2,
     IRanges,
+    magrittr,
+    matrixStats,
+    methods,
     NNLM,
     optparse,
     org.Hs.eg.db,
@@ -38,15 +44,17 @@ Imports:
     philentropy,
     plyr,
     preprocessCore,
-    RCellosaurus,
     RColorBrewer,
     reshape2,
     Rfast,
     rjson,
+    S4Vectors,
     scales,
     TxDb.Hsapiens.UCSC.hg19.knownGene,
     VariantAnnotation
 Suggests: 
     knitr,
     rmarkdown
+Depends:
+    R (>= 2.10.0)
 VignetteBuilder: knitr

@@ -9,9 +9,6 @@
 \arguments{
 \item{dr.nm}{nonmatch SNP}
 }
-\value{
-
-}
 \description{
 generates a matrix of euclidean distance between probesets of 
 sample pairs if the sample id's MATCH

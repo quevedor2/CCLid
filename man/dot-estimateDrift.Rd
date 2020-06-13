@@ -11,9 +11,6 @@
 
 \item{...}{Extra param}
 }
-\value{
-
-}
 \description{
 Estimates genetic drift given an SD adjusted DNAcopy::segment()
 object.  Estimates this based on a t-statistic

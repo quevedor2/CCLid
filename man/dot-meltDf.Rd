@@ -6,6 +6,9 @@
 \usage{
 .meltDf(m)
 }
+\arguments{
+\item{m}{Square similarity matrix}
+}
 \description{
 Melts dataframe
 }
