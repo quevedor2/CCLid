@@ -367,3 +367,9 @@ gcsi.meta <- gcsi.meta[-which(duplicated(gcsi.meta$Cell_line)),]
 gcsi.meta$V1.y <- paste0(gcsi.meta$V1.y, "_1")
 write.table(gcsi.meta, file=file.path(PDIR, "gcsi_meta.tsv"), sep="\t",
             col.names=TRUE, row.names=FALSE, quote=FALSE)
+
+#### Generate internal memory ####
+data(snp6.dat)
+snp6_all <- snp6.dat$All
+snp6_all@elementMetadata <- mcols(snp6_all)[,c('Probe_Set_ID','Probe'), drop=FALSE]
+save(snp6_all, file="~/snp6_all.rda")
