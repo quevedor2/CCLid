@@ -369,7 +369,12 @@ write.table(gcsi.meta, file=file.path(PDIR, "gcsi_meta.tsv"), sep="\t",
             col.names=TRUE, row.names=FALSE, quote=FALSE)
 
 #### Generate internal memory ####
-data(snp6.dat)
-snp6_all <- snp6.dat$All
-snp6_all@elementMetadata <- mcols(snp6_all)[,c('Probe_Set_ID','Probe'), drop=FALSE]
-save(snp6_all, file="~/snp6_all.rda")
+data_dir <- "~/git/CCL_authenticator/data"
+data_files <- list.files(data_dir)
+for( i in data_files){
+  load(file.path(data_dir, i))
+}
+cat(gsub(".rda$", "", data_files), sep=", ")
+usethis::use_data(affy.omni, cin70, gne.meta, melt.cells, 
+                  meta.df, rna.meta.df, snp6.dat, 
+                  internal = TRUE, overwrite = T)
