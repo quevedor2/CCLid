@@ -5,7 +5,7 @@
 #' @param comp.ids IDs of the given input, comparator
 #' 
 .overlapProbeset <- function(ref.ids, comp.ids){
-  probe.meta <- CCLid::snp6.dat$SNP$Probe_Set_ID
+  probe.meta <- snp6.dat$SNP$Probe_Set_ID
   
   # Order according the meta data for probesets
   idx.df <- data.frame("comp"=match(probe.meta, comp.ids),

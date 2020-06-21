@@ -2,10 +2,15 @@
 % Please edit documentation in R/paper_functions.R
 \name{addSegDat}
 \alias{addSegDat}
-\title{Title}
+\title{addSegDat}
 \usage{
-addSegDat(ids, CNAo, ...)
+addSegDat(CNAo, ...)
+}
+\arguments{
+\item{CNAo}{DNAcopy object}
+
+\item{...}{extra params}
 }
 \description{
-Title
+addSegDat
 }

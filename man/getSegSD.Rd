@@ -6,6 +6,17 @@
 \usage{
 getSegSD(gr.D, gr.Draw, winsorize.data = FALSE, winsor = 0.95, n.scale = 1)
 }
+\arguments{
+\item{gr.D}{genomic ranges of segment distances}
+
+\item{gr.Draw}{GenomicRanges of raw probeset distances}
+
+\item{winsorize.data}{Winsorize data boolean (Default=FALSE)}
+
+\item{winsor}{winsorization threshold (Default=0.95)}
+
+\item{n.scale}{Scaling factor for denominator}
+}
 \description{
 get Seg SD
 }

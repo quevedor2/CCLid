@@ -3,17 +3,17 @@
 #' cell line name
 #'
 #' @param cellid character: cell line name (e.g. MCF-7)
-#' @param melt.cells from data(melt.cells)
+#' @param prioritize.datasets default=TRUE
+#' @importFrom utils data
 #'
 #' @return CVCL_ style character name
-#' @importsFrom utils data
 #' @export
 #'
-#' @examples data(melt.cells)
-#' getCVCL("Hela", melt.cells)
-getCVCL <- function(cellid, melt.cells, prioritize.datasets=TRUE){
+#' @examples 
+#' getCVCL("Hela")
+getCVCL <- function(cellid, prioritize.datasets=TRUE){
   # cellid <- "ES-2"
-  data(melt.cells)
+  #data(melt.cells)
   cl.match <- melt.cells[grep(paste0("^", cellid, "$"), melt.cells$ID),]
 
   ## If all CVCL's are equal, just use it

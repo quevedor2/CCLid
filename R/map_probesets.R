@@ -121,11 +121,13 @@
 #' @importFrom VariantAnnotation readVcfAsVRanges
 #' @importFrom VariantAnnotation refDepth
 #' @importFrom VariantAnnotation altDepth
-#' @importFrom IRanges seqlevelsStyle
+#' @importFrom GenomeInfoDb seqlevelsStyle
+#' @importFrom GenomeInfoDb seqlevelsStyle<-
 #' @importFrom GenomicRanges findOverlaps
-#' @importFrom IRanges queryHits
+#' @importFrom S4Vectors queryHits
 #' @importFrom GenomicRanges mcols
-#' @importFrom IRanges subjectHits
+#' @importFrom GenomicRanges mcols<-
+#' @importFrom S4Vectors subjectHits
 #' 
 #' @return List composed of two dataframes, BAF and GT
 #' @export
@@ -146,10 +148,10 @@ mapVcf2Affy <- function(vcfFile){
   vcf.gr <- sort(vcf.gr)
   
   ## Overlap VCF file with the snp6 SNP probesets
-  ov.idx <- findOverlaps(vcf.gr, CCLid::snp6.dat$SNP) # Memory: 1.6Gb
+  ov.idx <- findOverlaps(vcf.gr, snp6.dat$SNP) # Memory: 1.6Gb
   vcf.affy.gr <- vcf.gr[queryHits(ov.idx)]
   mcols(vcf.affy.gr) <- cbind(mcols(vcf.affy.gr), 
-                              mcols(CCLid::snp6.dat$SNP[subjectHits(ov.idx),]))
+                              mcols(snp6.dat$SNP[subjectHits(ov.idx),]))
   vcf.affy.gr$tdepth <- (refDepth(vcf.affy.gr) + altDepth(vcf.affy.gr))
   gc() # Memory: 1.4Gb
   

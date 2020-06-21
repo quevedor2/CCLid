@@ -154,7 +154,7 @@ checkForConcordance <- function(x.mat, metric='euclidean',
   x.dist <- CCLid::similarityMatrix(x.mat, method = metric)
   if(is.null(meta.dat)){
     if(verbose) print("Loading in metadata designed for reference matrix...")
-    data(meta.df)
+    #data(meta.df)
     meta.dat <- meta.df
   }
   gc();

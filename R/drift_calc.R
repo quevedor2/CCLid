@@ -10,7 +10,7 @@
 #' @param rm.homo  Remove homozygous SNPs (Default = FALSE)
 #' @importFrom stats median
 #' @importFrom dplyr %>%
-#' @importFrom dplyr .
+#' @import magrittr
 #' @importFrom DNAcopy smooth.CNA
 #' @importFrom DNAcopy segment
 #' 
@@ -84,7 +84,7 @@ segmentDrift <- function(segmenter='PCF', fdat, D, kmin=5, rm.homo=FALSE){
 #' @export
 bafDrift <- function(sample.mat, debug=FALSE, centering='none', 
                      norm.baf=TRUE, hom.filt.val=0.07, ...){
-  data(snp6.dat)
+  #data(snp6.dat)
   ## Get pairwise distance between loci
   M <- if(norm.baf) .normBAF(sample.mat) else sample.mat
   hom.filt.idx <- (rowSums(M) <= (hom.filt.val * ncol(M)))
@@ -166,17 +166,16 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #'
 #' @param seg.obj an object returned from DNAcopy::segment()
 #' @param winsor Winsorization threshold (Default = 0.95)
-#' @param ... Extra param
+#' @param verbose Default = FALSE
+#' @param ... Extra para
 #' @importFrom GenomicRanges makeGRangesFromDataFrame
-#' @importFrom IRanges seqlevelsStyle
+#' @importFrom GenomeInfoDb seqlevelsStyle
 #' @importFrom GenomicRanges findOverlaps
 #' @importFrom GenomicRanges mcols
-#' @importFrom IRanges subjectHits
-#' @importFrom IRanges queryHits
+#' @importFrom S4Vectors subjectHits
+#' @importFrom S4Vectors queryHits
 #' @importFrom stats quantile
 #' @importFrom stats sd
-#' 
-#' @return
 .addSegSd <- function(seg.obj, winsor=0.95, verbose=FALSE, ...){
   adj.segs <- lapply(split(seg.obj$output, f=seg.obj$output$ID), function(seg){
     if (verbose) print(paste0(unique(seg$ID), "..."))
@@ -189,7 +188,8 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
                                        end.field = c('maploc', 'pos'), 
                                        keep.extra.columns = TRUE)
     gr.seg <- makeGRangesFromDataFrame(seg, keep.extra.columns = TRUE)
-    seqlevelsStyle(gr.seg) <- seqlevelsStyle(gr.dat) <- 'UCSC'
+    seqlevelsStyle(gr.seg) <- 'UCSC'
+    seqlevelsStyle(gr.dat) <- 'UCSC'
     
     ov.idx <- findOverlaps(gr.dat, gr.seg)
     s.idx <- grep(paste0("^", unique(gr.seg$ID), "$"), colnames(mcols(gr.dat)))
@@ -230,12 +230,14 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' @param verbose Verbose (Default = FALSE)
 #' @importFrom GenomicRanges makeGRangesFromDataFrame
 #' @importFrom GenomicRanges mcols
-#' @importFrom IRanges seqlevelsStyle
+#' @importFrom GenomicRanges mcols<-
+#' @importFrom GenomeInfoDb seqlevelsStyle
+#' @importFrom GenomeInfoDb seqlevelsStyle<-
 #' @importFrom IRanges findOverlapPairs
 #' @importFrom GenomicRanges pintersect
 #' @importFrom GenomicRanges findOverlaps
-#' @importFrom IRanges subjectHits
-#' @importFrom IRanges queryHits
+#' @importFrom S4Vectors subjectHits
+#' @importFrom S4Vectors queryHits
 #' @importFrom stats t.test
 #'
 #' @return A list of seg objects
@@ -312,8 +314,6 @@ bafDrift <- function(sample.mat, debug=FALSE, centering='none',
 #' @importFrom stats setNames
 #' @importFrom methods as
 #' 
-#' @return
-#'
 .estimateDrift <- function(seg.obj, ...){
   seg.gr <- makeGRangesFromDataFrame(seg.obj$output, keep.extra.columns = TRUE)
   drift.dat <- lapply(split(seg.gr, seg.gr$ID), function(seg, z.cutoff=NULL, ...){
@@ -421,7 +421,6 @@ sigDiffBaf <- function(each.sample){
 #' @param i List object returned from bafDrift()
 #' @param idx Index to return (1 = input compared to all matching cell lines, 2 = reference cell lines to all others)
 #'
-#' @return
 .getDrift <- function(i, idx=1){
   if(length(i$frac) >= idx){
     ## Select the "z > 3" row from all baf-drift estimates

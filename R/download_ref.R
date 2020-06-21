@@ -145,14 +145,14 @@ formatRefMat <- function(name, ref.mat, analysis='baf',
 #' @importFrom stats var
 #' @importFrom stats setNames
 #' @importFrom GenomicRanges makeGRangesFromDataFrame
-#' @importFrom IRanges seqlengths
+#' @importFrom GenomeInfoDb seqlengths
 #' @importFrom BSgenome.Hsapiens.UCSC.hg19 Hsapiens
 #' @importFrom GenomicRanges tileGenome
-#' @importFrom IRanges seqlevelsStyle
+#' @importFrom GenomeInfoDb seqlevelsStyle
 #' @importFrom GenomicRanges findOverlaps
-#' @importFrom IRanges queryHits
-#' @importFrom IRanges subjectHits
-#' 
+#' @importFrom S4Vectors queryHits
+#' @importFrom S4Vectors subjectHits
+#' @importFrom GenomeInfoDb seqlevelsStyle<-
 .getVariantFeatures <- function(ref.mat, bin.size=1e6){
   ## Gets variance of matrix
   ref.vars <- apply(ref.mat, 1, var, na.rm=TRUE)
@@ -163,8 +163,8 @@ formatRefMat <- function(name, ref.mat, analysis='baf',
   na.per.snp <- setNames(na.per.snp, rownames(ref.mat))
   
   ## Identifies genomic position of SNPs in ref.mat
-  all.pb <-  as.data.frame(CCLid::snp6.dat$All)[,c(1:3)] #Loads in probeset meta data
-  rownames(all.pb) <- CCLid::snp6.dat$All$Probe_Set_ID
+  all.pb <-  as.data.frame(snp6.dat$All)[,c(1:3)] #Loads in probeset meta data
+  rownames(all.pb) <- snp6.dat$All$Probe_Set_ID
   var.pb <- all.pb[names(ref.vars),] # Selects rows based on probeset IDs
   var.pb$var <- round(ref.vars,3)  # Variance column
   var.pb$Probe_Set_ID <- names(ref.vars)  # Probe_Set_ID column

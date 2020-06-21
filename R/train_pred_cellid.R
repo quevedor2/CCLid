@@ -220,6 +220,7 @@ mkPredictions <- function(pred, models){
 #### Private Functions ####
 #' Melts dataframe
 #' @importFrom reshape2 melt
+#' @param m Square similarity matrix
 #'
 .meltDf <- function(m){
   diag(m) <- m[upper.tri(m)] <- NA
@@ -271,9 +272,8 @@ mkPredictions <- function(pred, models){
 #' @param dr.nm nonmatch SNP
 #' @importFrom utils combn
 #' @importFrom matrixStats rowDiffs
-#' @return
 .genMatchSnpDiff <- function(dr.nm){
-  data(meta.df)
+  #data(meta.df)
   m.d <- sapply(meta.df$ID, function(i){
     idx <- grep(paste0("_", i, "$"), colnames(dr.nm))
     if(length(idx) > 1){
