@@ -4,7 +4,7 @@
 \alias{assignGrpIDs}
 \title{pIDs}
 \usage{
-assignGrpIDs(mat, meta.df)
+assignGrpIDs(mat, meta.df, datasets = c("GNE", "GDSC", "CCLE"))
 }
 \arguments{
 \item{mat}{Matrix of BAF/Geno}
