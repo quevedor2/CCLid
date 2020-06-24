@@ -297,7 +297,7 @@ driftOverlapMetric <- function(gr.baf, gr.cn, cell.ids, ov.frac=seq(0, 1, by=0.0
 #' @return A list containing the fraction of genome drifted,
 #' as well the significantly drifted regions CNAo
 #' @export
-getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df,  
+getVcfDrifts <- function(vcfFile, ref.dat, meta.df,  
                          min.depth=5, centering='extreme',
                          dataset='GDSC'){
   vcf <- basename(vcfFile)
@@ -306,17 +306,17 @@ getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df,
   vcf.mat <- compareVcf(vcfFile, var.dat=ref.dat$var, 
                         ref.mat=ref.dat$ref, min.depth=min.depth)
   rna.idx <- switch(dataset,
-                    "GDSC"=grep(gsub(".snpOut.*", "", vcf), rna.meta.df$EGAF),
-                    "CCLE"=grep(gsub(".snpOut.*", "", vcf), rna.meta.df$SRR),
-                    "GNE"=grep(gsub(".snpOut.*", "", vcf), rna.meta.df$gCSI_RNA))  
-  colnames(vcf.mat)[1] <- paste0("RNA_", rna.meta.df[rna.idx, 'ID'])
-  if(is.na(rna.meta.df[rna.idx, 'ID']) & dataset=='GNE'){
-    colnames(vcf.mat)[1] <- rna.meta.df[rna.idx,'gCSI_RNA']
+                    "GDSC"=grep(gsub(".snpOut.*", "", vcf), meta.df$EGAF),
+                    "CCLE"=grep(gsub(".snpOut.*", "", vcf), meta.df$SRR),
+                    "GNE"=grep(gsub(".snpOut.*", "", vcf), meta.df$gCSI_RNA))  
+  colnames(vcf.mat)[1] <- paste0("RNA_", meta.df[rna.idx, 'ID'])
+  if(is.na(meta.df[rna.idx, 'ID']) & dataset=='GNE'){
+    colnames(vcf.mat)[1] <- meta.df[rna.idx,'gCSI_RNA']
   }
   
   ## Identify matching cell line data to RNAseq
   ## Calculate drift of Cell line with RNAseq with external control
-  match.idx <- grep(paste0("(^|_)", gsub("NCI-", ".*", rna.meta.df[rna.idx,]$ID), "$"), colnames(vcf.mat))
+  match.idx <- grep(paste0("(^|_)", gsub("NCI-", ".*", meta.df[rna.idx,]$ID), "$"), colnames(vcf.mat))
   if(length(match.idx) > 1){
     x.drift <- bafDrift(sample.mat=vcf.mat[,match.idx, drop=FALSE], hom.filt.val=0,
                         norm.baf=TRUE, segmenter='PCF', centering=centering)
@@ -333,20 +333,6 @@ getVcfDrifts <- function(vcfFile, ref.dat, rna.meta.df,
     summ=NULL
   }
   return(summ)
-}
-
-#' readinRnaFileMapping
-#' @description Map the RNA files to the SNP files
-#' using hardcoded metadata
-#' @importFrom utils data
-#' 
-#' @export
-readinRnaFileMapping <- function(){
-  #data(rna.meta.df)
-  #data(meta.df)
-  
-  all.meta.df <- merge(rna.meta.df, meta.df, by="ID", all.x=TRUE)
-  return(all.meta.df)
 }
 
 #' summarizeFracDrift
