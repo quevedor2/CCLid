@@ -1,2 +1,1 @@
-Ref.type,Datasets,Dataset.Type,Data.update,URL
-BAF,GDSC/CCLE/GNE,BAF,Sat Feb 1 2020,https://pmgenomics.ca/pughlabwiki/lib/exe/fetch.php?media=data:public_data:bafs-matrix.rds.gz
+Data.type,Datasets,Dataset.Type,Data.update,URLBAF,GDSC/CCLE/GNE,BAF,Feb 1 2020,https://pmgenomics.ca/pughlabwiki/lib/exe/fetch.php?media=data:public_data:bafs-matrix.rds.gzMETA.DF,GDSC/CCLE/GNE,Metadata,June 26 2020,AFFY.OMNI,GNE,Mapping,June 26 2020,CIN70,NA,Genes,June 26 2020,GNE.META,GNE,Metadata,June 26 2020,MELT.CELLS,GDSC/CCLE/GNE,Mapping,June 26 2020,SNP6.DAT,CCLE/GDSC,Probeset,June 26 2020,
