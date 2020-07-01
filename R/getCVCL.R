@@ -4,6 +4,8 @@
 #'
 #' @param cellid character: cell line name (e.g. MCF-7)
 #' @param prioritize.datasets default=TRUE
+#' @param melt.cells Melted cellosaurus dataframe, accessible from CCLid::ccl_table
+#' 
 #' @importFrom utils data
 #'
 #' @return CVCL_ style character name
@@ -11,7 +13,7 @@
 #'
 #' @examples 
 #' getCVCL("Hela")
-getCVCL <- function(cellid, prioritize.datasets=TRUE){
+getCVCL <- function(cellid, prioritize.datasets=TRUE, melt.cells){
   # cellid <- "ES-2"
   #data(melt.cells)
   cl.match <- melt.cells[grep(paste0("^", cellid, "$"), melt.cells$ID),]

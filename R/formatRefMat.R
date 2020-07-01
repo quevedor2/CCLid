@@ -11,6 +11,7 @@
 #' @param bin.size Default is set to 5e5, a variant file must be created for this bin size
 #' @param just.var Just runs the variant SNP part of the script, skips subsetting
 #' @param fill.na Fills NA with median (Default=FALSE)
+#' @param snp6.dat SNP6 probeset genomic position, accessible from CCLid::ccl_table
 #' @param verbose Verbose
 #' @importFrom stats median
 #' 
@@ -21,7 +22,8 @@
 #'
 formatRefMat <- function(name, ref.mat, analysis='baf', 
                          varFileName=NULL, saveDir = file.path(".", "CCLid"), 
-                         bin.size=1e6, just.var=FALSE, fill.na=FALSE, verbose=FALSE){
+                         bin.size=1e6, just.var=FALSE, fill.na=FALSE, 
+                         snp6.dat, verbose=FALSE){
   # saveDir=PDIR
   # name='BAF'
   # analysis='baf'
@@ -63,7 +65,8 @@ formatRefMat <- function(name, ref.mat, analysis='baf',
       var.feats <- readRDS(file.path(saveDir, varFileName))
     } else {
       if(verbose) print("Generate feature variance data")
-      var.feats <- .getVariantFeatures(ref.mat, bin.size)
+      var.feats <- .getVariantFeatures(ref.mat=ref.mat, bin.size=bin.size, 
+                                       snp6.dat=snp6.dat)
       saveRDS(var.feats, file.path(saveDir, varFileName))
     }
   } else {

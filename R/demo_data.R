@@ -238,7 +238,7 @@ combineSamples <- function(data.type, sample.mat, prop){
   ## Look for similarity
   sample=basename(vcfFile)
   colnames(vcf.mat)[1] <- sample
-  pred <- checkForConcordance(vcf.mat, sampleID=sample) 
+  pred <- checkForConcordance(vcf.mat, sampleID=sample, meta.df=meta.df) 
   
   ## Look for drift
   all.ids <- unique(unlist(pred$pred$M[,c('Var1', 'Var2')]))

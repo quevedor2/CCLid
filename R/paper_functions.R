@@ -57,11 +57,13 @@ addSegDat <- function(CNAo, ...){
 #' @param x.mat Input matrix containing probeset BAF data
 #' @param ref.ds Reference dataset (e.g. CCLE)
 #' @param alt.ds Comparing dataset (e.g. GDSC)
+#' @param snp6.dat SNP6 probeset genomic position, accessible from CCLid::ccl_table
 #' @param ... Extra param
 #'
 #' @return Drift object
 #' @export
-getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
+getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, 
+                         snp6.dat, ...){
   ref.idx <- grep(paste0(ref.ds, "_"), colnames(x.mat)[cl.pairs])
   alt.idx <- grep(paste0(alt.ds, "_"), colnames(x.mat)[cl.pairs])
   all.idx <- c(ref.idx, alt.idx)
@@ -71,7 +73,8 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
     # centering = centering; norm.baf = TRUE; segmenter='PCF', hom.filt.val=0
     # bafDrift(sample.mat = x.mat[,cl.pairs[all.idx]], debug = FALSE, segmenter='PCF',
     #          centering = centering, norm.baf = TRUE, hom.filt.val=0)
-    bdf <- bafDrift(sample.mat = x.mat[,cl.pairs[all.idx]], hom.filt.val=0, ...)
+    bdf <- bafDrift(sample.mat = x.mat[,cl.pairs[all.idx]], hom.filt.val=0,
+                    snp6.dat=snp6.dat, ...)
     #CCLid:::plot.CCLid(bdf$cna.obj[[1]], min.z=4)
     drift.score <- list("sig.gr"=bdf$cna.obj, #CCLid::sigDiffBaf(bdf$cna.obj[[1]]),
                         "frac"=bdf$frac[[1]])
@@ -94,13 +97,16 @@ getBafDrifts <- function(cl.pairs, x.mat, ref.ds=NULL, alt.ds=NULL, ...){
 #' @param verbose Verbose
 #' @param ... Extra param
 #' @param cell.ids All cell line IDs to compare drift between
+#' @param meta.df Cell line metadata, accessible from CCLid::ccl_table
+#' 
 #' @importFrom utils data
 #' @importFrom preprocessCore normalize.quantiles
 #' @importFrom matrixStats rowDiffs
 #' @importFrom stats median
 #' @return CN drift object
 #' @export
-getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, cell.ids, verbose=TRUE, ...){
+getCNDrifts <- function(ref.l2r, alt.l2r,fdat, seg.id, raw.id, 
+                        cell.ids, verbose=TRUE, meta.df, ...){
   #data(meta.df)
   ## Index matching cell line pairs for the CN PSets
   ref.bin.ids <- assignGrpIDs(ref.l2r[[seg.id]], meta.df)
@@ -293,18 +299,20 @@ driftOverlapMetric <- function(gr.baf, gr.cn, cell.ids, ov.frac=seq(0, 1, by=0.0
 #' @param min.depth Minimum depth to consider for SNPs
 #' @param dataset Either 'CCLE', 'GDSC', ro 'GNE'
 #' @param centering Centering of data method to be passed into bafDrift() function
+#' @param snp6.dat SNP6 probeset genomic position, accessible from CCLid::ccl_table
 #'
 #' @return A list containing the fraction of genome drifted,
 #' as well the significantly drifted regions CNAo
 #' @export
 getVcfDrifts <- function(vcfFile, ref.dat, meta.df,  
                          min.depth=5, centering='extreme',
-                         dataset='GDSC'){
+                         dataset='GDSC', snp6.dat){
   vcf <- basename(vcfFile)
   cat(basename(vcf), "...\n")
   ## Load in VCF data and leftjoin to existing ref.mat
   vcf.mat <- compareVcf(vcfFile, var.dat=ref.dat$var, 
-                        ref.mat=ref.dat$ref, min.depth=min.depth)
+                        ref.mat=ref.dat$ref, min.depth=min.depth
+                        snp6.dat=snp6.dat)
   rna.idx <- switch(dataset,
                     "GDSC"=grep(gsub(".snpOut.*", "", vcf), meta.df$EGAF),
                     "CCLE"=grep(gsub(".snpOut.*", "", vcf), meta.df$SRR),
@@ -471,10 +479,12 @@ genErrBp <- function(p.m.nm){
 #' Cellosaurus database
 #'
 #' @param mat A matrix containing "cvclA" and "cvclB" columns for cellosaurus IDs of cell lines
+#' @param melt.cells Melted cellosaurus dataframe, accessible from CCLid::ccl_table
+#' 
 #' @importFrom utils data
 #' @return Character vector of OI (originating in), SS (synonymous), SI (sample from), 
 #' and PCL (problematic)
-checkAgainst <- function(mat){
+checkAgainst <- function(mat, melt.cells){
   #data(melt.cells)
   .getAcr <- function(A, B, fp){
     B.mat <- B == fp
@@ -486,8 +496,8 @@ checkAgainst <- function(mat){
     return(if(length(acr) ==0) 0 else acr)
   }
   map <- apply(mat, 1, function(i){
-    fpA <- fullpull(i['cvclA'])
-    fpB <- fullpull(i['cvclB'])
+    fpA <- fullpull(i['cvclA'], melt.cells)
+    fpB <- fullpull(i['cvclB'], melt.cells)
     if(!is.null(fpA) & !is.null(fpB)){
       A=.getAcr(i['cvclA'], i['cvclB'], fpA)
       B=.getAcr(i['cvclB'], i['cvclA'], fpB)
@@ -526,12 +536,14 @@ loadInPSets <- function(drug.pset){
 #'
 #' @param psets PSets from pharmacoGX
 #' @param cin.metric sum or mean to compute CIN70 score
+#' @param cin70 CIN70 gene set, accessible from CCLid::ccl_table
+#' 
 #' @importFrom utils data
 #' @importFrom PharmacoGx molecularProfiles
 #' 
 #' @return a CIN list
 #' @export
-getCinScore <- function(psets, cin.metric='sum'){
+getCinScore <- function(psets, cin.metric='sum', cin70){
   #data(cin70)
   
   rna <- lapply(psets, function(pset, mDataType='rnaseq'){

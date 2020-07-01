@@ -64,6 +64,6 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
     
     return(ref.mat)
   } else {
-    CCLid:::.chkAndDownload(name, whichx, saveDir)
+    .chkAndDownload(name, whichx, saveDir)
   }
 }
