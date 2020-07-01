@@ -10,6 +10,8 @@ assignGrpIDs(mat, meta.df, datasets = c("GNE", "GDSC", "CCLE"))
 \item{mat}{Matrix of BAF/Geno}
 
 \item{meta.df}{Metadata for the samples being used with CVCL ids}
+
+\item{datasets}{Datasets to include in analysis (Default 'GNE', 'CCLE', 'GDSC')}
 }
 \description{
 Creates a standardized set of group names for 

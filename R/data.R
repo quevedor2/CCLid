@@ -1,0 +1,18 @@
+#' Table containing links to external datasets and BAF matrices
+#'
+#' A data table containing metadata regarding links and datasets
+#' needed for the CCLid package.
+#'
+#' @format A data frame with 12 rows and 7 variables:
+#' \describe{
+#'   \item{Data.type}{Unique identifier for dataset}
+#'   \item{Datasets}{Datasets the data type are designed from/for}
+#'   \item{Dataset.Type}{What type of dataset the data.type is}
+#'   \item{Data.update}{Date of the last modification}
+#'   \item{URL}{Primary Zenodo download URL}
+#'   \item{URL2}{Second download URL}
+#'   \item{URL3}{Tertiary download URL}
+#'   ...
+#' }
+#' @source \url{https://zenodo.org/deposit/3891805}
+"ccl_table"

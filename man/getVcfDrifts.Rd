@@ -7,7 +7,7 @@
 getVcfDrifts(
   vcfFile,
   ref.dat,
-  rna.meta.df,
+  meta.df,
   min.depth = 5,
   centering = "extreme",
   dataset = "GDSC"
@@ -18,7 +18,7 @@ getVcfDrifts(
 
 \item{ref.dat}{Refrence data containing Reference matrix and variance}
 
-\item{rna.meta.df}{Meta file linking RNA files to cell names}
+\item{meta.df}{Meta file linking RNA files to cell names}
 
 \item{min.depth}{Minimum depth to consider for SNPs}
 

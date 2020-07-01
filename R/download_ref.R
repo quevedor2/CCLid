@@ -62,6 +62,7 @@
 #' 
 #' @param mat Matrix of BAF/Geno
 #' @param meta.df Metadata for the samples being used with CVCL ids
+#' @param datasets Datasets to include in analysis (Default 'GNE', 'CCLE', 'GDSC')
 #'
 #' @export
 assignGrpIDs <- function(mat, meta.df, datasets=c("GNE", "GDSC", "CCLE")){

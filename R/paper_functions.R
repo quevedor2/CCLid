@@ -288,7 +288,7 @@ driftOverlapMetric <- function(gr.baf, gr.cn, cell.ids, ov.frac=seq(0, 1, by=0.0
 #' cell line names based on the meta-data matched IDs
 #'
 #' @param vcfFile path to vcf file
-#' @param rna.meta.df Meta file linking RNA files to cell names
+#' @param meta.df Meta file linking RNA files to cell names
 #' @param ref.dat Refrence data containing Reference matrix and variance
 #' @param min.depth Minimum depth to consider for SNPs
 #' @param dataset Either 'CCLE', 'GDSC', ro 'GNE'
