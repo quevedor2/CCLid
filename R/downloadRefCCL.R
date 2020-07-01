@@ -4,13 +4,12 @@
 #' @param name Currently only supports "BAF"
 #' @param saveDir Directory containign bigmemory .desc/.bin folder, or where to save new download
 #' @param verbose Verbose (Default=FALSE)
-#' @param bin.size Genomic size to chunk the SNPs into
 #' @importFrom bigmemory attach.big.matrix
 #' 
 #' @export
 #'
 downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"), 
-                            verbose = FALSE, bin.size=NULL) {
+                            verbose = FALSE) {
   if (!file.exists(saveDir)) {
     dir.create(saveDir, recursive = TRUE)
   }
@@ -26,7 +25,7 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
   
   ## Load in the probeset BAF/Genotype matrix
   if(name %in% c("BAF", "GENO")){
-    identifier <- paste0("ref_", tolower(name), "-", as.integer(bin.size))
+    identifier <- paste0("ref_", tolower(name))
     row_ids <- paste0("ref_", tolower(name), "-ids.rds")
     desc_chk <- file.exists(file.path(saveDir, paste0(identifier, ".desc")))
     bin_chk <- file.exists(file.path(saveDir, paste0(identifier, ".bin")))

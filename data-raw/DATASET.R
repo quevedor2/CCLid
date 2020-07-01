@@ -379,6 +379,7 @@ write.table(gcsi.meta, file=file.path(PDIR, "gcsi_meta.tsv"), sep="\t",
 #                   meta.df, rna.meta.df, snp6.dat, 
 #                   internal = TRUE, overwrite = T)
 
+setwd("~/git/CCL_authenticator")
 dataraw_dir <- "~/git/CCL_authenticator/data-raw"
 ccl_table <- read.csv(file.path(dataraw_dir, "downloadTable.csv"), 
                       check.names = FALSE, 

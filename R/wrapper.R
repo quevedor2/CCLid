@@ -25,7 +25,7 @@ loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE, bin.size=1e6, verbo
   # 
   # }
   if(verbose) print("Attaching/downloading reference matrix...")
-  ref.mat <- downloadRefCCL(toupper(analysis), saveDir = PDIR, bin.size=bin.size, verbose=verbose)
+  ref.mat <- downloadRefCCL(toupper(analysis), saveDir = PDIR, verbose=verbose)
   
   if(rm.gne){
     rm.idx <- grep("^Unk*", colnames(ref.mat))
