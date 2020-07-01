@@ -10,9 +10,6 @@
 #'
 #' @return CVCL_ style character name
 #' @export
-#'
-#' @examples 
-#' getCVCL("Hela")
 getCVCL <- function(cellid, prioritize.datasets=TRUE, melt.cells){
   # cellid <- "ES-2"
   #data(melt.cells)

@@ -9,7 +9,7 @@
 #' Else, it will use the rownames of ref as the probe set IDs
 #'
 #' @export
-overlapPos <- function(comp, ref, mapping='probeset', ...){
+overlapPos <- function(comp, ref, mapping='probeset', snp6.dat){
   switch(mapping,
          "probeset"={
            if(any(grepl("Probe_Set_ID", colnames(comp)))){

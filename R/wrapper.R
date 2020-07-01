@@ -15,7 +15,7 @@
 #' @export
 #'
 loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE, 
-                    bin.size=1e6, verbose=FALSE, meta.df, ...){
+                    bin.size=1e6, verbose=FALSE, meta.df=NULL, ...){
   # if(verbose) print("Checking for existing reference data...")
   # ref.data.exists <- any(grepl(paste0(as.integer(bin.size), ".", toupper(analysis)), list.files(PDIR)))
   # 
@@ -26,6 +26,14 @@ loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE,
   # } else {
   # 
   # }
+  #if(verbose) print("Downloading and loading metadata...")
+  #metadata <- c("meta.df",  "affy.omni", "cin70", "gne.meta", "melt.cells", "snp6.dat")
+  #sapply(metadata, downloadRefCCL, saveDir=PDIR, verbose=verbose)
+  #env <- new.env()
+  #for(m in metadata){
+  #  downloadRefCCL(name=m, saveDir=PDIR, env=env, verbose=verbose)
+  #}
+
   if(verbose) print("Attaching/downloading reference matrix...")
   ref.mat <- downloadRefCCL(toupper(analysis), saveDir = PDIR, verbose=verbose)
   
@@ -45,10 +53,13 @@ loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE,
   ## Assign group IDs (e.g. 22Rv1.cel -> GDSC_22Rv1)
   if(verbose) print("Assigning group IDs...")
   if(!file.exists(file=file.path(PDIR, "col_ids.rda"))){
+    print(head(meta.df))
+    print("Assigning group IDs")
     new.ids <- assignGrpIDs(ref.mat, meta.df)
     new.ids[duplicated(new.ids)] <- gsub("_", "2_",new.ids[duplicated(new.ids)])
     save(new.ids, file=file.path(PDIR, "col_ids.rda"))
   } else {
+    print("Loading in existing group IDs")
     load(file=file.path(PDIR, "col_ids.rda"))
   }
   colnames(ref.mat) <- new.ids

@@ -311,7 +311,7 @@ getVcfDrifts <- function(vcfFile, ref.dat, meta.df,
   cat(basename(vcf), "...\n")
   ## Load in VCF data and leftjoin to existing ref.mat
   vcf.mat <- compareVcf(vcfFile, var.dat=ref.dat$var, 
-                        ref.mat=ref.dat$ref, min.depth=min.depth
+                        ref.mat=ref.dat$ref, min.depth=min.depth,
                         snp6.dat=snp6.dat)
   rna.idx <- switch(dataset,
                     "GDSC"=grep(gsub(".snpOut.*", "", vcf), meta.df$EGAF),

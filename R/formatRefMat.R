@@ -34,10 +34,8 @@ formatRefMat <- function(name, ref.mat, analysis='baf',
   whichx <- match(toupper(name), CCLid::ccl_table[, 1])
   
   if (is.null(varFileName)) {
-    varFileName <- paste0(as.integer(bin.size), ".", 
-                          CCLid::ccl_table[whichx, "Ref.type"], ".rds")
+    varFileName <- paste0(as.integer(bin.size), ".", toupper(name), ".rds")
   }
-  
   
   
   ## Process if existing RDS doesn't exist
@@ -50,13 +48,14 @@ formatRefMat <- function(name, ref.mat, analysis='baf',
                        lrr=grep("CN", gsub("_.*", "", rownames(ref.mat))),
                        baf=grep("SNP", gsub("_.*", "", rownames(ref.mat))),
                        stop("'analysis' parameter must be submitted: 'lrr, baf'"))
+    if(verbose) print("Keeping only analysis type probesets")
     ref.mat <- ref.mat[keep.idx,]
     if(fill.na) ref.mat[is.na(ref.mat)] <- median(as.matrix(ref.mat), na.rm=T)
   }
   
   ## Calculate variant features if file doesn't already exist
   if (!file.exists(file.path(saveDir, varFileName))) {
-    which_file <- match(varFileName, CCLid::ccl_table[, 1])
+    which_file <- match(gsub(".rds$", "", varFileName, ignore.case=TRUE), CCLid::ccl_table[, 1])
     if(!is.na(which_file)){
       print("Downloading and loading existing variance file...")
       downloader::download(url = as.character(CCLid::ccl_table[which_file, "URL"]), 

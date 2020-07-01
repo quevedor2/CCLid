@@ -9,7 +9,7 @@
 #' @export
 #'
 downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"), 
-                            verbose = FALSE) {
+                            verbose = FALSE, ...) {
   if (!file.exists(saveDir)) {
     dir.create(saveDir, recursive = TRUE)
   }
@@ -35,19 +35,25 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
     if (!(desc_chk & bin_chk & row_chk)) {
       message("Downloading .bin, .desc, and row_ids file...")
       # URL: .bin file
-      downloader::download(url = as.character(CCLid::ccl_table[whichx, "URL"]), 
-                           destfile = file.path(saveDir, paste0(identifier, ".bin")), 
-                           quiet = !verbose)
+      if(!bin_chk){
+        downloader::download(url = as.character(CCLid::ccl_table[whichx, "URL"]), 
+                             destfile = file.path(saveDir, paste0(identifier, ".bin")), 
+                             quiet = !verbose)
+      }
       
       # URL2: .desc file
-      downloader::download(url = as.character(CCLid::ccl_table[whichx, "URL2"]), 
-                           destfile = file.path(saveDir, paste0(identifier, ".desc")), 
-                           quiet = !verbose)
+      if(!desc_chk){
+        downloader::download(url = as.character(CCLid::ccl_table[whichx, "URL2"]), 
+                             destfile = file.path(saveDir, paste0(identifier, ".desc")), 
+                             quiet = !verbose)
+      }
       
       # URL3: row IDs file
-      downloader::download(url = as.character(CCLid::ccl_table[whichx, "URL3"]), 
-                           destfile = file.path(saveDir, row_chk), 
-                           quiet = !verbose)
+      if(!row_chk){
+        downloader::download(url = as.character(CCLid::ccl_table[whichx, "URL3"]), 
+                             destfile = file.path(saveDir, row_ids), 
+                             quiet = !verbose)
+      }
     }
     
     ## Read in bigmemory stuff                      
