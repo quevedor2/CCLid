@@ -53,11 +53,14 @@ The reference BAF matrix for all cell lines (2,887) and all SNPs (507,452) can b
 
 ```{r download-dataset, eval=FALSE, results='hide'}
 refdir <- '~/cclid'
+metadata <- c("meta.df",  "affy.omni", "cin70", "gne.meta", "melt.cells", "snp6.dat")
+sapply(metadata, downloadRefCCL, saveDir=refdir, verbose=verbose)
+
 ref_dat <- CCLid::loadRef(PDIR=refdir, analysis='baf', 
                           bin.size=5e5, just.var=TRUE)
 ```
 
-To save on memory, computing resources, and time for future analyses, a pre-computed bigmemory `.bin` and `.desc` file can be stored and passed into `PDIR` argument. These files can either be created using the **bigmemory** package, or downloaded from: XXXXX. The function will use the pre-existing bigmemory objects rather than download and calculate variance estimates.
+To save on memory, computing resources, and time for future analyses, a pre-computed bigmemory `.bin` and `.desc` file can be stored and passed into `PDIR` argument. These files can either be created using the **bigmemory** package, or downloaded from: https://zenodo.org/deposit/3891805. The function will use the pre-existing bigmemory objects rather than download and calculate variance estimates.
 
 ## Input CCL data (VCF)
 `CCLid` requires a VCF as the input for all future analyses. An example of the vcf can be downloaded and viewed at <https://pmgenomics.ca/pughlabwiki/lib/exe/fetch.php?media=data:public_data:a549.sample_id.vcf.gz> or stored in the CCLid R package folder
@@ -73,7 +76,7 @@ This `vcf_map` object will be the main input for all future analysis. Alternativ
 The goal of this section is to read in the input VCF file and subset it for SNPs that overlap with the reference datasets. The `compareVcf` function works by reading in the `path_to_vcf` variable, mapping the SNPs to the reference dataset matrix, filtering out non-informative SNPs, keeping the Ref/Alt allele consistent with the reference SNP probesets, and finally reducing the dataset to a certain number of SNPs for memory purposes. A `max.snps` parameter is used to limit the memory footprint of this process and it is recommended that this value is greater than 100 SNPs to maximize detection.
 ```{r map-vcf, eval=FALSE, results='hide'}
 path_to_vcf = file.path(system.file(file.path("extdata"), package="CCLid"), "a549.sample_id.vcf")
-vcf_mat <- compareVcf(path_to_vcf, var.dat=ref_dat$var, ref.mat=ref_dat$ref, max.snps=200)
+vcf_mat <- compareVcf(path_to_vcf, var.dat=ref_dat$var, ref.mat=ref_dat$ref, max.snps=200, snp6.dat=snp6.dat)
 ```
 
 This `compareVcf` function returns a matrix of BAf values for the SNPs that overlap the input VCF. For example:

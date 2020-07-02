@@ -27,6 +27,7 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
   if(name %in% c("BAF", "GENO")){
     identifier <- paste0("ref_", tolower(name))
     row_ids <- paste0("ref_", tolower(name), "-ids.rds")
+    rds_chk <- file.exists(file.path(saveDir, paste0(identifier, ".rds")))
     desc_chk <- file.exists(file.path(saveDir, paste0(identifier, ".desc")))
     bin_chk <- file.exists(file.path(saveDir, paste0(identifier, ".bin")))
     row_chk <- file.exists(file.path(saveDir, row_ids))
@@ -56,14 +57,20 @@ downloadRefCCL <- function (name, saveDir = file.path(".", "CCLid"),
       }
     }
     
-    ## Read in bigmemory stuff                      
-    if(verbose) print("Reading in bigmemory sample x probeset object...")
-    shared.desc <- dget(file.path(saveDir, paste0(identifier, ".desc")))
-    shared.desc@description$dirname <- gsub("\\/?$", "/", saveDir)
-    shared.desc@description$filename <- paste0(identifier, ".bin")
-    shared.bigobject <- attach.big.matrix(shared.desc)
-    ref.mat <- shared.bigobject
-    options(bigmemory.allow.dimnames=TRUE)
+    ## Read in bigmemory stuff     
+    if(rds_chk){
+      if(verbose) print("Reading in RDS file for sample x probeset object...")
+      ref.mat <- readRDS(file.path(saveDir, paste0(identifier, ".rds")))
+    } else {
+      if(verbose) print("Reading in bigmemory sample x probeset object...")
+      shared.desc <- dget(file.path(saveDir, paste0(identifier, ".desc")))
+      shared.desc@description$dirname <- gsub("\\/?$", "/", saveDir)
+      shared.desc@description$filename <- paste0(identifier, ".bin")
+      shared.bigobject <- attach.big.matrix(shared.desc)
+      ref.mat <- shared.bigobject
+      options(bigmemory.allow.dimnames=TRUE)
+    }
+    
     
     ids <- readRDS(file.path(saveDir, row_ids))
     rownames(ref.mat) <- ids

@@ -1,3 +1,20 @@
+#' .filt
+#' @description Removes probesets under a certain depth, especially useful
+#' for RNAsequencing vcfs
+#'
+#' @param vcf list from mapVcf2Affy
+#' @param min.depth Default=5
+#'
+#' @return A filtered list from mapVcf2Affy
+#' @export
+#' @keywords internal
+.filt <- function(vcf, min.depth=5){
+  rm.idx <- which(vcf[[1]]$tdepth <= min.depth)
+  vcf[[1]] <- vcf[[1]][-rm.idx,,drop=FALSE]
+  vcf[[2]] <- vcf[[2]][-rm.idx,,drop=FALSE]
+  return(vcf)
+}
+
 #' Check and download
 #' @description Checks for an existing .rda file of the input
 #' data type. If it doesn't exist, it downloads from the
@@ -78,12 +95,16 @@
 #' @export
 #' @keywords internal
 .getVariantFeatures <- function(ref.mat, bin.size=1e6, snp6.dat){
-  ## Gets variance of matrix
-  ref.vars <- apply(ref.mat, 1, var, na.rm=TRUE)
-  ref.vars <- setNames(round(ref.vars,3), rownames(ref.mat))
+  ## Gets variance of matrix | Tally of NA SNPs
+  if(class(ref.mat) == 'big.matrix'){
+    ref.vars <- biganalytics::apply(ref.mat, 1, var, na.rm=TRUE)
+    na.per.snp <- biganalytics::apply(ref.mat, 1, function(i) sum(is.na(i)))
+  } else {
+    ref.vars <- apply(ref.mat, 1, var, na.rm=TRUE)
+    na.per.snp <- apply(ref.mat, 1, function(i) sum(is.na(i)))
+  }
   
-  ## Get tally of non-NA sites:
-  na.per.snp <- apply(ref.mat, 1, function(i) sum(is.na(i)))
+  ref.vars <- setNames(round(ref.vars,3), rownames(ref.mat))
   na.per.snp <- setNames(na.per.snp, rownames(ref.mat))
   
   ## Identifies genomic position of SNPs in ref.mat
@@ -171,4 +192,125 @@
     cl.match$acr <- "SS"
   }
   return(cl.match)
+}
+
+#' .vcf2AffyGT
+#' @description Maps Genotypes called from VCFs (0/0, 0/1, 1/0, 1/1) to the Affymetrix
+#' standard of 0, 1, 2 genotypes
+#' 
+#' @param vcf.gt VariantAnnotation object where the $GT column contains 1/1, 0/1, etc...
+#'
+#' @export
+#' @keywords internal
+.vcf2AffyGT <- function(vcf.gt){
+  vcf.affy.map <- c('1/1'=2, 
+                    '0/1'=1,
+                    '1/0'=1,
+                    '0/0'=0)
+  if(class(vcf.gt) == 'VRanges'){
+    affy.gt <- vcf.affy.map[vcf.gt$GT]
+  } else if (all(vcf.gt %in% names(vcf.gt))) {
+    affy.gt <- vcf.affy.map[vcf.gt]
+  } else {
+    stop("Could not determine type of input data, must be vector of 0/0 genotypes or VariantAnnotation object")
+  }
+  if(any(is.na(affy.gt))) affy.gt[is.na(affy.gt)] <- -1
+  
+  return(affy.gt)
+}
+
+#' .revComp
+#' @description Reverse complements the Alleles
+#' 
+#' @param vcf.gt VariantAnnotation ob ject
+#' @param ret.idx  Boolean, if True, does not reverse complement any alleles
+#' @export
+#' @keywords internal
+.revComp <- function(vcf.gt, ret.idx=FALSE){
+  complementAllele <- c(A="T", T="A", C="G", G="C")
+  neg.strand <- which(vcf.gt$Strand == '-')
+  
+  if(ret.idx){
+    neg.strand
+  } else {
+    vcf.gt[neg.strand,]$Allele_A <- complementAllele[vcf.gt[neg.strand,]$Allele_A]
+    vcf.gt[neg.strand,]$Allele_B <- complementAllele[vcf.gt[neg.strand,]$Allele_B]
+    vcf.gt
+  }
+}
+
+#' .fixGT
+#' @description Switches the genotype to adjust for the reverse complement switch (0/0 -> 1/1)
+#' 
+#' @param vcf.gt VCF genotype (0,1,2)
+#' @param affy.gt Affy6 genotype
+#' @param ret.idx Returns the index of matching instead of genotype fix
+#' @importFrom VariantAnnotation alt
+#' @export
+#' @keywords internal
+.fixGT <- function(vcf.gt, affy.gt, ret.idx=FALSE){
+  complementGenotype <- c('0'='2', 
+                          '1'='1', 
+                          '2'='0')
+  rev.idx <- which(vcf.gt$Allele_A == alt(vcf.gt))
+  if(ret.idx){
+    rev.idx
+  } else {
+    affy.gt[rev.idx] <- complementGenotype[as.character(affy.gt[rev.idx])]
+    as.integer(affy.gt)
+  }
+}
+
+#' .normBAF
+#' @description rescales the BAF from a 0-1 scale to a 0-0.5
+#' 
+#' @param x BAF vector
+#' @param lower if TRUE, 0-0.5 range, ELSE, 0.5-1 range
+#' @export
+#' @keywords internal
+.normBAF <- function(x, lower=T){
+  #x <- seq(0, 1, by=0.1)
+  x[x>1] <- 1; x[x<0] <- 0
+  if(lower){
+    nBAF <- (0.5 - abs(x - 0.5))
+  } else {
+    nBAF <- (0.5 + abs(x - 0.5))
+  }
+  
+  nBAF
+}
+
+#' .jsonToGr
+#' @description converts a JSON object into a VariantAnnotation object
+#'
+#' @param from.file Boolean to say whether it comes from a file or passed in object
+#' @param json Json VCF format - OUTDATED
+#' @importFrom VariantAnnotation VRanges
+#' @importFrom IRanges IRanges
+#' @export
+#' @keywords internal
+.jsonToGr <- function(json, from.file=TRUE){
+  if(from.file){
+    ad <- sapply(json, function(i) i$sampleinfo[[1]]$AD)
+    names <- as.character(sapply(json, function(i) i$sampleinfo[[1]]$NAME))
+    gt <- sapply(json, function(i) i$sampleinfo[[1]]$GT)
+  } else {
+    ad <- sapply(json$sampleinfo, function(i) i$AD)
+    names <- sapply(json$sampleinfo, function(i) i$NAME)
+    gt <- sapply(json$sampleinfo, function(i) i$GT)
+  }
+  null.idx <- sapply(ad, is.null)
+  if(any(null.idx)) ad[which(null.idx)] <- '0,0'
+  ad <- unlist(ad)
+  vr <- VRanges(seqnames=as.character(if(from.file) sapply(json, function(i) i$chr) else json$chr), 
+                ranges = IRanges(start=as.integer(if(from.file) sapply(json, function(i) i$pos) else json$pos), 
+                                 end=as.integer(if(from.file) sapply(json, function(i) i$pos) else json$pos)),
+                ref=as.character(if(from.file) sapply(json, function(i) i$ref) else json$ref),
+                alt=as.character(if(from.file) sapply(json, function(i) i$alt) else json$alt),
+                totalDepth=sapply(strsplit(ad, ','), function(i) sum(as.integer(i))),
+                refDepth=as.integer(sapply(strsplit(ad, ','), function(i) i[[1]])),
+                altDepth=as.integer(sapply(strsplit(ad, ','), function(i) i[[2]])),
+                sampleNames = names)
+  vr$GT <- as.character(gt)
+  return(vr)
 }

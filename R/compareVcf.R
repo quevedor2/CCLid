@@ -27,7 +27,8 @@ compareVcf <- function(vcfFile, var.dat, ref.mat,
   vcf.map.var <- CCLid::mapVariantFeat(vcf.map, var.dat)
   vcf.to.use <- vcf.map.var
   ov.idx <- CCLid::overlapPos(comp = vcf.to.use$BAF,
-                              ref=ref.mat, mapping = 'probeset')
+                              ref=ref.mat, mapping = 'probeset',
+                              snp6.dat=snp6.dat)
   if(nrow(ov.idx) > max.snps){
     ov.idx <- ov.idx[order(ov.idx$ref)[1:max.snps],]
   }
