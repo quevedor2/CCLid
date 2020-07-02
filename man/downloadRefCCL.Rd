@@ -4,7 +4,7 @@
 \alias{downloadRefCCL}
 \title{downloadRefCCL}
 \usage{
-downloadRefCCL(name, saveDir = file.path(".", "CCLid"), verbose = FALSE)
+downloadRefCCL(name, saveDir = file.path(".", "CCLid"), verbose = FALSE, ...)
 }
 \arguments{
 \item{name}{Currently only supports "BAF"}
@@ -12,6 +12,8 @@ downloadRefCCL(name, saveDir = file.path(".", "CCLid"), verbose = FALSE)
 \item{saveDir}{Directory containign bigmemory .desc/.bin folder, or where to save new download}
 
 \item{verbose}{Verbose (Default=FALSE)}
+
+\item{...}{Extra snp6.dat}
 }
 \description{
 Downloads the precomputed RDS data structures for reference

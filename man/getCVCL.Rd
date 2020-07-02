@@ -4,12 +4,14 @@
 \alias{getCVCL}
 \title{getCVCL}
 \usage{
-getCVCL(cellid, prioritize.datasets = TRUE)
+getCVCL(cellid, prioritize.datasets = TRUE, melt.cells)
 }
 \arguments{
 \item{cellid}{character: cell line name (e.g. MCF-7)}
 
 \item{prioritize.datasets}{default=TRUE}
+
+\item{melt.cells}{Melted cellosaurus dataframe, accessible from CCLid::ccl_table}
 }
 \value{
 CVCL_ style character name
@@ -17,7 +19,4 @@ CVCL_ style character name
 \description{
 get the Cellosaurus CVCL_ id for a given
 cell line name
-}
-\examples{
-getCVCL("Hela")
 }

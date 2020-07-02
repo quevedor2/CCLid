@@ -13,6 +13,7 @@ formatRefMat(
   bin.size = 1e+06,
   just.var = FALSE,
   fill.na = FALSE,
+  snp6.dat,
   verbose = FALSE
 )
 }
@@ -33,6 +34,8 @@ typically obtained from the downloadRefCCL() function}
 \item{just.var}{Just runs the variant SNP part of the script, skips subsetting}
 
 \item{fill.na}{Fills NA with median (Default=FALSE)}
+
+\item{snp6.dat}{SNP6 probeset genomic position, accessible from CCLid::ccl_table}
 
 \item{verbose}{Verbose}
 }

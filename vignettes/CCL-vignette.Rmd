@@ -66,7 +66,7 @@ To save on memory, computing resources, and time for future analyses, a pre-comp
 `CCLid` requires a VCF as the input for all future analyses. An example of the vcf can be downloaded and viewed at <https://pmgenomics.ca/pughlabwiki/lib/exe/fetch.php?media=data:public_data:a549.sample_id.vcf.gz> or stored in the CCLid R package folder
 
 ```{r load-vcf, eval=FALSE, results='hide'}
-path_to_vcf = file.path(system.file(file.path("extdata"), package="CCLid"), "a549.sample_id.vcf")
+path_to_vcf = file.path(system.file(file.path("extdata"), package="CCLid"), "A549_trim.vcf.gz")
 vcf_map <- mapVcf2Affy(path_to_vcf)
 ```
 
@@ -94,7 +94,7 @@ The goal of this section is to build a logistic regression model and test the fi
 
 ```{r match-it, eval=FALSE, results='hide'}
 colnames(vcf_mat)[1] <- sample_name
-pred <- checkForConcordance(x.mat=vcf_mat, sampleID=sample_name, rm.gcsi = FALSE)
+pred <- checkForConcordance(x.mat=vcf_mat, sampleID=sample_name, rm.gcsi = FALSE, meta.df=meta.df)
 ```
 
 With the results looking as followed:
@@ -127,14 +127,15 @@ all.ids <- unique(unlist(pred$pred$M[,c('Var1', 'Var2')]))
 ```{r match-it-2, eval=FALSE, results='hide'}
 # Subset the VCF matrix for just the cell lines of interest
 vcf_mat <- compareVcf(vcfFile, var.dat=ref.dat$var, 
-                      ref.mat=ref.dat$ref, ids=all.ids)  ## starts at 2.5g, ramps up to 6.8Gb
+                      ref.mat=ref.dat$ref, ids=all.ids,
+                      snp6.dat=snp6.dat)   ## starts at 2.5g, ramps up to 6.8Gb
 ```
 
 1. The final step will be to run the `bafDrift` function which will go through each sample in the `vcf_mat` matrix, and do an all by all comparison.
 ```{r match-it-3, eval=FALSE, results='hide'}
 # Drift estimation
 bdf <- tryCatch({
-  bafDrift(vcf_mat, centering='median')
+  bafDrift(vcf_mat, centering='median', snp6.dat=snp6.dat)
 }, error=function(e){NULL})
 ```
 
@@ -147,4 +148,9 @@ $output
 1 CCLE_KMS-11  chr6  72899530  72899530        1     0.02   q     NA    NA NA       NA
 2 CCLE_KMS-11 chr14 107142448 107142448        1    -0.02   q     NA    NA NA       NA
 3 CCLE_KMS-11 chr22  17414640  22673639        2     0.00   q  0.021     0  0        0
+```
+
+The `bdf$cna.obj` list elements contains objects of the CCLid class, which can be plotted using:
+```
+  plot(bdf$cna.obj[[1]])
 ```

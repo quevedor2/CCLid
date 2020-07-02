@@ -10,7 +10,8 @@ getVcfDrifts(
   meta.df,
   min.depth = 5,
   centering = "extreme",
-  dataset = "GDSC"
+  dataset = "GDSC",
+  snp6.dat
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ getVcfDrifts(
 \item{centering}{Centering of data method to be passed into bafDrift() function}
 
 \item{dataset}{Either 'CCLE', 'GDSC', ro 'GNE'}
+
+\item{snp6.dat}{SNP6 probeset genomic position, accessible from CCLid::ccl_table}
 }
 \value{
 A list containing the fraction of genome drifted,

@@ -12,6 +12,7 @@ getCNDrifts(
   raw.id,
   cell.ids,
   verbose = TRUE,
+  meta.df,
   ...
 )
 }
@@ -29,6 +30,8 @@ getCNDrifts(
 \item{cell.ids}{All cell line IDs to compare drift between}
 
 \item{verbose}{Verbose}
+
+\item{meta.df}{Cell line metadata, accessible from CCLid::ccl_table}
 
 \item{...}{Extra param}
 }

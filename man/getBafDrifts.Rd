@@ -4,7 +4,7 @@
 \alias{getBafDrifts}
 \title{getBafDrifts}
 \usage{
-getBafDrifts(cl.pairs, x.mat, ref.ds = NULL, alt.ds = NULL, ...)
+getBafDrifts(cl.pairs, x.mat, ref.ds = NULL, alt.ds = NULL, snp6.dat, ...)
 }
 \arguments{
 \item{cl.pairs}{Vector of indices for cell line pairs in x.mat}
@@ -14,6 +14,8 @@ getBafDrifts(cl.pairs, x.mat, ref.ds = NULL, alt.ds = NULL, ...)
 \item{ref.ds}{Reference dataset (e.g. CCLE)}
 
 \item{alt.ds}{Comparing dataset (e.g. GDSC)}
+
+\item{snp6.dat}{SNP6 probeset genomic position, accessible from CCLid::ccl_table}
 
 \item{...}{Extra param}
 }

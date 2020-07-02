@@ -4,10 +4,12 @@
 \alias{checkAgainst}
 \title{checkAgainst}
 \usage{
-checkAgainst(mat)
+checkAgainst(mat, melt.cells)
 }
 \arguments{
 \item{mat}{A matrix containing "cvclA" and "cvclB" columns for cellosaurus IDs of cell lines}
+
+\item{melt.cells}{Melted cellosaurus dataframe, accessible from CCLid::ccl_table}
 }
 \value{
 Character vector of OI (originating in), SS (synonymous), SI (sample from), 

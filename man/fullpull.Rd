@@ -4,10 +4,12 @@
 \alias{fullpull}
 \title{fullpull}
 \usage{
-fullpull(cvcl)
+fullpull(cvcl, melt.cells)
 }
 \arguments{
 \item{cvcl}{Cellosaurus CVCL id (e.g. CVCL_1384)}
+
+\item{melt.cells}{Melted cellosaurus dataframe, accessible from CCLid::ccl_table}
 }
 \value{
 Dataframe of all synonymous (SS), similar origins (OI), MSI positive, or problematic
@@ -16,8 +18,4 @@ lines associated with the CVCL
 \description{
 Gets the synonymous cell lines and cell line that they derived from,
 as well as any indication of MSI or probelmatic cell line (e.g. contamination)
-}
-\examples{
-cvcl <- getCVCL('Hela')
-fullpull(cvcl)
 }

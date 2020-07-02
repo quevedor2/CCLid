@@ -10,14 +10,13 @@
 #' @param sampletype Strictly for labelling purposes
 #' @param snp6.dat SNP6 probeset genomic position, accessible from CCLid::ccl_table
 #' @param ... Extra param
-#' @param all.ids IDs to subset to
 #'
 #' @return Matrix: Containing reference matrix subsetted to common SNPs as 
 #' the input VCF, as well as a left-joined VCF data
 #' @export
 #'
 compareVcf <- function(vcfFile, var.dat, ref.mat, 
-                       max.snps=1e6, ids=NULL, sampletype='RNA', all.ids=NULL, 
+                       max.snps=1e6, ids=NULL, sampletype='RNA',
                        snp6.dat, ...){
   vcf.map <- CCLid::mapVcf2Affy(vcfFile, snp6.dat=snp6.dat)
   vcf.map <- .filt(vcf.map, ...) ## Memory: up to 1.8Gb 
@@ -38,12 +37,12 @@ compareVcf <- function(vcfFile, var.dat, ref.mat,
   if(is.null(ids)){
     refm <- ref.mat
   } else {
-    colidx <- which(colnames(ref.mat) %in% all.ids)
+    colidx <- which(colnames(ref.mat) %in% ids)
     message("Isolating for: ", paste(colnames(ref.mat)[colidx], collapse=", "))
     refm <- ref.mat[,colidx,drop=FALSE]
   }
   x.mat <- cbind(vcf.to.use$BAF$BAF[ov.idx$comp], 
-                 refm[ov.idx$ref,])
+                 refm[ov.idx$ref,,drop=FALSE])
   colnames(x.mat)[1] <- paste0(sampletype, "_", gsub(".vcf.*", "", basename(vcfFile)))
   
   if(storage.mode(ref.mat[,1]) == 'integer'){

@@ -4,6 +4,7 @@
 #' @param name Currently only supports "BAF"
 #' @param saveDir Directory containign bigmemory .desc/.bin folder, or where to save new download
 #' @param verbose Verbose (Default=FALSE)
+#' @param ... Extra snp6.dat
 #' @importFrom bigmemory attach.big.matrix
 #' 
 #' @export

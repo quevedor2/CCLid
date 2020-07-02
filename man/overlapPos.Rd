@@ -4,14 +4,16 @@
 \alias{overlapPos}
 \title{overlapPos}
 \usage{
-overlapPos(comp, ref, mapping = "probeset")
+overlapPos(comp, ref, mapping = "probeset", snp6.dat)
 }
 \arguments{
 \item{comp}{Input comparison data with a $Probe_Set_ID column}
 
 \item{ref}{Reference probeset order where rownames are Probe_Set_IDs}
 
-\item{mapping}{If "probeset", will using $Probe_Set_ID from comp dataframe.
+\item{mapping}{If "probeset", will using $Probe_Set_ID from comp dataframe.}
+
+\item{snp6.dat}{SNP6 probeset genomic position, accessible from CCLid::ccl_table
 Else, it will use the rownames of ref as the probe set IDs}
 }
 \description{

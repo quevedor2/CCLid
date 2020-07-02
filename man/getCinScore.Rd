@@ -4,12 +4,14 @@
 \alias{getCinScore}
 \title{getCinScore}
 \usage{
-getCinScore(psets, cin.metric = "sum")
+getCinScore(psets, cin.metric = "sum", cin70)
 }
 \arguments{
 \item{psets}{PSets from pharmacoGX}
 
 \item{cin.metric}{sum or mean to compute CIN70 score}
+
+\item{cin70}{CIN70 gene set, accessible from CCLid::ccl_table}
 }
 \value{
 a CIN list
