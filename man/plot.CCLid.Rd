@@ -13,7 +13,8 @@ plot() function for CCLid adjusted DNAcopy segment objects}
   add.chr.sep = TRUE,
   atype = "sd",
   add.points = TRUE,
-  min.z = 3
+  min.z = 3,
+  ...
 )
 }
 \arguments{
