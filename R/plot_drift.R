@@ -137,7 +137,7 @@ multiDriftPlot <- function(seg, chr.size.gr=NULL,
 #' @export
 plot.CCLid <- function (obj, sample.size=600, low.sig.alpha=0.01, 
                         hi.sig.alpha=0.2, add.chr.sep=TRUE, 
-                        atype='sd', add.points=TRUE, min.z=3) {
+                        atype='sd', add.points=TRUE, min.z=3, ...) {
   # low.sig.alpha=0.01
   # hi.sig.alpha=0.2
   # add.chr.sep=TRUE
