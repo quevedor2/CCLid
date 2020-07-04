@@ -31,13 +31,13 @@ dependencies are available from CRAN or Bioconductor.
 
 ```{r install-pkg, eval=FALSE, results='hide'}
 library(devtools)
-devtools::install_github('quevedor2/CCLid')
+devtools::install_github('bhklab/CCLid')
 ```
 
 Load `CCLid` into your current workspace:
 
 ```{r, eval=FALSE, results='hide'}
-library(PharmacoGx)
+library(CCLid)
 ```
 
 ## Requirements
