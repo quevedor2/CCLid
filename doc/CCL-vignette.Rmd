@@ -31,13 +31,13 @@ dependencies are available from CRAN or Bioconductor.
 
 ```{r install-pkg, eval=FALSE, results='hide'}
 library(devtools)
-devtools::install_github('quevedor2/CCLid')
+devtools::install_github('bhklab/CCLid')
 ```
 
 Load `CCLid` into your current workspace:
 
 ```{r, eval=FALSE, results='hide'}
-library(PharmacoGx)
+library(CCLid)
 ```
 
 ## Requirements
@@ -53,17 +53,20 @@ The reference BAF matrix for all cell lines (2,887) and all SNPs (507,452) can b
 
 ```{r download-dataset, eval=FALSE, results='hide'}
 refdir <- '~/cclid'
+metadata <- c("meta.df",  "affy.omni", "cin70", "gne.meta", "melt.cells", "snp6.dat")
+sapply(metadata, downloadRefCCL, saveDir=refdir, verbose=verbose)
+
 ref_dat <- CCLid::loadRef(PDIR=refdir, analysis='baf', 
                           bin.size=5e5, just.var=TRUE)
 ```
 
-To save on memory, computing resources, and time for future analyses, a pre-computed bigmemory `.bin` and `.desc` file can be stored and passed into `PDIR` argument. These files can either be created using the **bigmemory** package, or downloaded from: XXXXX. The function will use the pre-existing bigmemory objects rather than download and calculate variance estimates.
+To save on memory, computing resources, and time for future analyses, a pre-computed bigmemory `.bin` and `.desc` file can be stored and passed into `PDIR` argument. These files can either be created using the **bigmemory** package, or downloaded from: https://zenodo.org/deposit/3891805. The function will use the pre-existing bigmemory objects rather than download and calculate variance estimates.
 
 ## Input CCL data (VCF)
 `CCLid` requires a VCF as the input for all future analyses. An example of the vcf can be downloaded and viewed at <https://pmgenomics.ca/pughlabwiki/lib/exe/fetch.php?media=data:public_data:a549.sample_id.vcf.gz> or stored in the CCLid R package folder
 
 ```{r load-vcf, eval=FALSE, results='hide'}
-path_to_vcf = file.path(system.file(file.path("extdata"), package="CCLid"), "a549.sample_id.vcf")
+path_to_vcf = file.path(system.file(file.path("extdata"), package="CCLid"), "A549_trim.vcf.gz")
 vcf_map <- mapVcf2Affy(path_to_vcf)
 ```
 
@@ -73,7 +76,7 @@ This `vcf_map` object will be the main input for all future analysis. Alternativ
 The goal of this section is to read in the input VCF file and subset it for SNPs that overlap with the reference datasets. The `compareVcf` function works by reading in the `path_to_vcf` variable, mapping the SNPs to the reference dataset matrix, filtering out non-informative SNPs, keeping the Ref/Alt allele consistent with the reference SNP probesets, and finally reducing the dataset to a certain number of SNPs for memory purposes. A `max.snps` parameter is used to limit the memory footprint of this process and it is recommended that this value is greater than 100 SNPs to maximize detection.
 ```{r map-vcf, eval=FALSE, results='hide'}
 path_to_vcf = file.path(system.file(file.path("extdata"), package="CCLid"), "a549.sample_id.vcf")
-vcf_mat <- compareVcf(path_to_vcf, var.dat=ref_dat$var, ref.mat=ref_dat$ref, max.snps=200)
+vcf_mat <- compareVcf(path_to_vcf, var.dat=ref_dat$var, ref.mat=ref_dat$ref, max.snps=200, snp6.dat=snp6.dat)
 ```
 
 This `compareVcf` function returns a matrix of BAf values for the SNPs that overlap the input VCF. For example:
@@ -91,7 +94,7 @@ The goal of this section is to build a logistic regression model and test the fi
 
 ```{r match-it, eval=FALSE, results='hide'}
 colnames(vcf_mat)[1] <- sample_name
-pred <- checkForConcordance(x.mat=vcf_mat, sampleID=sample_name, rm.gcsi = FALSE)
+pred <- checkForConcordance(x.mat=vcf_mat, sampleID=sample_name, rm.gcsi = FALSE, meta.df=meta.df)
 ```
 
 With the results looking as followed:
@@ -124,14 +127,15 @@ all.ids <- unique(unlist(pred$pred$M[,c('Var1', 'Var2')]))
 ```{r match-it-2, eval=FALSE, results='hide'}
 # Subset the VCF matrix for just the cell lines of interest
 vcf_mat <- compareVcf(vcfFile, var.dat=ref.dat$var, 
-                      ref.mat=ref.dat$ref, ids=all.ids)  ## starts at 2.5g, ramps up to 6.8Gb
+                      ref.mat=ref.dat$ref, ids=all.ids,
+                      snp6.dat=snp6.dat)   ## starts at 2.5g, ramps up to 6.8Gb
 ```
 
 1. The final step will be to run the `bafDrift` function which will go through each sample in the `vcf_mat` matrix, and do an all by all comparison.
 ```{r match-it-3, eval=FALSE, results='hide'}
 # Drift estimation
 bdf <- tryCatch({
-  bafDrift(vcf_mat, centering='median')
+  bafDrift(vcf_mat, centering='median', snp6.dat=snp6.dat)
 }, error=function(e){NULL})
 ```
 
@@ -144,4 +148,9 @@ $output
 1 CCLE_KMS-11  chr6  72899530  72899530        1     0.02   q     NA    NA NA       NA
 2 CCLE_KMS-11 chr14 107142448 107142448        1    -0.02   q     NA    NA NA       NA
 3 CCLE_KMS-11 chr22  17414640  22673639        2     0.00   q  0.021     0  0        0
+```
+
+The `bdf$cna.obj` list elements contains objects of the CCLid class, which can be plotted using:
+```
+  plot(bdf$cna.obj[[1]])
 ```
