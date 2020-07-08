@@ -702,7 +702,7 @@ getGenes <- function(genome.build="hg19"){
 #' @importFrom S4Vectors subjectHits
 #' @importFrom S4Vectors queryHits
 #' @importFrom S4Vectors subjectLength
-#' @importFrom IRanges splitAsList 
+#' @importFrom S4Vectors splitAsList 
 #' @importFrom AnnotationDbi mapIds
 #' @importFrom org.Hs.eg.db org.Hs.eg.db
 #' 
