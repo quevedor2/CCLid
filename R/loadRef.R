@@ -53,13 +53,13 @@ loadRef <- function(PDIR=NULL, analysis='baf', rm.gne=FALSE,
   ## Assign group IDs (e.g. 22Rv1.cel -> GDSC_22Rv1)
   if(verbose) print("Assigning group IDs...")
   if(!file.exists(file=file.path(PDIR, "col_ids.rda"))){
-    print(head(meta.df))
-    print("Assigning group IDs")
+    if(verbose) print(head(meta.df))
+    if(verbose) print("Assigning group IDs")
     new.ids <- assignGrpIDs(ref.mat, meta.df)
     new.ids[duplicated(new.ids)] <- gsub("_", "2_",new.ids[duplicated(new.ids)])
     save(new.ids, file=file.path(PDIR, "col_ids.rda"))
   } else {
-    print("Loading in existing group IDs")
+    if(verbose) print("Loading in existing group IDs")
     load(file=file.path(PDIR, "col_ids.rda"))
   }
   colnames(ref.mat) <- new.ids
